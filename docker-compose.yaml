@@ -1,0 +1,52 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:16.6-alpine3.21
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  flaresolverr:
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:v3.3.20
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-verbose}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=Asia/Jakarta
+    ports:
+      - "${PORT:-8191}:8191"
+    restart: unless-stopped
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:stable
+    restart: always
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - n8n:/home/node/.n8n
+      - ./local-files:/files
+
+volumes:
+  n8n:
+  postgres:
+
+networks:
+  n8n:
