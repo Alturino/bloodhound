@@ -1,0 +1,212 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "453eb002-dade-46cc-8641-63627d974bef",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8191/v1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+            },
+            {
+              "name": "sec-fetch-mode",
+              "value": "cors"
+            },
+            {
+              "name": "sec-fetch-site",
+              "value": "same-origin"
+            },
+            {
+              "name": "sec-ch-ua-platform",
+              "value": "\"Android\""
+            },
+            {
+              "name": "referer",
+              "value": "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json; charset=utf-8",
+        "body": "{\"cmd\":\"request.get\",\"url\":\"https://www.idx.co.id/primary/ListedCompany/GetAnnouncement?kodeEmiten=&emitenType=*&indexFrom=0&pageSize=100&lang=id&keyword=\",\"maxTimeout\":60000}",
+        "options": {
+          "proxy": "http://flaresolverr:8191/v1"
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "82b64b1b-1819-4407-b818-165b916abe75",
+      "name": "HTTP Request",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "solution.response",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "=body",
+              "cssSelector": "html"
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true,
+          "cleanUpText": true
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "a613c995-6692-49bf-a08d-c99602a9d77b",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst replies = JSON.parse($input.first().json.body).Replies.map((reply) => {\n  return {\n    'title': reply.pengumuman.JudulPengumuman,\n    'created_at': reply.pengumuman.CreatedDate,\n    'tanggal_pengumuman': reply.pengumuman.TglPengumuman,\n    'attachments': reply.attachments.filter((attachment) => {\n      return attachment.OriginalFilename.endsWith('.pdf')\n    }).map((attachment) => {\n      return {\n        'filename': attachment.OriginalFilename,\n        'download_url': attachment.FullSavePath,\n      }\n    })\n  }\n})\nreturn replies;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "59ed5179-efb5-4718-b277-58eba7ee2514",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202508/b2cf8ac6d6_4fcf2bd0b9.pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+            },
+            {
+              "name": "sec-fetch-mode",
+              "value": "cors"
+            },
+            {
+              "name": "sec-fetch-site",
+              "value": "same-origin"
+            },
+            {
+              "name": "sec-ch-ua-platform",
+              "value": "\"Android\""
+            },
+            {
+              "name": "referer",
+              "value": "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "4af95511-8836-4b16-b077-85de172d0679",
+      "name": "HTTP Request1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "090fde61-0325-41fe-8c54-26aab534bffd",
+  "meta": {
+    "instanceId": "c04230f5ae54e34d14fb67d8825c6ee6ce5c931086670eb85f36824639ce58b6"
+  },
+  "id": "5BXs0C0tIAQB6x7B",
+  "tags": []
+}
