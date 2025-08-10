@@ -1,0 +1,2230 @@
+{
+  "ResultCount": 40,
+  "SearchParams": {
+    "DateFrom": "10/08/2022 4:55:42 PM",
+    "DateTo": "10/08/2025 4:55:42 PM",
+    "Query": null,
+    "Language": "id-id",
+    "KodeEmiten": "AADI",
+    "EmitenType": null,
+    "SortOrder": null,
+    "SortColumn": null,
+    "indexfrom": 0,
+    "pagesize": 100
+  },
+  "Replies": [
+    {
+      "pengumuman": {
+        "Id2": "20250808210440-AAI/124/VIII-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/124/VIII-25/corsec",
+        "TglPengumuman": "2025-08-08T21:04:40",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-08-08T21:30:38",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31929976-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "4e3f5e30ac_fc2c8b631a.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202508/4e3f5e30ac_fc2c8b631a.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250804_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31929976.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "08df3d4367_2a71f95a34.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202508/08df3d4367_2a71f95a34.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250804_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31929976_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250718193029-AAI/119/VII-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/119/VII-25/corsec",
+        "TglPengumuman": "2025-07-18T19:30:29",
+        "JudulPengumuman": "Rencana Penyampaian Laporan Keuangan Kuartal II 2025 Ditelaah secara terbatas",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-07-18T20:00:32",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Rencana Penyampaian Laporan Ke",
+        "JMSXGroupID": "f-31911690-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "381c4d136a_aeb14d37b3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/381c4d136a_aeb14d37b3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250704_AADI_Rencana Penyampaian Laporan Keuangan_31911690.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250715200650-AAI/116/VII-25/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/116/VII-25/JA-LL/corsec",
+        "TglPengumuman": "2025-07-15T20:06:50",
+        "JudulPengumuman": "Laporan Penggunaan Dana Hasil Penawaran Umum",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-07-15T20:30:42",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Penggunaan Dana Hasil ",
+        "JMSXGroupID": "f-31914171-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "587f9996ad_9056f1bf39.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/587f9996ad_9056f1bf39.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250711_AADI_Laporan Penggunaan Dana Hasil Penawaran Umum_31914171.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "2680029e47_8b03ef729f.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/2680029e47_8b03ef729f.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250711_AADI_Laporan Penggunaan Dana Hasil Penawaran Umum_31914171_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250710195925-AAI/115/VII-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/115/VII-25/corsec",
+        "TglPengumuman": "2025-07-10T19:59:25",
+        "JudulPengumuman": "Laporan Bulanan Aktivitas Eksplorasi",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-07-10T20:30:29",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Aktivitas Eksp",
+        "JMSXGroupID": "f-31913727-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "0e98140f99_6e8ae16ee3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/0e98140f99_6e8ae16ee3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250710_AADI_Laporan Bulanan Aktivitas Eksplorasi_31913727.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250710185017-AAI/114/VII-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/114/VII-25/corsec",
+        "TglPengumuman": "2025-07-10T18:50:17",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-07-10T19:03:27",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31911708-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "324c26299e_8a919f2d1f.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/324c26299e_8a919f2d1f.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250704_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31911708.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "356c47d2e2_d49664e374.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/356c47d2e2_d49664e374.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250704_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31911708_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "6ca4435d95_b30a26151b.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/6ca4435d95_b30a26151b.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250704_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31911708_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "ef9343bd06_8945cf36f3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/ef9343bd06_8945cf36f3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250704_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31911708_lamp3.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250702221255-AAI/109/VII-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/109/VII-25/corsec",
+        "TglPengumuman": "2025-07-02T22:12:55",
+        "JudulPengumuman": "Transaksi Afiliasi",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-07-02T22:30:46",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Transaksi Afiliasi",
+        "JMSXGroupID": "f-31911050-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "e61f722d85_cde213f1ca.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/e61f722d85_cde213f1ca.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250702_AADI_Informasi Transaksi Afiliasi_31911050.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "136d27a30c_d5a314c217.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/136d27a30c_d5a314c217.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250702_AADI_Informasi Transaksi Afiliasi_31911050_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "d7e4f35ee4_5a052270f9.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/d7e4f35ee4_5a052270f9.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250702_AADI_Informasi Transaksi Afiliasi_31911050_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250625215857-AAI/107/VI-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/107/VI-25/corsec",
+        "TglPengumuman": "2025-06-25T21:58:57",
+        "JudulPengumuman": "Transaksi Afiliasi",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-06-25T22:30:18",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Transaksi Afiliasi",
+        "JMSXGroupID": "f-31908793-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "d5c855f59d_3b274d2e7a.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/d5c855f59d_3b274d2e7a.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250625_AADI_Informasi Transaksi Afiliasi_31908793.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "95992b5bb0_c5d6742233.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/95992b5bb0_c5d6742233.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250625_AADI_Informasi Transaksi Afiliasi_31908793_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "cdedf74609_e6e0ae0b0a.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/cdedf74609_e6e0ae0b0a.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250625_AADI_Informasi Transaksi Afiliasi_31908793_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250609203225-AAI/105/VI-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/105/VI-25/corsec",
+        "TglPengumuman": "2025-06-09T20:32:25",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-06-09T21:00:21",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31891962-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "27dd6f252a_8b7a91b32a.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/27dd6f252a_8b7a91b32a.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250604_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31891962.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "974950ac92_91fa422c2e.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/974950ac92_91fa422c2e.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250604_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31891962_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "bcca01ec7e_2628c7e0a8.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/bcca01ec7e_2628c7e0a8.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250604_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31891962_lamp3.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "fc155b18af_17316207ce.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202506/fc155b18af_17316207ce.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250604_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31891962_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250526165629-AAI/090/V-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/090/V-25/corsec",
+        "TglPengumuman": "2025-05-26T16:56:29",
+        "JudulPengumuman": "Ringkasan Risalah Rapat Umum Para Pemegang Saham Tahunan",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-05-26T17:02:20",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Ringkasan Risalah Rapat Umum P",
+        "JMSXGroupID": "f-31889017-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "7b90154daa_70ee4a9d00.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/7b90154daa_70ee4a9d00.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250526_AADI_Ringkasan Risalah//Risalah RUPS_31889017.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "21220dbd3e_ecba5b51c2.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/21220dbd3e_ecba5b51c2.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250526_AADI_Ringkasan Risalah//Risalah RUPS_31889017_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "4bce775cfd_082c106820.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/4bce775cfd_082c106820.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250526_AADI_Ringkasan Risalah//Risalah RUPS_31889017_lamp3.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "dffd02422c_471d21224d.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/dffd02422c_471d21224d.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250526_AADI_Ringkasan Risalah//Risalah RUPS_31889017_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250509194149-AAI/024/V-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/024/V-25/corsec",
+        "TglPengumuman": "2025-05-09T19:41:49",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-05-09T20:04:39",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31882577-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "98f6b80e0d_c64ae6093d.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/98f6b80e0d_c64ae6093d.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250505_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31882577.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "0baea3b6f4_d89cee40c4.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/0baea3b6f4_d89cee40c4.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250505_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31882577_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "2291ca8749_c6e750e6db.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/2291ca8749_c6e750e6db.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250505_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31882577_lamp3.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "62b3f4d637_694fc328a4.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/62b3f4d637_694fc328a4.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250505_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31882577_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250430224853-AAI/019/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/019/IV-25/corsec",
+        "TglPengumuman": "2025-04-30T22:48:53",
+        "JudulPengumuman": "Penyampaian Laporan Keuangan",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-05-02T15:38:10",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Penyampaian Laporan Keuangan",
+        "JMSXGroupID": "f-31880846-0-1",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "8838a6bef4_2b8e2ad9de.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/8838a6bef4_2b8e2ad9de.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250430_AADI_Laporan Informasi dan Fakta Material_31880846.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "08e4dd559c_582ad99f64.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/08e4dd559c_582ad99f64.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250430_AADI_Laporan Informasi dan Fakta Material_31880846_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250430220435-AAI/022/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/022/IV-25/corsec",
+        "TglPengumuman": "2025-04-30T22:04:35",
+        "JudulPengumuman": "Penyampaian Laporan Keberlanjutan dan ESG",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-30T22:43:21",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Penyampaian Laporan Keberlanju",
+        "JMSXGroupID": "f-31878059-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "fb8615607c_46bd841bf3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/fb8615607c_46bd841bf3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "ESG2024-AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "9974de1b4a_40a659c050.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/9974de1b4a_40a659c050.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "AnnualReport2024-AADI-att1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250430194404-AAI/020a/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/020a/IV-25/corsec",
+        "TglPengumuman": "2025-04-30T19:44:04",
+        "JudulPengumuman": "Pemanggilan Rapat Umum Pemegang Saham Tahunan (KOREKSI)",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-30T20:13:23",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Pemanggilan Rapat Umum Pemegan",
+        "JMSXGroupID": "f-31880452-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "282e1ce78e_4fa968c5c3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/282e1ce78e_4fa968c5c3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250430_AADI_Pemanggilan RUPS_31880452.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "a89bfe5ff3_b79b38fb26.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/a89bfe5ff3_b79b38fb26.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250430_AADI_Pemanggilan RUPS_31880452_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "adbfc6a9df_ae1f75a594.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/adbfc6a9df_ae1f75a594.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250430_AADI_Pemanggilan RUPS_31880452_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250430190645-AAI/021/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/021/IV-25/corsec",
+        "TglPengumuman": "2025-04-30T19:06:45",
+        "JudulPengumuman": "Penyampaian Laporan Tahunan",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-30T19:44:14",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Penyampaian Laporan Tahunan",
+        "JMSXGroupID": "f-31878018-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "52ff57ad3c_f6912de316.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/52ff57ad3c_f6912de316.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "AnnualReport2024-AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "dd68aa1634_ccc31cec64.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/dd68aa1634_ccc31cec64.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "AnnualReport2024-AADI-att1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250430184106-AAI/020/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/020/IV-25/corsec",
+        "TglPengumuman": "2025-04-30T18:41:06",
+        "JudulPengumuman": "Pemanggilan Rapat Umum Pemegang Saham Tahunan",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-30T19:11:22",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Pemanggilan Rapat Umum Pemegan",
+        "JMSXGroupID": "f-31878032-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "c2f717e42b_7ddc1693e6.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/c2f717e42b_7ddc1693e6.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250425_AADI_Pemanggilan RUPS_31878032.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "990dba038d_d29f610e67.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/990dba038d_d29f610e67.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250425_AADI_Pemanggilan RUPS_31878032_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "efaa800cbf_478b8feb25.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/efaa800cbf_478b8feb25.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250425_AADI_Pemanggilan RUPS_31878032_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250430181217-AAI/019/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/019/IV-25/corsec",
+        "TglPengumuman": "2025-04-30T18:12:17",
+        "JudulPengumuman": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-05-02T14:03:05",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "",
+        "JMSXGroupID": "idxnet-xbrl-20250502132830-52762-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "FinancialStatement-2025-I-AADI.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/20250502132830-52762-0/FinancialStatement-2025-I-AADI.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "FinancialStatement-2025-I-AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "BOD Statement AADI 31 Maret 2025.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/20250502132830-52762-0/BOD Statement AADI 31 Maret 2025.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "BOD Statement AADI 31 Maret 2025.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "FinancialStatement-2025-I-AADI.xlsx",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/20250502132830-52762-0/FinancialStatement-2025-I-AADI.xlsx",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "FinancialStatement-2025-I-AADI.xlsx"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "FS Adaro Andalan Indonesia 31 March 2025.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/20250502132830-52762-0/FS Adaro Andalan Indonesia 31 March 2025.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "FS Adaro Andalan Indonesia 31 March 2025.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "inlineXBRL.zip",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/20250502132830-52762-0/inlineXBRL.zip",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "inlineXBRL.zip"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "instance.zip",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202505/20250502132830-52762-0/instance.zip",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "instance.zip"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250415172918-AAI/018/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/018/IV-25/corsec",
+        "TglPengumuman": "2025-04-15T17:29:18",
+        "JudulPengumuman": "Rencana Pembelian Kembali Saham PT Adaro Andalan Indonesia Tbk",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-15T18:04:05",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Rencana Pembelian Kembali Saha",
+        "JMSXGroupID": "f-31875355-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "15b7a55ac7_320afe2ee3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/15b7a55ac7_320afe2ee3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250414_AADI_Laporan Informasi dan Fakta Material_31875355.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "1552137b03_7f7f201269.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/1552137b03_7f7f201269.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250414_AADI_Laporan Informasi dan Fakta Material_31875355_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "b92c3e52e6_e43f84aa36.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/b92c3e52e6_e43f84aa36.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250414_AADI_Laporan Informasi dan Fakta Material_31875355_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250415172444-AAI/017/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/017/IV-25/corsec",
+        "TglPengumuman": "2025-04-15T17:24:44",
+        "JudulPengumuman": "Pemberitahuan Rencana Rapat Umum Pemegang Saham Tahunan",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-15T17:34:23",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Pemberitahuan Rencana Rapat Um",
+        "JMSXGroupID": "f-31875357-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "6ea4ef4f58_1562035cb0.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/6ea4ef4f58_1562035cb0.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250414_AADI_Pengumuman RUPS_31875357.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "1cb0a4c282_10f6cd68f3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/1cb0a4c282_10f6cd68f3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250414_AADI_Pengumuman RUPS_31875357_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "f9e4d420f2_9659c8a452.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/f9e4d420f2_9659c8a452.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250414_AADI_Pengumuman RUPS_31875357_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250410180913-AAI/016/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/016/IV-25/corsec",
+        "TglPengumuman": "2025-04-10T18:09:13",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-10T18:34:00",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31872699-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "f3362b7602_57ab9db5e0.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/f3362b7602_57ab9db5e0.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250407_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31872699.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "2669d7e33f_455aa2fd6e.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/2669d7e33f_455aa2fd6e.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250407_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31872699_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "a9d8b42223_91b90a134c.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/a9d8b42223_91b90a134c.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250407_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31872699_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "b4fa314b47_1129d30170.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/b4fa314b47_1129d30170.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250407_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31872699_lamp3.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250410174648-AAI/015/IV-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/015/IV-25/corsec",
+        "TglPengumuman": "2025-04-10T17:46:48",
+        "JudulPengumuman": "Laporan Bulanan Aktivitas Eksplorasi",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-04-10T18:04:15",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Aktivitas Eksp",
+        "JMSXGroupID": "f-31870903-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "2cbd4a28bf_bc5ff04a52.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202504/2cbd4a28bf_bc5ff04a52.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250325_AADI_Laporan Bulanan Aktivitas Eksplorasi_31870903.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250319200130-AAI/013/III-25/JA-SST/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/013/III-25/JA-SST/corsec",
+        "TglPengumuman": "2025-03-19T20:01:30",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-03-19T20:30:23",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31869667-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "924442f2d6_c0927a43be.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/924442f2d6_c0927a43be.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250319_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31869667.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "1568d2833e_197c4c06ff.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/1568d2833e_197c4c06ff.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250319_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31869667_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "d4d8e1c824_b4fca34055.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/d4d8e1c824_b4fca34055.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250319_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31869667_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250310194150-AAI/011/III-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/011/III-25/corsec",
+        "TglPengumuman": "2025-03-10T19:41:50",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-03-10T20:00:42",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31866591-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "aa5725db92_2f6f71ae0b.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/aa5725db92_2f6f71ae0b.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250305_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31866591.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "484ed38db2_ed0e1867a3.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/484ed38db2_ed0e1867a3.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250305_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31866591_lamp3.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "595659c48b_7e55ca7e1f.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/595659c48b_7e55ca7e1f.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250305_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31866591_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "827b8b3bc4_560b794bd8.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/827b8b3bc4_560b794bd8.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250305_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31866591_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250305224859-AAI/010A/III-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/010A/III-25/corsec",
+        "TglPengumuman": "2025-03-05T22:48:59",
+        "JudulPengumuman": "News Release Kinerja Keuangan dan Laporan Operasional FY24 (KOREKSI)",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-03-05T23:00:13",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "News Release Kinerja Keuangan ",
+        "JMSXGroupID": "f-31866398-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "53eea247c0_2ccae3faf8.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/53eea247c0_2ccae3faf8.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250305_AADI_Laporan Informasi dan Fakta Material_31866398.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "92cecfde70_698e9645e4.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/92cecfde70_698e9645e4.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250305_AADI_Laporan Informasi dan Fakta Material_31866398_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "98bf9603d6_70cbd0294c.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/98bf9603d6_70cbd0294c.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250305_AADI_Laporan Informasi dan Fakta Material_31866398_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250304201734-AAI/010/III-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/010/III-25/corsec",
+        "TglPengumuman": "2025-03-04T20:17:34",
+        "JudulPengumuman": "News Release Kinerja Keuangan dan Laporan Operasional FY24",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-03-04T20:30:55",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "News Release Kinerja Keuangan ",
+        "JMSXGroupID": "f-31866026-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "2aa0651619_e993afb5f5.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/2aa0651619_e993afb5f5.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250304_AADI_Laporan Informasi dan Fakta Material_31866026.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "3cde84a646_20abaaca3b.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/3cde84a646_20abaaca3b.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250304_AADI_Laporan Informasi dan Fakta Material_31866026_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "c1a9517db3_46b5d53adc.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202503/c1a9517db3_46b5d53adc.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250304_AADI_Laporan Informasi dan Fakta Material_31866026_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250304184428-AAI/009/III-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/009/III-25/corsec",
+        "TglPengumuman": "2025-03-04T18:44:28",
+        "JudulPengumuman": "Penyampaian Laporan Keuangan Tahunan",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-03-04T19:02:08",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "",
+        "JMSXGroupID": "idxnet-xbrl-20250304185400-49874-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "FinancialStatement-2024-Tahunan-AADI.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/FinancialStatement-2024-Tahunan-AADI.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "FinancialStatement-2024-Tahunan-AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "BOD Statement FS 31 December 2024 AADI.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/BOD Statement FS 31 December 2024 AADI.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "BOD Statement FS 31 December 2024 AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "Checklist Pengungkapan LK 31 Desember 2024 AADI.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/Checklist Pengungkapan LK 31 Desember 2024 AADI.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "Checklist Pengungkapan LK 31 Desember 2024 AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "FinancialStatement-2024-Tahunan-AADI.xlsx",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/FinancialStatement-2024-Tahunan-AADI.xlsx",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "FinancialStatement-2024-Tahunan-AADI.xlsx"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "FS 31 December 2024 AADI.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/FS 31 December 2024 AADI.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "FS 31 December 2024 AADI.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "inlineXBRL.zip",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/inlineXBRL.zip",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "inlineXBRL.zip"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "instance.zip",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202403/20250304185400-49874-0/instance.zip",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "instance.zip"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250210192814-AAI/007/II-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/007/II-25/corsec",
+        "TglPengumuman": "2025-02-10T19:28:14",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-02-10T19:31:39",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31845094-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "d1c38703de_0ca14e3f97.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202502/d1c38703de_0ca14e3f97.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250111_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31845094.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "7a186be6f5_59863a1620.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202502/7a186be6f5_59863a1620.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250111_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31845094_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "8b5614b7a5_b86a6ade07.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202502/8b5614b7a5_b86a6ade07.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250111_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31845094_lamp3.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "fa0892a05d_6fb7e7c546.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202502/fa0892a05d_6fb7e7c546.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250111_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31845094_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250123181618-AAI/005/I-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/005/I-25/corsec",
+        "TglPengumuman": "2025-01-23T18:16:18",
+        "JudulPengumuman": "Konfirmasi Emiten Grup",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-01-23T18:33:10",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Konfirmasi Emiten Grup",
+        "JMSXGroupID": "f-31847086-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "f3894d101b_9c95f1e6b0.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202501/f3894d101b_9c95f1e6b0.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250121_AADI_Konfirmasi Emiten Grup_31847086.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250115200655-AAI/004/I-25/PRI-SST/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/004/I-25/PRI-SST/corsec",
+        "TglPengumuman": "2025-01-15T20:06:55",
+        "JudulPengumuman": "Laporan Penggunaan Dana Hasil Penawaran Umum",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-01-15T20:31:41",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Penggunaan Dana Hasil ",
+        "JMSXGroupID": "f-31845461-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "c315289712_ba366375e0.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202501/c315289712_ba366375e0.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250114_AADI_Laporan Penggunaan Dana Hasil Penawaran Umum_31845461.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "f69a801087_26083b3b19.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202501/f69a801087_26083b3b19.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20250114_AADI_Laporan Penggunaan Dana Hasil Penawaran Umum_31845461_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250110191810-AAI/002-a/I-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/002-a/I-25/corsec",
+        "TglPengumuman": "2025-01-10T19:18:10",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek (KOREKSI)",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-01-10T19:33:12",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31845054-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "f55a2f4e47_9463f8aff5.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202501/f55a2f4e47_9463f8aff5.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250110_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31845054.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250110190544-AAI/003/I-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/003/I-25/corsec",
+        "TglPengumuman": "2025-01-10T19:05:44",
+        "JudulPengumuman": "Laporan Bulanan Aktivitas Eksplorasi",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-01-10T19:33:12",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Aktivitas Eksp",
+        "JMSXGroupID": "f-31844800-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "da609fbdd1_005f14c6df.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202501/da609fbdd1_005f14c6df.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250110_AADI_Laporan Bulanan Aktivitas Eksplorasi_31844800.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20250110190346-AAI/002/I-25/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/002/I-25/corsec",
+        "TglPengumuman": "2025-01-10T19:03:46",
+        "JudulPengumuman": "Laporan Bulanan Registrasi Pemegang Efek",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2025-01-11T18:16:55",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Bulanan Registrasi Pem",
+        "JMSXGroupID": "f-31844192-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "4a125ca84b_e651b0749f.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202501/4a125ca84b_e651b0749f.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20250108_AADI_Laporan Bulanan Registrasi Pemegang Efek//Perubahan Struktur Pemegang Saham_31844192.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241214173830-AAI/037/XII-24/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/037/XII-24/JA-LL/corsec",
+        "TglPengumuman": "2024-12-14T17:38:30",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-14T17:39:41",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819026-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "b61ea94151_4e675996aa.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/b61ea94151_4e675996aa.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819026.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "38b2fc0a48_15a5f4df47.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/38b2fc0a48_15a5f4df47.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819026_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "7610315f01_bce6143d00.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/7610315f01_bce6143d00.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819026_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213180048-AAI/042/XII-24/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/042/XII-24/corsec",
+        "TglPengumuman": "2024-12-13T18:00:48",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka (KOREKSI)",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T18:01:18",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819111-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "6eb111de1d_20d12924c6.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/6eb111de1d_20d12924c6.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819111.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "22c2b3c9bd_9420a25cd5.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/22c2b3c9bd_9420a25cd5.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819111_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "31b197fd7b_c8bcbda78d.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/31b197fd7b_c8bcbda78d.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819111_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213173806-AAI/041/XII-24/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/041/XII-24/corsec",
+        "TglPengumuman": "2024-12-13T17:38:06",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka (KOREKSI)",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T17:39:15",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819094-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "5ac70cce47_50b4d97b2d.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/5ac70cce47_50b4d97b2d.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819094.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "072b55ac94_703ee8275e.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/072b55ac94_703ee8275e.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819094_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "ae7fa44d4f_f3f5c7e91b.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/ae7fa44d4f_f3f5c7e91b.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819094_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213163357-AAI/040/XII-24/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/040/XII-24/JA-LL/corsec",
+        "TglPengumuman": "2024-12-13T16:33:57",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T16:35:03",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819012-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "4766913ed3_cdf39f9c18.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/4766913ed3_cdf39f9c18.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819012.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "904503a111_40bf0ba3ad.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/904503a111_40bf0ba3ad.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819012_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "9181b65016_319aa46d3f.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/9181b65016_319aa46d3f.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819012_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213163338-AAI/039/XII-24/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/039/XII-24/JA-LL/corsec",
+        "TglPengumuman": "2024-12-13T16:33:38",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T16:34:49",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819008-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "c3ca6855cd_67340562ca.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/c3ca6855cd_67340562ca.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819008.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "08c2308bda_79bdabbbd4.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/08c2308bda_79bdabbbd4.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819008_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "25b2a2fb6d_1570018f13.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/25b2a2fb6d_1570018f13.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819008_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213163312-AAI/038/XII-24/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/038/XII-24/JA-LL/corsec",
+        "TglPengumuman": "2024-12-13T16:33:12",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T16:34:25",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819006-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "462d412379_4c57defe4b.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/462d412379_4c57defe4b.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819006.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "65b44a6d9f_926050f55f.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/65b44a6d9f_926050f55f.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819006_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "e953b792fb_25785ce346.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/e953b792fb_25785ce346.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819006_lamp2.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213163252-AAI/036/XII-24/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/036/XII-24/JA-LL/corsec",
+        "TglPengumuman": "2024-12-13T16:32:52",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T16:33:59",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31819001-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "5d3b00aa3b_1ba86267f7.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/5d3b00aa3b_1ba86267f7.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819001.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "30c096e597_44eda1fd97.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/30c096e597_44eda1fd97.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819001_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "f673ef80a9_c3962e4912.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/f673ef80a9_c3962e4912.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31819001_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241213163218-AAI/035/XII-24/JA-LL/corsec_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "AAI/035/XII-24/JA-LL/corsec",
+        "TglPengumuman": "2024-12-13T16:32:18",
+        "JudulPengumuman": "Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-13T16:33:26",
+        "Form_Id": "10000",
+        "PerihalPengumuman": "Laporan Kepemilikan atau Setia",
+        "JMSXGroupID": "f-31818994-0",
+        "Divisi": "",
+        "KodeDivisi": "",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": true,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "5682d911aa_70709e8dae.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/5682d911aa_70709e8dae.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31818994.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "1d0f96319e_8f7f87977e.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/1d0f96319e_8f7f87977e.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31818994_lamp2.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "e98c5dcfaa_d71e22b04d.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/e98c5dcfaa_d71e22b04d.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241213_AADI_Laporan Kepemilikan atau Setiap Perubahan Kepemilikan Saham Perusahaan Terbuka_31818994_lamp1.pdf"
+        }
+      ]
+    },
+    {
+      "pengumuman": {
+        "Id2": "20241204194511-Peng-P-03105/BEI.PP2/12-2024_id-id",
+        "EfekEmiten_DIRE": false,
+        "EfekEmiten_DINFRA": false,
+        "Id": 0,
+        "FinalId": null,
+        "OldFinalId": 0,
+        "NoPengumuman": "Peng-P-03105/BEI.PP2/12-2024",
+        "TglPengumuman": "2024-12-04T19:45:11",
+        "JudulPengumuman": "Pencatatan Saham Dari Penawaran Umum",
+        "JenisPengumuman": "STOCK",
+        "Kode_Emiten": "AADI                                                                                                ",
+        "CreatedDate": "2024-12-16T09:15:17",
+        "Form_Id": "00000",
+        "PerihalPengumuman": "Pencatatan Saham Dari Penawara",
+        "JMSXGroupID": "f-31805414-1-2",
+        "Divisi": "Divisi Penilaian Perusahaan 2",
+        "KodeDivisi": "PP2",
+        "JenisEmiten": null,
+        "EfekEmiten_Saham": false,
+        "EfekEmiten_Obligasi": false,
+        "EfekEmiten_EBA": false,
+        "EfekEmiten_ETF": false,
+        "EfekEmiten_SPEI": false
+      },
+      "attachments": [
+        {
+          "Id": 0,
+          "PDFFilename": "3671c37042_1fb40325da.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/3671c37042_1fb40325da.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241204_AADI_Pencatatan Saham Dari Penawaran Umum_31805414.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "507180186a_0b85d410f8.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/507180186a_0b85d410f8.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241204_AADI_Pencatatan Saham Dari Penawaran Umum_31805414.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "6dc25e6faa_a8302f60b1.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/6dc25e6faa_a8302f60b1.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": false,
+          "OriginalFilename": "20241204_AADI_Pencatatan Saham Dari Penawaran Umum_31805414.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "62c0dc3f4c_cec2667df2.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/62c0dc3f4c_cec2667df2.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241204_AADI_Pencatatan Saham Dari Penawaran Umum_31805414_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "8755dd2fee_cae37e7ee5.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/8755dd2fee_cae37e7ee5.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241204_AADI_Pencatatan Saham Dari Penawaran Umum_31805414_lamp1.pdf"
+        },
+        {
+          "Id": 0,
+          "PDFFilename": "cdd490bab8_0c8fcbef6a.pdf",
+          "FullSavePath": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202412/cdd490bab8_0c8fcbef6a.pdf",
+          "JMSXGroupID": null,
+          "CorrelationID": null,
+          "IsAttachment": true,
+          "OriginalFilename": "20241204_AADI_Pencatatan Saham Dari Penawaran Umum_31805414_lamp1.pdf"
+        }
+      ]
+    }
+  ]
+}
