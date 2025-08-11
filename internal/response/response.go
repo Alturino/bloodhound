@@ -10,20 +10,21 @@ type Response struct {
 }
 
 type Reply struct {
-	Attachments []Attachment `json:"attachments"`
 	Pengumuman  Pengumuman   `json:"pengumuman"`
+	Attachments []Attachment `json:"attachments"`
 }
 
 type Attachment struct {
 	FullSavePath string `json:"FullSavePath"`
-	ID           int    `json:"Id"`
 	PDFFilename  string `json:"PDFFilename"`
+	ID           int    `json:"Id"`
 }
 
 type Pengumuman struct {
+	TglPengumuman     common.LocalTime `json:"TglPengumuman"`
 	KodeEmiten        string           `json:"Kode_Emiten"`
 	NoPengumuman      string           `json:"NoPengumuman"`
-	OldFinalID        int              `json:"OldFinalId"`
+	JudulPengumuman   string           `json:"JudulPengumuman"`
 	PerihalPengumuman string           `json:"PerihalPengumuman"`
-	TglPengumuman     common.LocalTime `json:"TglPengumuman"`
+	OldFinalID        int              `json:"OldFinalId"`
 }

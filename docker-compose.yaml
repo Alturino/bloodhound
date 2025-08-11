@@ -29,24 +29,26 @@ services:
   #   ports:
   #     - "${PORT:-8191}:8191"
   #   restart: unless-stopped
-  n8n:
-    container_name: n8n
-    image: n8nio/n8n:stable
-    restart: always
-    ports:
-      - "5678:5678"
-    env_file:
-      - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-    # environment:
-    #   - N8N_SSL_KEY=/certs/mitmproxy-ca.pem
-    #   - N8N_SSL_CERT=/certs/mitmproxy-ca.pem
-    volumes:
-      - n8n:/home/node/.n8n
-      - ./local-files/:/files/
-      - ./mitmproxy/:/certs/
+  # n8n:
+  #   container_name: n8n
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   ports:
+  #     - "5678:5678"
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   # environment:
+  #   #   - N8N_SSL_KEY=/certs/mitmproxy-ca.pem
+  #   #   - N8N_SSL_CERT=/certs/mitmproxy-ca.pem
+  #   volumes:
+  #     - n8n:/home/node/.n8n
+  #     - ./local-files/:/files/
+  #     - ./mitmproxy/:/opt/custom-certificates/
   # nginx:
   #   container_name: nginx
   #   image: nginx:1.27.3-alpine-slim
@@ -71,27 +73,27 @@ services:
   #   volumes:
   #     - ./squid.conf:/etc/squid/squid.conf
   #   restart: unless-stopped
-  mitmproxy:
-    image: mitmproxy/mitmproxy
-    container_name: mitmproxy
-    command:
-      [
-        "mitmweb",
-        "--web-host",
-        "0.0.0.0",
-        "--ssl-insecure",
-        "--modify-headers=/~q/User-Agent/Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
-        "--modify-headers=/~q/Host/idx.co.id",
-        "--modify-headers=/~q/user-agent/Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
-        "--modify-headers=/~q/Referer/https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
-        '--modify-headers=/~q/sec-ch-ua-platform/"Android"',
-      ]
-    tty: true
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-    volumes:
-      - ./mitmproxy/:/home/mitmproxy/.mitmproxy
+  # mitmproxy:
+  #   image: mitmproxy/mitmproxy
+  #   container_name: mitmproxy
+  #   command:
+  #     [
+  #       "mitmweb",
+  #       "--ssl-insecure",
+  #       "--web-host",
+  #       "0.0.0.0",
+  #       "--modify-headers=/~q/User-Agent/Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
+  #       "--modify-headers=/~q/Host/idx.co.id",
+  #       "--modify-headers=/~q/user-agent/Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
+  #       "--modify-headers=/~q/Referer/https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
+  #       '--modify-headers=/~q/sec-ch-ua-platform/"Android"',
+  #     ]
+  #   tty: true
+  #   ports:
+  #     - "8080:8080"
+  #     - "8081:8081"
+  #   volumes:
+  #     - ./mitmproxy/:/home/mitmproxy/.mitmproxy
 
 volumes:
   n8n:
