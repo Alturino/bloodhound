@@ -15,9 +15,10 @@ type Reply struct {
 }
 
 type Attachment struct {
-	FullSavePath string `json:"FullSavePath"`
-	PDFFilename  string `json:"PDFFilename"`
-	ID           int    `json:"Id"`
+	FullSavePath     string `json:"FullSavePath"`
+	PDFFilename      string `json:"PDFFilename"`
+	OriginalFilename string `json:"OriginalFilename"`
+	ID               int    `json:"Id"`
 }
 
 type Pengumuman struct {
