@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -10,10 +11,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
+	"time"
 
 	req "github.com/imroc/req/v3"
 
+	"github.com/Alturino/bloodhound/internal/jobs"
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
@@ -25,6 +27,34 @@ func NewTrack(http *req.Client) *Track {
 	return &Track{http: http}
 }
 
+// TODO: TrackTillEmpty should be checking the latest document from the idx.co.id between the latest file in database or json file before get the whole file
+func (t Track) TrackTillEmpty(
+	ctx context.Context,
+	emiten, keyword string,
+	page, pageSize int,
+) {
+	dir := createDir("responses")
+	timestamp := time.Now().Format("2006-01-02_15:04:05")
+	filename := filepath.Join(dir, fmt.Sprintf("%s_response.json", timestamp))
+
+	file := createFile(dir, filename)
+	defer file.Close()
+
+	responses := make([]response.Response, 0, 100)
+	for {
+		response := t.Track(ctx, emiten, keyword, page, pageSize)
+		responses = append(responses, response)
+		if len(response.Replies) == 0 {
+			break
+		}
+		page++
+	}
+
+	if err := json.NewEncoder(file).Encode(responses); err != nil {
+		log.Fatalln(err.Error())
+	}
+}
+
 func (t Track) Track(
 	ctx context.Context,
 	emiten, keyword string,
@@ -33,13 +63,7 @@ func (t Track) Track(
 	url := "https://idx.co.id/primary/ListedCompany/GetAnnouncement"
 	pageStr := strconv.Itoa(page)
 	pageSizeStr := strconv.Itoa(pageSize)
-	resp, err := t.http.R().
-		SetHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0").
-
-		// SetHeader("Referer", "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/").
-		SetHeader("Host", "idx.co.id").
-		SetHeader("Connection", "keep-alive").
-		SetHeader("Accept-Encoding", "gzip").
+	resp, err := buildRequest(t.http.R()).
 		SetHeader("Sec-Fetch-Dest", "document").
 		SetHeader("Sec-Fetch-Mode", "navigate").
 		SetHeader("Sec-Fetch-Site", "cross-site").
@@ -62,47 +86,86 @@ func (t Track) Track(
 		log.Fatalf("Failed to decode response: %v", err)
 	}
 
-	// if err = json.NewEncoder(os.Stdout).Encode(res); err != nil {
-	// 	log.Fatalf("Failed to encode response: %v", err)
-	// }
-
 	t.Download(ctx, res)
 	return res
 }
 
 func (t Track) Download(ctx context.Context, data response.Response) {
-	var replyWg sync.WaitGroup
-	for _, reply := range data.Replies {
-		replyWg.Add(1)
-		go func() {
-			defer replyWg.Done()
-			emiten := reply.Pengumuman.KodeEmiten
-			log.Println("Downloading attachments for", emiten, reply.Pengumuman.JudulPengumuman)
-			dir := createDir(emiten)
-			var attachmentWg sync.WaitGroup
-			for _, attachment := range reply.Attachments {
-				attachmentWg.Add(1)
-				go func() {
-					defer attachmentWg.Done()
-					title := attachment.OriginalFilename
-					file := createFile(dir, title)
-					if err := downloadWorker(ctx, attachment.FullSavePath, t.http.R(), file); err != nil {
-						log.Fatalln("Download failed", err.Error())
-					}
-				}()
+	pool := 10
+	stopCh := make(chan struct{}, 1)
+	defer close(stopCh)
+	jobCh := make(chan jobs.DownloadJob, pool)
+	defer close(jobCh)
+	resCh := make(chan jobs.DownloadRes, pool)
+	defer close(jobCh)
+	go t.workerPool(ctx, pool, stopCh, jobCh, resCh)
+	for i, reply := range data.Replies {
+		emiten := reply.Pengumuman.KodeEmiten
+		log.Println("Downloading attachments for", emiten, reply.Pengumuman.JudulPengumuman)
+		dir := createDir(emiten)
+		for j, attachment := range reply.Attachments {
+			title := attachment.OriginalFilename
+			title = strings.TrimSpace(title)
+			title = strings.ReplaceAll(title, "/", "_")
+			title = strings.ToLower(title)
+			title = strings.Join(strings.Split(title, " "), "_")
+			file := createFile(dir, title)
+			log.Println(
+				"sending job to worker pool",
+				"URL", attachment.FullSavePath,
+				"File", file.Name(),
+				"ReplyID", i,
+				"AttachmentID", j,
+			)
+			jobCh <- jobs.DownloadJob{URL: attachment.FullSavePath, File: file, ReplyID: i, AttachmentID: j}
+			log.Println(
+				"sent job to worker pool",
+				"URL", attachment.FullSavePath,
+				"File", file.Name(),
+				"ReplyID", i,
+				"AttachmentID", j,
+			)
+		}
+
+		for j, attachment := range reply.Attachments {
+			log.Println(
+				"Waiting for worker to finish downloading",
+				"URL", attachment.FullSavePath,
+				"attachment", j,
+			)
+			res := <-resCh
+			log.Println(
+				"Worker finished",
+				"URL", res.URL,
+				"ReplyID", res.ReplyID,
+				"attachment", res.AttachmentID,
+			)
+			if res.Err != nil {
+				log.Println(
+					"Worker failed to download",
+					"URL", res.URL,
+					"ReplyID", res.ReplyID,
+					"attachment", res.AttachmentID,
+					":", res.Err.Error(),
+				)
+				continue
 			}
-			attachmentWg.Wait()
-		}()
+			log.Println(
+				"Worker successfully downloaded",
+				"URL", res.URL,
+				"ReplyID", res.ReplyID,
+				"attachment", res.AttachmentID,
+			)
+		}
 	}
-	replyWg.Wait()
 }
 
-func createDir(emiten string) string {
+func createDir(dirName string) string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	dir := path.Join(home, "Downloads", "bloodhound", emiten)
+	dir := path.Join(home, "Downloads", "bloodhound", dirName)
 	err = os.MkdirAll(dir, os.FileMode(0o755))
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -111,11 +174,7 @@ func createDir(emiten string) string {
 }
 
 func createFile(dir, title string) *os.File {
-	title = strings.TrimSpace(title)
-	title = strings.ReplaceAll(title, "/", "_")
-	title = strings.ToLower(title)
-	filename := strings.Join(strings.Split(title, " "), "_")
-	fp := filepath.Join(dir, filename)
+	fp := filepath.Join(dir, title)
 	file, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY, os.FileMode(0o644))
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -123,17 +182,13 @@ func createFile(dir, title string) *os.File {
 	return file
 }
 
-func downloadWorker(
+func (t Track) downloadFile(
 	ctx context.Context,
 	url string,
-	request *req.Request,
 	file *os.File,
 ) error {
 	log.Println("Download worker", "Downloading file from", url)
-	resp, err := request.SetHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0").
-		SetHeader("Referer", "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/").
-		SetHeader("Host", "idx.co.id").
-		SetHeader("Connection", "keep-alive").
+	resp, err := buildRequest(t.http.R()).
 		SetHeader("Sec-Fetch-Dest", "empty").
 		SetHeader("Sec-Fetch-Mode", "cors").
 		SetHeader("Sec-Fetch-Site", "same-origin").
@@ -144,6 +199,7 @@ func downloadWorker(
 	}
 	defer resp.Body.Close()
 
+	log.Println("Write downloaded file to", file.Name())
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
 		return err
@@ -153,15 +209,42 @@ func downloadWorker(
 	return nil
 }
 
-type DownloadJob struct {
-	URL               string
-	Request           *req.Request
-	File              *os.File
-	TotalAttachment   int
-	CurrentAttachment int
+func buildRequest(request *req.Request) *req.Request {
+	return request.SetHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0").
+		SetHeader("Host", "idx.co.id").
+		SetHeader("Connection", "keep-alive").
+		SetHeader("Accept-Encoding", "gzip")
 }
 
-type DownloadRes struct {
-	Err error
-	URL string
+// blocking worker pool need to be called with goroutine
+func (t Track) workerPool(
+	ctx context.Context,
+	pool int,
+	stopCh <-chan struct{},
+	jobCh <-chan jobs.DownloadJob,
+	resCh chan<- jobs.DownloadRes,
+) {
+	select {
+	case <-stopCh:
+		return
+	case <-ctx.Done():
+		return
+	default:
+		for i := range pool {
+			log.Println("started worker i")
+			go func(workerID int) {
+				for job := range jobCh {
+					log.Println("worker", workerID, "downloading", job.URL)
+					err := t.downloadFile(ctx, job.URL, job.File)
+					if err != nil {
+						log.Println("worker", workerID, "failed to download", job.URL)
+						resCh <- jobs.DownloadRes{Err: err, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID}
+						continue
+					}
+					log.Println("worker", workerID, "downloaded", job.URL)
+					resCh <- jobs.DownloadRes{Err: nil, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID}
+				}
+			}(i)
+		}
+	}
 }

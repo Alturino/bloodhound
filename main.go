@@ -17,9 +17,9 @@ func main() {
 	rootCmd := &cobra.Command{}
 
 	httpClient := req.ImpersonateFirefox().
-		// EnableDumpAll().
+		EnableDumpAll().
 		// DisableKeepAlives().
-		// EnableTraceAll().
+		EnableTraceAll().
 		EnableAutoDecompress().
 		DisableAutoReadResponse()
 	track := internal.NewTrack(httpClient)
@@ -42,11 +42,30 @@ func main() {
 	trackCmd.Flags().IntVarP(&pageSize, "size", "s", 100, "specify how much each page sized")
 	trackCmd.Flags().IntVarP(&page, "p", "p", 0, "specify page")
 
+	trackTillEmptyCmd := &cobra.Command{
+		Use:     "track-empty",
+		Short:   "get all stock announcements",
+		Aliases: []string{"te"},
+		Example: "bloodhound track-empty --emiten=AADI --keyword='laporan keuangan' --page-size=100 --page=0",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := cmd.ValidateArgs(args); err != nil {
+				log.Fatalln(err.Error())
+			}
+			track.TrackTillEmpty(cmd.Context(), emiten, keyword, page, pageSize)
+		},
+	}
+	trackTillEmptyCmd.Flags().StringVarP(&emiten, "emiten", "e", "", "specify the stock ticker")
+	trackTillEmptyCmd.Flags().
+		StringVarP(&keyword, "keyword", "k", "", "specify title of the document")
+	trackTillEmptyCmd.Flags().
+		IntVarP(&pageSize, "size", "s", 200, "specify how much each page sized")
+	trackTillEmptyCmd.Flags().IntVarP(&page, "p", "p", 0, "specify page")
+
 	var interval int
 	guardCmd := &cobra.Command{
-		Use:     "guard",
+		Use:     "watchdog",
 		Short:   "watch stock announcements",
-		Aliases: []string{"g"},
+		Aliases: []string{"w"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := cmd.ValidateArgs(args); err != nil {
 				log.Fatalln(err.Error())
@@ -60,7 +79,7 @@ func main() {
 	guardCmd.Flags().
 		IntVarP(&interval, "interval", "i", 15, "specify the interval in minute to check for new announcements")
 
-	commands := []*cobra.Command{trackCmd, guardCmd}
+	commands := []*cobra.Command{trackCmd, trackTillEmptyCmd, guardCmd}
 	rootCmd.AddCommand(commands...)
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		log.Fatalln(err.Error())
