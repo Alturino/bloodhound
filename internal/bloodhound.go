@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	req "github.com/imroc/req/v3"
 
@@ -34,12 +35,14 @@ func (t Track) Track(
 	pageSizeStr := strconv.Itoa(pageSize)
 	resp, err := t.http.R().
 		SetHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0").
-		SetHeader("Referer", "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/").
+
+		// SetHeader("Referer", "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/").
 		SetHeader("Host", "idx.co.id").
 		SetHeader("Connection", "keep-alive").
-		SetHeader("Sec-Fetch-Dest", "empty").
-		SetHeader("Sec-Fetch-Mode", "cors").
-		SetHeader("Sec-Fetch-Site", "same-origin").
+		SetHeader("Accept-Encoding", "gzip").
+		SetHeader("Sec-Fetch-Dest", "document").
+		SetHeader("Sec-Fetch-Mode", "navigate").
+		SetHeader("Sec-Fetch-Site", "cross-site").
 		// EnableDump().
 		// EnableDumpTo(os.Stdout).
 		SetContext(ctx).
@@ -68,44 +71,30 @@ func (t Track) Track(
 }
 
 func (t Track) Download(ctx context.Context, data response.Response) {
-	pool := 5
-	downloadJob := make(chan DownloadJob, pool)
-	downloadResult := make(chan DownloadRes, pool)
-
+	var replyWg sync.WaitGroup
 	for _, reply := range data.Replies {
-		emiten := reply.Pengumuman.KodeEmiten
-		log.Println("Downloading attachments for", emiten, reply.Pengumuman.JudulPengumuman)
-
-		dir := createDir(emiten)
-		for i := range pool {
-			log.Println("Starting download worker", i)
-			job := <-downloadJob
-			log.Println(
-				"Download worker",
-				i,
-				"Received job to download",
-				job.File.Name(),
-				"with url",
-				job.URL,
-			)
-			go downloadFile(job.Ctx, job.URL, job.Request, job.File, downloadResult, i)
-		}
-
-		for i, attachment := range reply.Attachments {
-			title := attachment.OriginalFilename
-			file := createFile(dir, title)
-			log.Println("Sending job to download", title, "with url", attachment.FullSavePath)
-			downloadJob <- DownloadJob{Ctx: ctx, URL: attachment.FullSavePath, Request: t.http.R(), File: file, CurrentAttachment: i, TotalAttachment: len(reply.Attachments)}
-			log.Println("Sent job to download", title, "with url", attachment.FullSavePath)
-		}
-
-		for res := range downloadResult {
-			if res.Err != nil {
-				log.Fatalln("Download failed", res.Err.Error())
+		replyWg.Add(1)
+		go func() {
+			defer replyWg.Done()
+			emiten := reply.Pengumuman.KodeEmiten
+			log.Println("Downloading attachments for", emiten, reply.Pengumuman.JudulPengumuman)
+			dir := createDir(emiten)
+			var attachmentWg sync.WaitGroup
+			for _, attachment := range reply.Attachments {
+				attachmentWg.Add(1)
+				go func() {
+					defer attachmentWg.Done()
+					title := attachment.OriginalFilename
+					file := createFile(dir, title)
+					if err := downloadWorker(ctx, attachment.FullSavePath, t.http.R(), file); err != nil {
+						log.Fatalln("Download failed", err.Error())
+					}
+				}()
 			}
-			log.Println("Download success", res.URL)
-		}
+			attachmentWg.Wait()
+		}()
 	}
+	replyWg.Wait()
 }
 
 func createDir(emiten string) string {
@@ -134,15 +123,13 @@ func createFile(dir, title string) *os.File {
 	return file
 }
 
-func downloadFile(
+func downloadWorker(
 	ctx context.Context,
 	url string,
 	request *req.Request,
 	file *os.File,
-	resCh chan<- DownloadRes,
-	pool int,
-) {
-	log.Println("Download worker", pool, "Downloading file from", url)
+) error {
+	log.Println("Download worker", "Downloading file from", url)
 	resp, err := request.SetHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0").
 		SetHeader("Referer", "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/").
 		SetHeader("Host", "idx.co.id").
@@ -153,33 +140,20 @@ func downloadFile(
 		SetContext(ctx).
 		Get(url)
 	if err != nil {
-		resCh <- DownloadRes{Err: err}
-		log.Println("Download worker", pool, "failed to download file from", url, ":", err.Error())
-		return
+		return err
 	}
 	defer resp.Body.Close()
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		resCh <- DownloadRes{Err: err}
-		log.Println(
-			"Download worker",
-			pool,
-			"failed to write file to",
-			file.Name(),
-			":",
-			err.Error(),
-		)
-		return
+		return err
 	}
 	defer file.Close()
-	log.Println("Download worker", pool, "successfully downloaded file from", url)
 
-	resCh <- DownloadRes{Err: nil, URL: url}
+	return nil
 }
 
 type DownloadJob struct {
-	Ctx               context.Context
 	URL               string
 	Request           *req.Request
 	File              *os.File
@@ -188,8 +162,6 @@ type DownloadJob struct {
 }
 
 type DownloadRes struct {
-	Err               error
-	URL               string
-	TotalAttachment   int
-	CurrentAttachment int
+	Err error
+	URL string
 }

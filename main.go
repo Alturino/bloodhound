@@ -16,7 +16,12 @@ func main() {
 
 	rootCmd := &cobra.Command{}
 
-	httpClient := req.ImpersonateFirefox()
+	httpClient := req.ImpersonateFirefox().
+		// EnableDumpAll().
+		// DisableKeepAlives().
+		// EnableTraceAll().
+		EnableAutoDecompress().
+		DisableAutoReadResponse()
 	track := internal.NewTrack(httpClient)
 	var emiten, keyword string
 	var page, pageSize int
