@@ -5,4 +5,5 @@ type DownloadRes struct {
 	URL          string
 	AttachmentID int
 	ReplyID      int
+	WorkerID     int
 }

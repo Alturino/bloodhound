@@ -17,9 +17,9 @@ func main() {
 	rootCmd := &cobra.Command{}
 
 	httpClient := req.ImpersonateFirefox().
-		EnableDumpAll().
+		// EnableDumpAll().
 		// DisableKeepAlives().
-		EnableTraceAll().
+		// EnableTraceAll().
 		EnableAutoDecompress().
 		DisableAutoReadResponse()
 	track := internal.NewTrack(httpClient)

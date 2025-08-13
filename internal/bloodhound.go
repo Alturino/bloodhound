@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -37,7 +38,10 @@ func (t Track) TrackTillEmpty(
 	timestamp := time.Now().Format("2006-01-02_15:04:05")
 	filename := filepath.Join(dir, fmt.Sprintf("%s_response.json", timestamp))
 
-	file := createFile(dir, filename)
+	file, err := createFile(dir, filename)
+	if err != nil {
+		log.Fatalln("Failed to create file:", err.Error())
+	}
 	defer file.Close()
 
 	responses := make([]response.Response, 0, 100)
@@ -97,34 +101,18 @@ func (t Track) Download(ctx context.Context, data response.Response) {
 	jobCh := make(chan jobs.DownloadJob, pool)
 	defer close(jobCh)
 	resCh := make(chan jobs.DownloadRes, pool)
-	defer close(jobCh)
+	defer close(resCh)
 	go t.workerPool(ctx, pool, stopCh, jobCh, resCh)
 	for i, reply := range data.Replies {
 		emiten := reply.Pengumuman.KodeEmiten
 		log.Println("Downloading attachments for", emiten, reply.Pengumuman.JudulPengumuman)
-		dir := createDir(emiten)
 		for j, attachment := range reply.Attachments {
 			title := attachment.OriginalFilename
 			title = strings.TrimSpace(title)
 			title = strings.ReplaceAll(title, "/", "_")
 			title = strings.ToLower(title)
 			title = strings.Join(strings.Split(title, " "), "_")
-			file := createFile(dir, title)
-			log.Println(
-				"sending job to worker pool",
-				"URL", attachment.FullSavePath,
-				"File", file.Name(),
-				"ReplyID", i,
-				"AttachmentID", j,
-			)
-			jobCh <- jobs.DownloadJob{URL: attachment.FullSavePath, File: file, ReplyID: i, AttachmentID: j}
-			log.Println(
-				"sent job to worker pool",
-				"URL", attachment.FullSavePath,
-				"File", file.Name(),
-				"ReplyID", i,
-				"AttachmentID", j,
-			)
+			jobCh <- jobs.DownloadJob{URL: attachment.FullSavePath, Filename: title, Emiten: emiten, ReplyID: i, AttachmentID: j}
 		}
 
 		for j, attachment := range reply.Attachments {
@@ -135,14 +123,14 @@ func (t Track) Download(ctx context.Context, data response.Response) {
 			)
 			res := <-resCh
 			log.Println(
-				"Worker finished",
+				"Worker", res.WorkerID, " finished",
 				"URL", res.URL,
 				"ReplyID", res.ReplyID,
 				"attachment", res.AttachmentID,
 			)
 			if res.Err != nil {
 				log.Println(
-					"Worker failed to download",
+					"Worker", res.WorkerID, "failed to download",
 					"URL", res.URL,
 					"ReplyID", res.ReplyID,
 					"attachment", res.AttachmentID,
@@ -151,7 +139,7 @@ func (t Track) Download(ctx context.Context, data response.Response) {
 				continue
 			}
 			log.Println(
-				"Worker successfully downloaded",
+				"Worker", res.WorkerID, "successfully to download",
 				"URL", res.URL,
 				"ReplyID", res.ReplyID,
 				"attachment", res.AttachmentID,
@@ -173,13 +161,13 @@ func createDir(dirName string) string {
 	return dir
 }
 
-func createFile(dir, title string) *os.File {
+func createFile(dir, title string) (*os.File, error) {
 	fp := filepath.Join(dir, title)
-	file, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY, os.FileMode(0o644))
+	file, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_EXCL, os.FileMode(0o644))
 	if err != nil {
-		log.Fatalln(err.Error())
+		return nil, err
 	}
-	return file
+	return file, nil
 }
 
 func (t Track) downloadFile(
@@ -198,13 +186,13 @@ func (t Track) downloadFile(
 		return err
 	}
 	defer resp.Body.Close()
+	defer file.Close()
 
 	log.Println("Write downloaded file to", file.Name())
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
 	return nil
 }
@@ -231,18 +219,62 @@ func (t Track) workerPool(
 		return
 	default:
 		for i := range pool {
-			log.Println("started worker i")
+			log.Println("started worker", i)
 			go func(workerID int) {
 				for job := range jobCh {
-					log.Println("worker", workerID, "downloading", job.URL)
-					err := t.downloadFile(ctx, job.URL, job.File)
+					dir := createDir(job.Emiten)
+					file, err := createFile(dir, job.Filename)
+					if err != nil {
+						if os.IsExist(err) {
+							log.Println("File already exists")
+							path := filepath.Join(dir, job.Filename)
+							log.Println("checking existing file at", path)
+							info, err := os.Stat(path)
+							if err != nil {
+								log.Println("Failed to get info of the existing file:", err)
+								resCh <- jobs.DownloadRes{Err: errors.New("failed to get info of the existing file"), URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID, WorkerID: workerID}
+								continue
+							}
+							log.Println("Existing file size:", info.Size())
+							if info.Size() > 0 {
+								log.Println("File is not empty, skipping download")
+								resCh <- jobs.DownloadRes{Err: errors.New("file is not empty skipping download"), URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID, WorkerID: workerID}
+								continue
+							}
+							log.Println("Existing file was empty, downloading again")
+							file, err = os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0o644)
+							if err != nil {
+								log.Println("Failed to open empty file for writing:", err)
+								resCh <- jobs.DownloadRes{
+									Err:          err,
+									URL:          job.URL,
+									AttachmentID: job.AttachmentID,
+									ReplyID:      job.ReplyID,
+									WorkerID:     workerID,
+								}
+								continue
+							}
+							log.Println("File was empty, continuing with download.")
+						} else {
+							log.Println("Failed to create file:", err.Error())
+							resCh <- jobs.DownloadRes{Err: err, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID, WorkerID: workerID}
+							continue
+						}
+					}
+					log.Println(
+						"worker", workerID,
+						"downloading", job.URL,
+						"to", job.Filename,
+						"in directory", dir,
+					)
+					err = t.downloadFile(ctx, job.URL, file)
 					if err != nil {
 						log.Println("worker", workerID, "failed to download", job.URL)
-						resCh <- jobs.DownloadRes{Err: err, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID}
+						resCh <- jobs.DownloadRes{Err: err, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID, WorkerID: workerID}
 						continue
 					}
 					log.Println("worker", workerID, "downloaded", job.URL)
-					resCh <- jobs.DownloadRes{Err: nil, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID}
+					resCh <- jobs.DownloadRes{Err: nil, URL: job.URL, AttachmentID: job.AttachmentID, ReplyID: job.ReplyID, WorkerID: workerID}
 				}
 			}(i)
 		}

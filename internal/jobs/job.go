@@ -1,12 +1,9 @@
 package jobs
 
-import (
-	"os"
-)
-
 type DownloadJob struct {
 	URL          string
-	File         *os.File
+	Filename     string
+	Emiten       string
 	AttachmentID int
 	ReplyID      int
 }
