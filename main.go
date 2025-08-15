@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"path"
 	"time"
 
 	"github.com/imroc/req/v3"
@@ -16,11 +18,20 @@ func main() {
 
 	rootCmd := &cobra.Command{}
 
-	httpClient := req.ImpersonateFirefox().
-		// EnableDumpAll().
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	bloodhoundDir := path.Join(homeDir, "Downloads", "bloodhound")
+
+	httpClient := req.ImpersonateChrome().
+		EnableDumpAll().
 		// DisableKeepAlives().
-		// EnableTraceAll().
+		EnableTraceAll().
 		EnableAutoDecompress().
+		SetOutputDirectory(bloodhoundDir).
+		SetUserAgent("Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36").
 		DisableAutoReadResponse()
 	track := internal.NewTrack(httpClient)
 	var emiten, keyword string
