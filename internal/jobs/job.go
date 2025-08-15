@@ -7,3 +7,7 @@ type DownloadJob struct {
 	AttachmentID int
 	ReplyID      int
 }
+
+type FetchJob struct {
+	Page int
+}
