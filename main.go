@@ -7,10 +7,11 @@ import (
 	"path"
 	"time"
 
-	"github.com/imroc/req/v3"
+	req "github.com/imroc/req/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/Alturino/bloodhound/internal"
+	"github.com/Alturino/bloodhound/internal/repository"
 )
 
 func main() {
@@ -26,14 +27,27 @@ func main() {
 	bloodhoundDir := path.Join(homeDir, "Downloads", "bloodhound")
 
 	httpClient := req.ImpersonateChrome().
-		EnableDumpAll().
+		// EnableDumpAll().
+		// EnableTraceAll().
 		// DisableKeepAlives().
-		EnableTraceAll().
 		EnableAutoDecompress().
+		SetCommonHeaders(map[string]string{
+			"Connection":         "keep-alive",
+			"Accept-Encoding":    "gzip",
+			"Host":               "idx.co.id",
+			"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
+			"Sec-Fetch-Dest":     "document",
+			"Sec-Fetch-Mode":     "navigate",
+			"Sec-Fetch-Site":     "cross-site",
+			"sec-ch-ua-platform": `"Android"`,
+		}).
 		SetOutputDirectory(bloodhoundDir).
 		SetUserAgent("Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36").
 		DisableAutoReadResponse()
-	track := internal.NewTrack(httpClient)
+
+	pool := 10
+	repo := repository.NewHTTPRepository(httpClient)
+	track := internal.NewTrack(ctx, repo, pool)
 	var emiten, keyword string
 	var page, pageSize int
 	trackCmd := &cobra.Command{
@@ -45,7 +59,11 @@ func main() {
 			if err := cmd.ValidateArgs(args); err != nil {
 				log.Fatalln(err.Error())
 			}
-			track.Track(cmd.Context(), emiten, keyword, page, pageSize)
+			res, err := track.Track(cmd.Context(), emiten, keyword, page, pageSize)
+			if err != nil {
+				log.Fatalln(err.Error())
+			}
+			log.Println(res)
 		},
 	}
 	trackCmd.Flags().StringVarP(&emiten, "emiten", "e", "", "specify the stock ticker")
@@ -69,7 +87,7 @@ func main() {
 	trackTillEmptyCmd.Flags().
 		StringVarP(&keyword, "keyword", "k", "", "specify title of the document")
 	trackTillEmptyCmd.Flags().
-		IntVarP(&pageSize, "size", "s", 200, "specify how much each page sized")
+		IntVarP(&pageSize, "size", "s", 100, "specify how much each page sized")
 	trackTillEmptyCmd.Flags().IntVarP(&page, "p", "p", 0, "specify page")
 
 	var interval int

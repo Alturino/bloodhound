@@ -5,14 +5,15 @@ import (
 	"log"
 )
 
-type WorkerFunc[I any, O any] func(ctx context.Context, workerID int, jobCh <-chan I, resCh chan<- O)
+type WorkerFunc[I any, O any] func(ctx context.Context, workerID int, jobCh <-chan I, resCh chan<- O, stopCh <-chan struct{})
 
 func WorkerPool[I any, O any](
 	ctx context.Context,
 	pool int,
 	jobCh <-chan I,
 	resCh chan<- O,
-	worker WorkerFunc[I, O],
+	stopCh <-chan struct{},
+	workerFunc WorkerFunc[I, O],
 ) {
 	select {
 	case <-ctx.Done():
@@ -20,7 +21,7 @@ func WorkerPool[I any, O any](
 		return
 	default:
 		for i := range pool {
-			go worker(ctx, i, jobCh, resCh)
+			go workerFunc(ctx, i, jobCh, resCh, stopCh)
 		}
 	}
 }

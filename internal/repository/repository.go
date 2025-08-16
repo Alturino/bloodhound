@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,15 +14,15 @@ import (
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
-type Repository struct {
+type HTTPRepository struct {
 	http *req.Client
 }
 
-func NewRepository(http *req.Client) Repository {
-	return Repository{http: http}
+func NewHTTPRepository(http *req.Client) HTTPRepository {
+	return HTTPRepository{http: http}
 }
 
-func (r Repository) Get(
+func (r HTTPRepository) Get(
 	ctx context.Context,
 	emiten, keyword string,
 	page, pageSize int,
@@ -29,7 +30,7 @@ func (r Repository) Get(
 	url := "https://idx.co.id/primary/ListedCompany/GetAnnouncement"
 	pageStr := strconv.Itoa(page)
 	pageSizeStr := strconv.Itoa(pageSize)
-	result, err := buildRequest(r.http.R()).
+	result, err := r.http.R().
 		// EnableDump().
 		// EnableDumpTo(os.Stdout).
 		SetContext(ctx).
@@ -61,46 +62,29 @@ func (r Repository) Get(
 	return res, nil
 }
 
-func (r Repository) GetFile(
+func (r HTTPRepository) DownloadFile(
 	ctx context.Context,
+	emiten string,
 	attachment response.Attachment,
-) (*req.Response, error) {
-	exp := regexp.MustCompile(`[A-Z]{4}`)
-	emiten := exp.FindString(attachment.OriginalFilename)
+) error {
 	filename := strings.TrimSpace(attachment.OriginalFilename)
 	filename = strings.ReplaceAll(filename, " ", "_")
 	filename = strings.ReplaceAll(filename, "/", "_")
 	filename = strings.ToLower(filename)
 	fp := filepath.Join(emiten, filename)
 
-	res, err := buildRequest(r.http.R()).
-		// EnableDump().
-		// EnableDumpTo(os.Stdout).
+	err := r.http.NewParallelDownload(attachment.FullSavePath).
+		SetConcurrency(5).
+		SetSegmentSize(1024 * 1024 * 2).
 		SetOutputFile(fp).
-		SetContext(ctx).
-		Get(attachment.FullSavePath)
+		SetTempRootDir(os.TempDir()).
+		SetFileMode(os.FileMode(0o644)).
+		Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("repository failed to get data with error: %w", err)
+		return fmt.Errorf("repository failed to download file with error: %w", err)
 	}
 
-	if res.IsErrorState() {
-		return nil, fmt.Errorf(
-			"request failed with statusCode: %d error: %s",
-			res.StatusCode,
-			res.String(),
-		)
-	}
+	log.Println("repository successfully downloaded file")
 
-	return res, nil
-}
-
-func buildRequest(request *req.Request) *req.Request {
-	return request.SetHeader("Accept-Encoding", "gzip").
-		SetHeader("Connection", "keep-alive").
-		SetHeader("Host", "idx.co.id").
-		SetHeader("Referer", "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/").
-		SetHeader("Sec-Fetch-Dest", "document").
-		SetHeader("Sec-Fetch-Mode", "navigate").
-		SetHeader("Sec-Fetch-Site", "cross-site").
-		SetHeader("sec-ch-ua-platform", `"Android"`)
+	return nil
 }

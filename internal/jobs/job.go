@@ -1,13 +1,15 @@
 package jobs
 
-type DownloadJob struct {
-	URL          string
-	Filename     string
-	Emiten       string
-	AttachmentID int
-	ReplyID      int
+import "github.com/Alturino/bloodhound/internal/response"
+
+type FetchAnnouncementJob struct {
+	Page     int
+	PageSize int
+	Keyword  string
+	Emiten   string
 }
 
-type FetchJob struct {
-	Page int
+type DownloadJob struct {
+	Emiten string
+	response.Attachment
 }
