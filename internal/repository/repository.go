@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -71,14 +72,25 @@ func (r HTTPRepository) DownloadFile(
 	filename = strings.ReplaceAll(filename, " ", "_")
 	filename = strings.ReplaceAll(filename, "/", "_")
 	filename = strings.ToLower(filename)
-	fp := filepath.Join(emiten, filename)
 
-	err := r.http.NewParallelDownload(attachment.FullSavePath).
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	dir := path.Join(homeDir, "Downloads", "bloodhound", emiten)
+	if err = os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
+		return err
+	}
+
+	filePath := filepath.Join(dir, filename)
+
+	err = r.http.NewParallelDownload(attachment.FullSavePath).
 		SetConcurrency(5).
 		SetSegmentSize(1024 * 1024 * 2).
-		SetOutputFile(fp).
+		SetOutputFile(filePath).
 		SetTempRootDir(os.TempDir()).
-		SetFileMode(os.FileMode(0o644)).
+		SetFileMode(os.FileMode(0o755)).
 		Do(ctx)
 	if err != nil {
 		return fmt.Errorf("repository failed to download file with error: %w", err)

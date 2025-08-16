@@ -25,6 +25,9 @@ func main() {
 	}
 
 	bloodhoundDir := path.Join(homeDir, "Downloads", "bloodhound")
+	if err = os.MkdirAll(bloodhoundDir, os.FileMode(0o755)); err != nil {
+		log.Fatalln(err.Error())
+	}
 
 	httpClient := req.ImpersonateChrome().
 		// EnableDumpAll().
@@ -54,7 +57,7 @@ func main() {
 		Use:     "track",
 		Short:   "get stock announcements",
 		Aliases: []string{"t"},
-		Example: "bloodhound track --emiten=AADI --keyword='laporan keuangan' --page-size=100 --page=0",
+		Example: "bloodhound track --emiten=AADI --keyword='laporan keuangan' --size=100 --page=0",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := cmd.ValidateArgs(args); err != nil {
 				log.Fatalln(err.Error())
@@ -68,14 +71,14 @@ func main() {
 	}
 	trackCmd.Flags().StringVarP(&emiten, "emiten", "e", "", "specify the stock ticker")
 	trackCmd.Flags().StringVarP(&keyword, "keyword", "k", "", "specify title of the document")
-	trackCmd.Flags().IntVarP(&pageSize, "size", "s", 100, "specify how much each page sized")
-	trackCmd.Flags().IntVarP(&page, "p", "p", 0, "specify page")
+	trackCmd.Flags().IntVarP(&pageSize, "size", "s", 200, "specify how much each page sized")
+	trackCmd.Flags().IntVarP(&page, "page", "p", 0, "specify page")
 
 	trackTillEmptyCmd := &cobra.Command{
 		Use:     "track-empty",
 		Short:   "get all stock announcements",
 		Aliases: []string{"te"},
-		Example: "bloodhound track-empty --emiten=AADI --keyword='laporan keuangan' --page-size=100 --page=0",
+		Example: "bloodhound track-empty --emiten=AADI --keyword='laporan keuangan' --size=100 --page=0",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := cmd.ValidateArgs(args); err != nil {
 				log.Fatalln(err.Error())
@@ -87,8 +90,8 @@ func main() {
 	trackTillEmptyCmd.Flags().
 		StringVarP(&keyword, "keyword", "k", "", "specify title of the document")
 	trackTillEmptyCmd.Flags().
-		IntVarP(&pageSize, "size", "s", 100, "specify how much each page sized")
-	trackTillEmptyCmd.Flags().IntVarP(&page, "p", "p", 0, "specify page")
+		IntVarP(&pageSize, "size", "s", 200, "specify how much each page sized")
+	trackTillEmptyCmd.Flags().IntVarP(&page, "page", "p", 0, "specify page")
 
 	var interval int
 	guardCmd := &cobra.Command{
