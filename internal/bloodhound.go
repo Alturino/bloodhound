@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +47,7 @@ func NewTrack(ctx context.Context, repository repository.HTTPRepository, pool in
 		func(ctx context.Context, workerID int, jobCh <-chan jobs.DownloadJob, resCh chan<- jobs.DownloadRes, stopCh <-chan struct{}) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
+
 			defer close(resCh)
 			for {
 				select {
@@ -64,14 +66,29 @@ func NewTrack(ctx context.Context, repository repository.HTTPRepository, pool in
 						return
 					}
 					log.Println("workerID", workerID, "received job:", job)
-					err := track.repo.DownloadFile(ctx, job.Emiten, job.Attachment)
-					if err != nil {
-						log.Println("workerID", workerID, "failed to download file:", err.Error())
-						resCh <- jobs.DownloadRes{Err: err, URL: job.FullSavePath, AttachmentID: job.ID, WorkerID: workerID}
-						continue
+					var wg sync.WaitGroup
+					for _, attachment := range job.Attacments {
+						if !strings.HasSuffix(attachment.OriginalFilename, ".pdf") {
+							continue
+						}
+						wg.Add(1)
+						go func(wg *sync.WaitGroup) {
+							defer wg.Done()
+							err := track.repo.DownloadFile(ctx, job.Emiten, attachment)
+							if err != nil {
+								log.Println(
+									"workerID", workerID,
+									"failed to download file:", err.Error(),
+								)
+								return
+							}
+							log.Println(
+								"workerID", workerID,
+								"successfully downloaded file", attachment.OriginalFilename,
+							)
+						}(&wg)
 					}
-					log.Println("workerID", workerID, "successfully downloaded file")
-					resCh <- jobs.DownloadRes{Err: nil, URL: job.FullSavePath, AttachmentID: job.ID, WorkerID: workerID}
+					wg.Wait()
 				}
 			}
 		},
@@ -91,6 +108,7 @@ func (t Track) TrackTillEmpty(
 	responses := make([]response.Response, 0, 100)
 	for {
 		res, err := t.repo.Get(ctx, emiten, keyword, currentPage, pageSize)
+		currentPage++
 		if err != nil {
 			log.Println("failed to get announcement:", err.Error())
 			continue
@@ -99,10 +117,11 @@ func (t Track) TrackTillEmpty(
 			log.Println("Replies is empty, stopping")
 			break
 		}
+		for _, reply := range res.Replies {
+			t.downloadJobCh <- jobs.DownloadJob{Emiten: reply.Pengumuman.KodeEmiten, Attacments: reply.Attachments}
+		}
 		responses = append(responses, res)
 		log.Println("successfully appending to responses")
-		currentPage++
-		time.Sleep(3 * time.Second)
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -141,25 +160,4 @@ func (t Track) Track(
 		return response.Response{}, err
 	}
 	return res, nil
-}
-
-func (t Track) Download(ctx context.Context, responses []response.Response) {
-	var wg sync.WaitGroup
-	for _, response := range responses {
-		for _, reply := range response.Replies {
-			for _, attachment := range reply.Attachments {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					job := jobs.DownloadJob{
-						Emiten:     reply.Pengumuman.KodeEmiten,
-						Attachment: attachment,
-					}
-					log.Println("sending download job", job)
-					t.downloadJobCh <- job
-				}()
-				wg.Wait()
-			}
-		}
-	}
 }

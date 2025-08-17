@@ -10,6 +10,6 @@ type FetchAnnouncementJob struct {
 }
 
 type DownloadJob struct {
-	Emiten string
-	response.Attachment
+	Emiten     string
+	Attacments []response.Attachment
 }
