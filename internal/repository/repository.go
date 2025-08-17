@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -68,10 +69,11 @@ func (r HTTPRepository) DownloadFile(
 	emiten string,
 	attachment response.Attachment,
 ) error {
-	filename := strings.TrimSpace(attachment.OriginalFilename)
+	filename := strings.ReplaceAll(attachment.OriginalFilename, "/", " ")
+	filename = strings.TrimSpace(filename)
+	re := regexp.MustCompile(`\s+`)
+	filename = re.ReplaceAllString(filename, " ")
 	filename = strings.ReplaceAll(filename, " ", "_")
-	filename = strings.ReplaceAll(filename, "/", "_")
-	filename = strings.ToLower(filename)
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -86,10 +88,7 @@ func (r HTTPRepository) DownloadFile(
 	filePath := filepath.Join(dir, filename)
 
 	err = r.http.NewParallelDownload(attachment.FullSavePath).
-		SetConcurrency(5).
-		SetSegmentSize(1024 * 1024 * 2).
 		SetOutputFile(filePath).
-		SetTempRootDir(os.TempDir()).
 		SetFileMode(os.FileMode(0o755)).
 		Do(ctx)
 	if err != nil {

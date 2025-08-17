@@ -118,7 +118,9 @@ func (t Track) TrackTillEmpty(
 			break
 		}
 		for _, reply := range res.Replies {
-			t.downloadJobCh <- jobs.DownloadJob{Emiten: reply.Pengumuman.KodeEmiten, Attacments: reply.Attachments}
+			emiten := strings.TrimSpace(reply.Pengumuman.KodeEmiten)
+			log.Println("emiten:", emiten)
+			t.downloadJobCh <- jobs.DownloadJob{Emiten: emiten, Attacments: reply.Attachments}
 		}
 		responses = append(responses, res)
 		log.Println("successfully appending to responses")
