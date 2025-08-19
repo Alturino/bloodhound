@@ -2,7 +2,8 @@ package worker
 
 import (
 	"context"
-	"log"
+
+	"github.com/rs/zerolog"
 )
 
 type WorkerFunc[I any, O any] func(ctx context.Context, workerID int, jobCh <-chan I, resCh chan<- O, stopCh <-chan struct{})
@@ -15,9 +16,10 @@ func WorkerPool[I any, O any](
 	stopCh <-chan struct{},
 	workerFunc WorkerFunc[I, O],
 ) {
+	logger := zerolog.Ctx(ctx).With().Logger()
 	select {
 	case <-ctx.Done():
-		log.Println("context done, stopping worker pool")
+		logger.Info().Msg("context done, stopping worker pool")
 		return
 	default:
 		for i := range pool {

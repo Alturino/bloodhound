@@ -17,7 +17,6 @@ type Solution struct {
 	Cookies   []Cookie `json:"cookies"`
 	UserAgent string   `json:"userAgent"`
 	Headers   struct{} `json:"headers"`
-	Response  string   `json:"response"`
 }
 
 type ChallengeResponse struct {

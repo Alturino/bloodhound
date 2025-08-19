@@ -16,7 +16,7 @@ var (
 	logger zerolog.Logger
 )
 
-func Get() *zerolog.Logger {
+func Get() zerolog.Logger {
 	once.Do(func() {
 		zerolog.DurationFieldUnit = time.Microsecond
 		zerolog.ErrorFieldName = "error"
@@ -26,7 +26,7 @@ func Get() *zerolog.Logger {
 		zerolog.MessageFieldName = "message"
 		zerolog.TimestampFieldName = "timestamp"
 
-		logLevel := zerolog.InfoLevel
+		logLevel := zerolog.DebugLevel
 		// if config.Env == "development" {
 		// 	logLevel = zerolog.TraceLevel
 		// }
@@ -56,5 +56,5 @@ func Get() *zerolog.Logger {
 
 		zerolog.DefaultContextLogger = &logger
 	})
-	return &logger
+	return logger
 }

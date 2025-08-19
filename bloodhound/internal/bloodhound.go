@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -12,7 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+
+	"github.com/Alturino/bloodhound/internal/common"
 	"github.com/Alturino/bloodhound/internal/jobs"
+	"github.com/Alturino/bloodhound/internal/logging"
 	"github.com/Alturino/bloodhound/internal/repository"
 	"github.com/Alturino/bloodhound/internal/response"
 	"github.com/Alturino/bloodhound/internal/worker"
@@ -48,44 +54,48 @@ func NewTrack(ctx context.Context, repository repository.HTTPRepository, pool in
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
+			logger := zerolog.Ctx(ctx).With().
+				Int("worker_id", workerID).
+				Logger()
+			logger.Debug().Msg("worker started")
+
 			defer close(resCh)
 			for {
 				select {
 				case <-stopCh:
-					log.Println("workerID", workerID, "received stop signal, stopping worker")
+					logger.Info().Msg("received stop signal, stopping worker")
 					return
 				case <-ctx.Done():
-					log.Println("workerID", workerID, "received context done, stopping worker")
+					logger.Info().Msg("received context done, stopping worker")
 					return
 				case job, ok := <-jobCh:
 					if !ok {
-						log.Println(
-							"workerID", workerID,
-							"channel is closed stop receiving from channel",
-						)
+						logger.Info().Msg("channel is closed stop receiving from channel")
 						return
 					}
-					log.Println("workerID", workerID, "received job:", job)
+					logger = logger.With().
+						Str("emiten", job.Emiten).
+						Str("job_id", job.JobID).
+						Logger()
+					logger.Debug().Any("attachments", job.Attachments).Msg("received job")
 					var wg sync.WaitGroup
-					for _, attachment := range job.Attacments {
+					for _, attachment := range job.Attachments {
+						logger = logger.With().Str("filename", attachment.OriginalFilename).Logger()
 						if !strings.HasSuffix(attachment.OriginalFilename, ".pdf") {
+							logger.Debug().Msg("attachment is not a pdf, skipping")
 							continue
 						}
 						wg.Add(1)
 						go func(wg *sync.WaitGroup) {
 							defer wg.Done()
+							logger.Debug().Msg("downloading file")
 							err := track.repo.DownloadFile(ctx, job.Emiten, attachment)
 							if err != nil {
-								log.Println(
-									"workerID", workerID,
-									"failed to download file:", err.Error(),
-								)
+								err = fmt.Errorf("failed to download file with error: %w", err)
+								logger.Error().Err(err).Msg(err.Error())
 								return
 							}
-							log.Println(
-								"workerID", workerID,
-								"successfully downloaded file", attachment.OriginalFilename,
-							)
+							logger.Info().Msg("successfully downloaded file")
 						}(&wg)
 					}
 					wg.Wait()
@@ -104,49 +114,78 @@ func (t Track) TrackTillEmpty(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	logger := zerolog.Ctx(ctx).
+		With().
+		Str(logging.KEY_TAG, "Track TrackTillEmpty").
+		Str("search_emiten", emiten).
+		Str("keyword", keyword).
+		Int("starting_page", page).
+		Int("pageSize", pageSize).
+		Logger()
+
 	currentPage := page
 	responses := make([]response.IdxResponse, 0, 100)
 	for {
+		logger = logger.With().Int("page", currentPage).Logger()
 		res, err := t.repo.Get(ctx, emiten, keyword, currentPage, pageSize)
 		currentPage++
 		if err != nil {
-			log.Println("failed to get announcement:", err.Error())
+			err = fmt.Errorf("failed to get announcement with error: %w", err)
+			logger.Error().Err(err).Msg(err.Error())
 			continue
 		}
 		if len(res.Replies) == 0 {
-			log.Println("Replies is empty, stopping")
+			err = errors.New("replies is empty, stopping")
+			logger.Error().Err(err).Msg(err.Error())
 			break
 		}
+		logger = logger.With().Any("response", res).Logger()
 		for _, reply := range res.Replies {
 			emiten := strings.TrimSpace(reply.Pengumuman.KodeEmiten)
-			log.Println("emiten:", emiten)
-			t.downloadJobCh <- jobs.DownloadJob{Emiten: emiten, Attacments: reply.Attachments}
+			jobID := uuid.NewString()
+			logger = logger.With().
+				Str("job_id", jobID).
+				Str("job_emiten", emiten).
+				Any("attachments", reply.Attachments).
+				Logger()
+			logger.Debug().Msg("sending job")
+			t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachments: reply.Attachments}
+			logger.Info().Msg("job sent")
 		}
 		responses = append(responses, res)
 		log.Println("successfully appending to responses")
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
+	logger.Debug().Msg("creating directory")
+	dir := path.Join(common.BloodhoundDir, emiten, "responses")
+	if err := os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
+		err = fmt.Errorf("failed to create directory with error: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
 		return err
 	}
-
-	dir := path.Join(homeDir, "Downloads", "responses")
-	if err = os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
-		return err
-	}
+	logger.Debug().Msg("directory created")
 
 	timestamp := time.Now().Format("2006-01-02_15:04:05")
 	filename := fmt.Sprintf("%s_responses.json", timestamp)
 	filePath := filepath.Join(dir, filename)
+	logger.Debug().Str("filepath", filePath).Msg("creating file")
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, os.FileMode(0o755))
 	if err != nil {
+		err = fmt.Errorf("failed to create file with error: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
 		return err
 	}
+	logger.Debug().Msg("file created")
 
+	logger.Debug().Msg("writing responses to file")
 	if err = json.NewEncoder(file).Encode(responses); err != nil {
+		err = fmt.Errorf("failed to encode json with error: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
 		return err
 	}
+	logger.Debug().Msg("responses written to file")
+
+	logger.Info().Msg("successfully write responses to file")
 
 	return nil
 }
@@ -156,10 +195,48 @@ func (t Track) Track(
 	emiten, keyword string,
 	page, pageSize int,
 ) (response.IdxResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	logger := zerolog.Ctx(ctx).
+		With().
+		Str("emiten", emiten).
+		Str("keyword", keyword).
+		Int("page", page).
+		Int("pageSize", pageSize).
+		Logger()
+
+	logger.Debug().Msg("sending request")
 	res, err := t.repo.Get(ctx, emiten, keyword, page, pageSize)
 	if err != nil {
 		err = fmt.Errorf("Track failed with error: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
 		return response.IdxResponse{}, err
 	}
+	logger.Info().Msg("successfully sent request")
+
+	dir := path.Join(common.BloodhoundDir, emiten, "responses")
+	timestamp := time.Now().Format("2006-01-02_15:04:05")
+
+	filename := fmt.Sprintf("%s_responses.json", timestamp)
+	filePath := filepath.Join(dir, filename)
+
+	logger.Debug().Str("filepath", filePath).Msg("creating file")
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, os.FileMode(0o755))
+	if err != nil {
+		err = fmt.Errorf("failed to create file with error: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
+		return res, nil
+	}
+	logger.Debug().Msg("file created")
+
+	logger.Debug().Msg("writing responses to file")
+	if err := json.NewEncoder(file).Encode(res); err != nil {
+		err = fmt.Errorf("failed to write json to file err: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
+		return res, nil
+	}
+	logger.Debug().Msg("responses written to file")
+
 	return res, nil
 }

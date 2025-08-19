@@ -2,6 +2,7 @@ package common
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/Alturino/bloodhound/internal/logging"
@@ -9,7 +10,10 @@ import (
 
 var once sync.Once
 
-var HomeDir string
+var (
+	HomeDir       string
+	BloodhoundDir string
+)
 
 func GetHomeDir() string {
 	logger := logging.Get()
@@ -19,6 +23,7 @@ func GetHomeDir() string {
 			logger.Fatal().Err(err).Msg(err.Error())
 		}
 		HomeDir = dir
+		BloodhoundDir = filepath.Join(dir, "Downloads", "bloodhound")
 	})
 	return HomeDir
 }

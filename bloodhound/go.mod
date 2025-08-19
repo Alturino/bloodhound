@@ -5,6 +5,7 @@ go 1.24
 toolchain go1.24.6
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/imroc/req/v3 v3.54.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/rs/zerolog v1.34.0
