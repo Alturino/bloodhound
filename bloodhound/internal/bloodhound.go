@@ -105,7 +105,7 @@ func (t Track) TrackTillEmpty(
 	defer cancel()
 
 	currentPage := page
-	responses := make([]response.Response, 0, 100)
+	responses := make([]response.IdxResponse, 0, 100)
 	for {
 		res, err := t.repo.Get(ctx, emiten, keyword, currentPage, pageSize)
 		currentPage++
@@ -155,11 +155,11 @@ func (t Track) Track(
 	ctx context.Context,
 	emiten, keyword string,
 	page, pageSize int,
-) (response.Response, error) {
+) (response.IdxResponse, error) {
 	res, err := t.repo.Get(ctx, emiten, keyword, page, pageSize)
 	if err != nil {
 		err = fmt.Errorf("Track failed with error: %w", err)
-		return response.Response{}, err
+		return response.IdxResponse{}, err
 	}
 	return res, nil
 }

@@ -1,16 +1,22 @@
 package logging
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/natefinch/lumberjack"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-var once sync.Once
+var (
+	once   sync.Once
+	logger zerolog.Logger
+)
 
-func Get(filepath string) zerolog.Logger {
+func Get() *zerolog.Logger {
 	once.Do(func() {
 		zerolog.DurationFieldUnit = time.Microsecond
 		zerolog.ErrorFieldName = "error"
@@ -21,12 +27,13 @@ func Get(filepath string) zerolog.Logger {
 		zerolog.TimestampFieldName = "timestamp"
 
 		logLevel := zerolog.InfoLevel
-		if config.Env == "development" {
-			logLevel = zerolog.TraceLevel
-		}
+		// if config.Env == "development" {
+		// 	logLevel = zerolog.TraceLevel
+		// }
 
+		filename := filepath.Join("./", "bloodhound.log")
 		fileWriter := &lumberjack.Logger{
-			Filename: filepath,
+			Filename: filename,
 			Compress: true,
 		}
 		output := zerolog.MultiLevelWriter(os.Stdout, fileWriter)
@@ -43,9 +50,11 @@ func Get(filepath string) zerolog.Logger {
 			Logger()
 
 		logger.Info().
-			Str(constants.KEY_TAG, "InitLogger").
-			Str(constants.KEY_PROCESS, "InitLogger").
+			Str(KEY_TAG, "logging Get").
+			Str(KEY_PROCESS, "initiating logging").
 			Msg("finish initiating logging")
+
+		zerolog.DefaultContextLogger = &logger
 	})
-	return logger
+	return &logger
 }

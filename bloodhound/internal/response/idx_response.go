@@ -4,7 +4,7 @@ import (
 	"github.com/Alturino/bloodhound/internal/common"
 )
 
-type Response struct {
+type IdxResponse struct {
 	Replies     []Reply `json:"Replies"`
 	ResultCount int     `json:"ResultCount"`
 }

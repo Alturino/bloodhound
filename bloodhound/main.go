@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Alturino/bloodhound/internal"
+	"github.com/Alturino/bloodhound/internal/common"
+	"github.com/Alturino/bloodhound/internal/middleware"
 	"github.com/Alturino/bloodhound/internal/repository"
 )
 
@@ -19,13 +21,10 @@ func main() {
 
 	rootCmd := &cobra.Command{}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatalln(err.Error())
-	}
+	homeDir := common.GetHomeDir()
 
 	bloodhoundDir := path.Join(homeDir, "Downloads", "bloodhound")
-	if err = os.MkdirAll(bloodhoundDir, os.FileMode(0o755)); err != nil {
+	if err := os.MkdirAll(bloodhoundDir, os.FileMode(0o755)); err != nil {
 		log.Fatalln(err.Error())
 	}
 
@@ -34,6 +33,9 @@ func main() {
 		// EnableTraceAll().
 		// DisableKeepAlives().
 		EnableAutoDecompress().
+		AddCommonRetryCondition(middleware.ShouldGetCookie()).
+		SetCommonRetryCount(2).
+		SetCommonRetryHook(middleware.GetCookie(ctx)).
 		SetCommonHeaders(map[string]string{
 			"Connection":         "keep-alive",
 			"Accept-Encoding":    "gzip",

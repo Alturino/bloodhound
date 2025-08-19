@@ -13,6 +13,7 @@ import (
 
 	req "github.com/imroc/req/v3"
 
+	"github.com/Alturino/bloodhound/internal/logging"
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
@@ -28,7 +29,11 @@ func (r HTTPRepository) Get(
 	ctx context.Context,
 	emiten, keyword string,
 	page, pageSize int,
-) (response.Response, error) {
+) (response.IdxResponse, error) {
+	logger := logging.Get()
+
+	logger.Debug().Any("cookies", r.http.Cookies)
+
 	url := "https://idx.co.id/primary/ListedCompany/GetAnnouncement"
 	pageStr := strconv.Itoa(page)
 	pageSizeStr := strconv.Itoa(pageSize)
@@ -44,7 +49,8 @@ func (r HTTPRepository) Get(
 		AddQueryParam("keyword", keyword).
 		Get(url)
 	if err != nil {
-		return response.Response{}, fmt.Errorf("repository failed to get data with error: %w", err)
+		err = fmt.Errorf("repository failed to get data with error: %w", err)
+		return response.IdxResponse{}, err
 	}
 
 	if result.IsErrorState() {
@@ -53,12 +59,12 @@ func (r HTTPRepository) Get(
 			result.StatusCode,
 			result.String(),
 		)
-		return response.Response{}, err
+		return response.IdxResponse{}, err
 	}
 
-	var res response.Response
+	var res response.IdxResponse
 	if err = result.UnmarshalJson(&res); err != nil {
-		return response.Response{}, fmt.Errorf("failed UnmarshalJson with error: %w", err)
+		return response.IdxResponse{}, fmt.Errorf("failed UnmarshalJson with error: %w", err)
 	}
 
 	return res, nil

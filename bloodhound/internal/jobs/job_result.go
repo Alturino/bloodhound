@@ -11,5 +11,5 @@ type DownloadRes struct {
 
 type FetchAnnouncementRes struct {
 	Err error
-	response.Response
+	response.IdxResponse
 }
