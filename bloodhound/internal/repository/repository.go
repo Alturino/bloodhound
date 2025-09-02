@@ -90,28 +90,36 @@ func (r HTTPRepository) DownloadFile(
 	filename = re.ReplaceAllString(filename, " ")
 	filename = strings.ReplaceAll(filename, " ", "_")
 
-	dir := common.BloodhoundDir
-	downloadedFile := filepath.Join(dir, emiten, filename)
+	emitenDir := filepath.Join(common.BloodhoundDir, emiten)
+	downloadPath := filepath.Join(emitenDir, filename)
 	logger := zerolog.Ctx(ctx).
 		With().
 		Str(logging.KEY_TAG, "HTTPRepository DownloadFile").
+		Str("url", attachment.FullSavePath).
 		Str("filename", filename).
-		Str("bloodhound_dir", dir).
-		Str("downloaded_path", downloadedFile).
+		Str("bloodhound_dir", emitenDir).
+		Str("downloaded_path", downloadPath).
 		Logger()
 
 	logger.Debug().Msg("creating directory")
-	if err := os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
+	if err := os.MkdirAll(emitenDir, os.FileMode(0o755)); err != nil {
 		err = fmt.Errorf("repository failed to create directory with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
 		return err
 	}
 	logger.Debug().Msg("directory created")
 
+	file, err := os.OpenFile(downloadPath, os.O_CREATE|os.O_WRONLY, os.FileMode(0o755))
+	if err != nil {
+		logger.Error().Err(err).Msg(err.Error())
+		return err
+	}
+	defer file.Close()
+	logger.Debug().Msg("file created")
+
 	logger.Debug().Msg("downloading file")
-	err := r.http.NewParallelDownload(attachment.FullSavePath).
-		SetOutputFile(downloadedFile).
-		SetFileMode(os.FileMode(0o755)).
+	err = r.http.NewParallelDownload(attachment.FullSavePath).
+		SetOutput(file).
 		Do(ctx)
 	if err != nil {
 		err = fmt.Errorf("repository failed to download file with error: %w", err)

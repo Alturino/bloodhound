@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
 	"github.com/Alturino/bloodhound/internal/common"
@@ -77,7 +76,6 @@ func NewTrack(ctx context.Context, repository repository.HTTPRepository, pool in
 						Str("emiten", job.Emiten).
 						Str("job_id", job.JobID).
 						Logger()
-					logger.Debug().Any("attachments", job.Attachments).Msg("received job")
 					var wg sync.WaitGroup
 					for _, attachment := range job.Attachments {
 						logger = logger.With().Str("filename", attachment.OriginalFilename).Logger()
@@ -139,19 +137,29 @@ func (t Track) TrackTillEmpty(
 			logger.Error().Err(err).Msg(err.Error())
 			break
 		}
-		logger = logger.With().Any("response", res).Logger()
 		for _, reply := range res.Replies {
-			emiten := strings.TrimSpace(reply.Pengumuman.KodeEmiten)
-			jobID := uuid.NewString()
-			logger = logger.With().
-				Str("job_id", jobID).
-				Str("job_emiten", emiten).
-				Any("attachments", reply.Attachments).
-				Logger()
-			logger.Debug().Msg("sending job")
-			t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachments: reply.Attachments}
-			logger.Info().Msg("job sent")
+			for _, attachment := range reply.Attachments {
+				dLog := logger.With().
+					Str("filename", attachment.OriginalFilename).
+					Str("url", attachment.FullSavePath).
+					Logger()
+				err = t.repo.DownloadFile(ctx, emiten, attachment)
+				if err != nil {
+					dLog.Error().Err(err).Msg(err.Error())
+					continue
+				}
+			}
 		}
+		// for _, reply := range res.Replies {
+		// 	jobID := uuid.NewString()
+		// 	logger = logger.With().
+		// 		Str("job_id", jobID).
+		// 		Str("job_emiten", emiten).
+		// 		Logger()
+		// 	logger.Debug().Msg("sending job")
+		// 	t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachments: reply.Attachments}
+		// 	logger.Info().Msg("job sent")
+		// }
 		responses = append(responses, res)
 		log.Println("successfully appending to responses")
 	}
