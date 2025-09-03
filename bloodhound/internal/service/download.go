@@ -42,30 +42,26 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadJob, jobs.DownloadRes] 
 				jobLogger := logger.With().
 					Str("emiten", job.Emiten).
 					Str("job_id", job.JobID).
+					Str("filename", job.Attachment.OriginalFilename).
+					Str("url", job.Attachment.FullSavePath).
 					Logger()
-				for _, attachment := range job.Attachments {
-					attachmentLogger := jobLogger.With().
-						Str("filename", attachment.OriginalFilename).
-						Str("url", attachment.FullSavePath).
-						Logger()
-					if !strings.HasSuffix(attachment.OriginalFilename, ".pdf") {
-						err := errors.New("attachment is not a pdf, skipping")
-						attachmentLogger.Debug().Err(err).Msg(err.Error())
-						resCh <- jobs.DownloadRes{Err: err, URL: attachment.FullSavePath, AttachmentID: attachment.ID, WorkerID: workerID}
-						continue
-					}
-					attachmentLogger.Debug().Msg("downloading file")
-					ctx = attachmentLogger.WithContext(ctx)
-					err := track.repo.DownloadFile(ctx, job.Emiten, attachment)
-					if err != nil {
-						err = fmt.Errorf("failed to download file with error: %w", err)
-						attachmentLogger.Error().Err(err).Msg(err.Error())
-						resCh <- jobs.DownloadRes{Err: err, URL: attachment.FullSavePath, AttachmentID: attachment.ID, WorkerID: workerID}
-						continue
-					}
-					resCh <- jobs.DownloadRes{Err: err, URL: attachment.FullSavePath, AttachmentID: attachment.ID, WorkerID: workerID}
-					attachmentLogger.Info().Msg("successfully downloaded file")
+				if !strings.HasSuffix(job.Attachment.OriginalFilename, ".pdf") {
+					err := errors.New("attachment is not a pdf, skipping")
+					jobLogger.Debug().Err(err).Msg(err.Error())
+					resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.FullSavePath, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
+					continue
 				}
+				jobLogger.Debug().Msg("downloading file")
+				ctx = jobLogger.WithContext(ctx)
+				err := track.repo.DownloadFile(ctx, job.Emiten, job.Attachment)
+				if err != nil {
+					err = fmt.Errorf("failed to download file with error: %w", err)
+					jobLogger.Error().Err(err).Msg(err.Error())
+					resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.FullSavePath, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
+					continue
+				}
+				resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.FullSavePath, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
+				jobLogger.Info().Msg("successfully downloaded file")
 			}
 		}
 	}

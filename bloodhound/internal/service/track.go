@@ -29,8 +29,8 @@ type Track struct {
 	repo             *repository.HTTPRepository
 	pool             int
 	downloadJobCh    chan jobs.DownloadJob
-	resDownloadJobCh chan<- jobs.DownloadRes
-	stopDownloadCh   <-chan struct{}
+	resDownloadJobCh chan jobs.DownloadRes
+	stopDownloadCh   chan struct{}
 }
 
 var (
@@ -111,8 +111,24 @@ func (t Track) TrackTillEmpty(
 			pageLogger.Error().Err(err).Msg(err.Error())
 			break
 		}
+		go func() {
+			for downloadRes := range t.resDownloadJobCh {
+				resLogger := logger.With().
+					Str("job_id", downloadRes.JobID).
+					Str("emiten", downloadRes.Emiten).
+					Int("attachment_id", downloadRes.AttachmentID).
+					Int("worker_id", downloadRes.WorkerID).
+					Logger()
+				resLogger.Debug().Msg("received download result")
+				if downloadRes.Err != nil {
+					resLogger.Error().Err(downloadRes.Err).Msg(downloadRes.Err.Error())
+					continue
+				}
+				resLogger.Info().Msg("successfully downloaded file")
+			}
+		}()
 		for _, reply := range res.Replies {
-			if emiten == "" {
+			if len(emiten) == 0 {
 				re := regexp.MustCompile(`\s+`)
 				emiten = re.ReplaceAllString(reply.Pengumuman.KodeEmiten, "")
 				emiten = strings.TrimSpace(emiten)
@@ -120,14 +136,16 @@ func (t Track) TrackTillEmpty(
 					Str("emiten", emiten).
 					Msg("emiten is empty taking from reply then extract it ")
 			}
-			jobID := uuid.NewString()
-			pageLogger = pageLogger.With().
-				Str("job_id", jobID).
-				Str("job_emiten", emiten).
-				Logger()
-			pageLogger.Debug().Msg("sending job")
-			t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachments: reply.Attachments}
-			pageLogger.Info().Msg("job sent")
+			for _, attachment := range reply.Attachments {
+				jobID := uuid.NewString()
+				pageLogger = pageLogger.With().
+					Str("job_id", jobID).
+					Str("job_emiten", emiten).
+					Logger()
+				pageLogger.Debug().Msg("sending job")
+				t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachment: attachment}
+				pageLogger.Info().Msg("job sent")
+			}
 		}
 		responses = append(responses, res)
 		log.Println("successfully appending to responses")
@@ -190,7 +208,7 @@ func (t Track) Track(
 	filePath := filepath.Join(dir, filename)
 
 	logger.Debug().Str("filepath", filePath).Msg("creating file")
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, os.FileMode(0o755))
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, os.FileMode(0o755))
 	if err != nil {
 		err = fmt.Errorf("failed to create file with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
