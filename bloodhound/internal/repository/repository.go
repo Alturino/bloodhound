@@ -21,8 +21,8 @@ type HTTPRepository struct {
 	http *req.Client
 }
 
-func NewHTTPRepository(http *req.Client) HTTPRepository {
-	return HTTPRepository{http: http}
+func NewHTTPRepository(http *req.Client) *HTTPRepository {
+	return &HTTPRepository{http: http}
 }
 
 func (r HTTPRepository) Get(
@@ -92,14 +92,20 @@ func (r HTTPRepository) DownloadFile(
 
 	emitenDir := filepath.Join(common.BloodhoundDir, emiten)
 	downloadPath := filepath.Join(emitenDir, filename)
+
 	logger := zerolog.Ctx(ctx).
 		With().
 		Str(logging.KEY_TAG, "HTTPRepository DownloadFile").
 		Str("url", attachment.FullSavePath).
 		Str("filename", filename).
-		Str("bloodhound_dir", emitenDir).
 		Str("downloaded_path", downloadPath).
 		Logger()
+
+	err := os.MkdirAll(emitenDir, os.FileMode(0o755))
+	if err != nil {
+		logger.Error().Err(err).Msg(err.Error())
+		return err
+	}
 
 	logger.Debug().Msg("creating directory")
 	if err := os.MkdirAll(emitenDir, os.FileMode(0o755)); err != nil {
