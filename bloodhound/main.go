@@ -48,12 +48,13 @@ func main() {
 			"Host":               "idx.co.id",
 			"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
 			"Sec-Fetch-Dest":     "document",
+			"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
 			"Sec-Fetch-Mode":     "navigate",
-			"Sec-Fetch-Site":     "cross-site",
-			"sec-ch-ua-platform": `"Android"`,
+			"Sec-Fetch-Site":     "none",
+			"sec-ch-ua-platform": `"Linux"`,
 		}).
 		SetOutputDirectory(bloodhoundDir).
-		SetUserAgent("Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36").
+		SetUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36").
 		DisableAutoReadResponse()
 
 	repo := repository.NewHTTPRepository(httpClient)
