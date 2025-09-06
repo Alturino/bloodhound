@@ -72,8 +72,10 @@ func (r HTTPRepository) Get(
 	if err = resp.UnmarshalJson(&res); err != nil {
 		return response.IdxResponse{}, fmt.Errorf("failed UnmarshalJson with error: %w", err)
 	}
-	logger = logger.With().Any("idx_response", res).Logger()
+	logger = logger.With().Any("idx_response", res).Any("cookies", resp.Cookies()).Logger()
 	logger.Info().Msg("repository successfully get data")
+
+	r.http.SetCommonCookies(resp.Request.Cookies...)
 
 	return res, nil
 }
