@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -62,6 +63,7 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadJob, jobs.DownloadRes] 
 				}
 				resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.FullSavePath, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
 				jobLogger.Info().Msg("successfully downloaded file")
+				time.Sleep(time.Second * 2)
 			}
 		}
 	}
