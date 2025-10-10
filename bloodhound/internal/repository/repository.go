@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	req "github.com/imroc/req/v3"
 	"github.com/rs/zerolog"
@@ -84,23 +85,30 @@ func (r HTTPRepository) DownloadFile(
 	ctx context.Context,
 	emiten string,
 	attachment response.Attachment,
+	announcementDate time.Time,
 ) error {
 	filename := strings.ReplaceAll(attachment.OriginalFilename, "/", " ")
 	filename = strings.TrimSpace(filename)
 
-	re := regexp.MustCompile(`\s+`)
-	filename = re.ReplaceAllString(filename, " ")
+	excessSpaceRe := regexp.MustCompile(`\s+`)
+	filename = excessSpaceRe.ReplaceAllString(filename, " ")
+	filename = strings.ReplaceAll(filename, " ", "_")
+
+	removeDateRe := regexp.MustCompile(`\d{8}`)
+	filename = removeDateRe.ReplaceAllString(filename, "")
 	filename = strings.ReplaceAll(filename, " ", "_")
 
 	emitenDir := filepath.Join(common.BloodhoundDir, emiten)
-	downloadPath := filepath.Join(emitenDir, filename)
+	strDate := announcementDate.Format("2006_01_02")
+	filename = strings.Join([]string{strDate, filename}, "_")
+	downloadedFilepath := filepath.Join(emitenDir, filename)
 
 	logger := zerolog.Ctx(ctx).
 		With().
 		Str(logging.KEY_TAG, "HTTPRepository DownloadFile").
 		Str("url", attachment.FullSavePath).
 		Str("filename", filename).
-		Str("downloaded_path", downloadPath).
+		Str("downloaded_path", downloadedFilepath).
 		Logger()
 
 	err := os.MkdirAll(emitenDir, os.FileMode(0o755))
@@ -117,7 +125,7 @@ func (r HTTPRepository) DownloadFile(
 	}
 	logger.Debug().Msg("directory created")
 
-	file, err := os.OpenFile(downloadPath, os.O_CREATE|os.O_WRONLY, os.FileMode(0o755))
+	file, err := os.OpenFile(downloadedFilepath, os.O_CREATE|os.O_WRONLY, os.FileMode(0o755))
 	if err != nil {
 		logger.Error().Err(err).Msg(err.Error())
 		return err

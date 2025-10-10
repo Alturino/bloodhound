@@ -54,7 +54,7 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadJob, jobs.DownloadRes] 
 				}
 				jobLogger.Debug().Msg("downloading file")
 				ctx = jobLogger.WithContext(ctx)
-				err := track.repo.DownloadFile(ctx, job.Emiten, job.Attachment)
+				err := track.repo.DownloadFile(ctx, job.Emiten, job.Attachment, job.TglPengumuman)
 				if err != nil {
 					err = fmt.Errorf("failed to download file with error: %w", err)
 					jobLogger.Error().Err(err).Msg(err.Error())
@@ -63,7 +63,7 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadJob, jobs.DownloadRes] 
 				}
 				resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.FullSavePath, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
 				jobLogger.Info().Msg("successfully downloaded file")
-				time.Sleep(time.Second * 2)
+				time.Sleep(time.Second * 7)
 			}
 		}
 	}

@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"time"
+
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
@@ -13,9 +15,10 @@ type FetchAnnouncementJob struct {
 }
 
 type DownloadJob struct {
-	JobID      string
-	Emiten     string
-	Attachment response.Attachment
+	JobID         string
+	Emiten        string
+	TglPengumuman time.Time
+	Attachment    response.Attachment
 }
 
 type DownloadRes struct {

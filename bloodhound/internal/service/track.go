@@ -143,7 +143,7 @@ func (t Track) TrackTillEmpty(
 					Str("job_emiten", emiten).
 					Logger()
 				pageLogger.Debug().Msg("sending job")
-				t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachment: attachment}
+				t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachment: attachment, TglPengumuman: reply.Pengumuman.TglPengumuman.Time}
 				pageLogger.Info().Msg("job sent")
 			}
 		}
