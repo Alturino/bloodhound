@@ -28,7 +28,7 @@ import (
 type Track struct {
 	repo             *repository.HTTPRepository
 	pool             int
-	downloadJobCh    chan jobs.DownloadJob
+	downloadJobCh    chan jobs.DownloadFileArgs
 	resDownloadJobCh chan jobs.DownloadRes
 	stopDownloadCh   chan struct{}
 }
@@ -42,7 +42,7 @@ func NewTrack(
 	ctx context.Context,
 	repository *repository.HTTPRepository,
 	pool int,
-	downloadJobCh chan jobs.DownloadJob,
+	downloadJobCh chan jobs.DownloadFileArgs,
 	resDownloadJobCh chan jobs.DownloadRes,
 	stopDownloadCh chan struct{},
 ) *Track {
@@ -143,7 +143,7 @@ func (t Track) TrackTillEmpty(
 					Str("job_emiten", emiten).
 					Logger()
 				pageLogger.Debug().Msg("sending job")
-				t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachment: attachment, TglPengumuman: reply.Pengumuman.TglPengumuman.Time}
+				t.downloadJobCh <- jobs.DownloadFileArgs{JobID: jobID, Emiten: emiten, Attachment: attachment, TglPengumuman: reply.Pengumuman.TglPengumuman.Time}
 				pageLogger.Info().Msg("job sent")
 			}
 		}

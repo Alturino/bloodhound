@@ -61,7 +61,7 @@ func main() {
 
 	pool := 10
 
-	downloadCh := make(chan jobs.DownloadJob, pool)
+	downloadCh := make(chan jobs.DownloadFileArgs, pool)
 	defer close(downloadCh)
 
 	resDownloadCh := make(chan jobs.DownloadRes, pool)

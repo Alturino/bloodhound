@@ -14,8 +14,8 @@ import (
 	"github.com/Alturino/bloodhound/internal/worker"
 )
 
-func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadJob, jobs.DownloadRes] {
-	return func(ctx context.Context, workerID int, jobCh <-chan jobs.DownloadJob, resCh chan<- jobs.DownloadRes, stopCh <-chan struct{}) {
+func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadFileArgs, jobs.DownloadRes] {
+	return func(ctx context.Context, workerID int, jobCh <-chan jobs.DownloadFileArgs, resCh chan<- jobs.DownloadRes, stopCh <-chan struct{}) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
