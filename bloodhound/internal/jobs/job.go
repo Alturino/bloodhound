@@ -14,19 +14,11 @@ type GetAnnouncementArgs struct {
 	Emiten   string
 }
 
-func (f GetAnnouncementArgs) Kind() string {
-	return "get_announcement"
-}
-
 type DownloadFileArgs struct {
 	JobID         string
 	Emiten        string
 	TglPengumuman time.Time
 	Attachment    response.Attachment
-}
-
-func (f DownloadFileArgs) Kind() string {
-	return "download_file"
 }
 
 type DownloadRes struct {
