@@ -1,5 +1,5 @@
-CREATE TABLE "companies" (
-    "id" uuid PRIMARY KEY,
-    "name" string,
-    "ticker" string
+CREATE TABLE IF NOT EXISTS companies (
+    id uuid PRIMARY KEY,
+    name string,
+    ticker string
 );
