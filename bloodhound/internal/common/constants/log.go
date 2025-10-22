@@ -1,4 +1,4 @@
-package logging
+package constants
 
 const (
 	KEY_TAG     = "tag"

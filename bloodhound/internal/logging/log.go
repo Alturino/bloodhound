@@ -8,7 +8,10 @@ import (
 
 	"github.com/natefinch/lumberjack"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
+
+	"github.com/Alturino/bloodhound/internal/common/constants"
 )
 
 var (
@@ -31,7 +34,11 @@ func Get() zerolog.Logger {
 		// 	logLevel = zerolog.TraceLevel
 		// }
 
-		filename := filepath.Join("./", "bloodhound.log")
+		dir := filepath.Dir(".")
+		// if config.Env == "development" {
+		// 	dir = filepath.Dir("/var/log")
+		// }
+		filename := filepath.Join(dir, "bloodhound.log")
 		fileWriter := &lumberjack.Logger{
 			Filename: filename,
 			Compress: true,
@@ -50,11 +57,12 @@ func Get() zerolog.Logger {
 			Logger()
 
 		logger.Info().
-			Str(KEY_TAG, "logging Get").
-			Str(KEY_PROCESS, "initiating logging").
+			Str(constants.KEY_TAG, "logging Get").
+			Str(constants.KEY_PROCESS, "initiating logging").
 			Msg("finish initiating logging")
 
 		zerolog.DefaultContextLogger = &logger
+		log.Logger = logger
 	})
 	return logger
 }
