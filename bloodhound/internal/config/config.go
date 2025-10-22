@@ -23,6 +23,7 @@ type Config struct {
 	Database    `mapstructure:"db"          json:"db"`
 	Application `mapstructure:"application" json:"application"`
 	Otel        `mapstructure:"otel"        json:"otel"`
+	Nats        `mapstructure:"nats"        json:"nats"`
 }
 
 var (
@@ -32,7 +33,7 @@ var (
 
 func Get(c context.Context, filename string) Config {
 	logger := zerolog.Ctx(c).With().
-		Str("tag", "config Get").
+		Str(constants.KEY_TAG, "config Get").
 		Str("filename", filename).
 		Logger()
 
