@@ -54,7 +54,8 @@ func Get() zerolog.Logger {
 			Int("pid", os.Getpid()).
 			Int("gid", os.Getgid()).
 			Int("uid", os.Getuid()).
-			Logger()
+			Logger().
+			Hook(TraceHook())
 
 		logger.Info().
 			Str(constants.KEY_TAG, "logging Get").
