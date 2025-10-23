@@ -2,27 +2,30 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
-	req "github.com/imroc/req/v3"
 	"github.com/rs/zerolog"
 
+	"github.com/Alturino/bloodhound/internal/client"
 	"github.com/Alturino/bloodhound/internal/common"
-	"github.com/Alturino/bloodhound/internal/logging"
+	"github.com/Alturino/bloodhound/internal/common/constants"
+	"github.com/Alturino/bloodhound/internal/otel/otelutil"
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
 type HTTPRepository struct {
-	http *req.Client
+	http client.HTTPClient
 }
 
-func NewHTTPRepository(http *req.Client) *HTTPRepository {
+func NewHTTPRepository(http client.HTTPClient) *HTTPRepository {
 	return &HTTPRepository{http: http}
 }
 
@@ -34,7 +37,7 @@ func (r HTTPRepository) Get(
 	url := "https://idx.co.id/primary/ListedCompany/GetAnnouncement"
 
 	logger := zerolog.Ctx(ctx).With().
-		Str(logging.KEY_TAG, "HTTPRepository Get").
+		Str(constants.KEY_TAG, "HTTPRepository Get").
 		Str("emiten", emiten).
 		Str("keyword", keyword).
 		Str("url", url).
@@ -87,6 +90,9 @@ func (r HTTPRepository) DownloadFile(
 	attachment response.Attachment,
 	announcementDate time.Time,
 ) error {
+	ctx, span := otelutil.Tracer.Start(ctx, "DownloadFile")
+	defer span.End()
+
 	filename := strings.ReplaceAll(attachment.OriginalFilename, "/", " ")
 	filename = strings.TrimSpace(filename)
 
@@ -105,7 +111,7 @@ func (r HTTPRepository) DownloadFile(
 
 	logger := zerolog.Ctx(ctx).
 		With().
-		Str(logging.KEY_TAG, "HTTPRepository DownloadFile").
+		Str(constants.KEY_TAG, "HTTPRepository DownloadFile").
 		Str("url", attachment.FullSavePath).
 		Str("filename", filename).
 		Str("downloaded_path", downloadedFilepath).
@@ -145,5 +151,54 @@ func (r HTTPRepository) DownloadFile(
 
 	logger.Info().Msg("repository successfully download file")
 
+	return nil
+}
+
+func (r HTTPRepository) DownloadAnnouncement(
+	ctx context.Context,
+	announcement response.Reply,
+) error {
+	ctx, span := otelutil.Tracer.Start(ctx, "DownloadAnnouncement")
+	defer span.End()
+
+	logger := zerolog.Ctx(ctx).
+		With().
+		Ctx(ctx).
+		Str(constants.KEY_TAG, "HTTPRepository DownloadAnnouncement").
+		Str("announcement_title", announcement.Pengumuman.JudulPengumuman).
+		Str("ticker", announcement.Pengumuman.KodeEmiten).
+		Time("announcement_date", announcement.Pengumuman.TglPengumuman).
+		Logger()
+
+	var err error
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+	for i, attachment := range announcement.Attachments {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer mutex.Unlock()
+			lg := logger.With().Int("attachment_i", i+1).Logger()
+			nCtx := lg.WithContext(ctx)
+			downloadErr := r.DownloadFile(
+				nCtx,
+				announcement.Pengumuman.KodeEmiten,
+				attachment,
+				announcement.Pengumuman.TglPengumuman,
+			)
+			if downloadErr != nil {
+				lg.Error().Err(downloadErr).Msg(downloadErr.Error())
+			}
+			mutex.Lock()
+			err = errors.Join(downloadErr)
+		}()
+	}
+	wg.Wait()
+
+	if err != nil {
+		err = fmt.Errorf("repository failed to download attachment with error: %w", err)
+		logger.Error().Err(err).Msg(err.Error())
+		return err
+	}
 	return nil
 }
