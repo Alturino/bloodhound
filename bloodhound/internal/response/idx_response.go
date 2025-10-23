@@ -1,8 +1,6 @@
 package response
 
-import (
-	"github.com/Alturino/bloodhound/internal/common"
-)
+import "time"
 
 type IdxResponse struct {
 	Replies     []Reply `json:"Replies"`
@@ -22,10 +20,11 @@ type Attachment struct {
 }
 
 type Pengumuman struct {
-	TglPengumuman     common.LocalTime `json:"TglPengumuman"`
-	KodeEmiten        string           `json:"Kode_Emiten"`
-	NoPengumuman      string           `json:"NoPengumuman"`
-	JudulPengumuman   string           `json:"JudulPengumuman"`
-	PerihalPengumuman string           `json:"PerihalPengumuman"`
-	OldFinalID        int              `json:"OldFinalId"`
+	TglPengumuman     time.Time `json:"TglPengumuman"`
+	ID2               string    `json:"Id2"`
+	KodeEmiten        string    `json:"Kode_Emiten"`
+	NoPengumuman      string    `json:"NoPengumuman"`
+	JudulPengumuman   string    `json:"JudulPengumuman"`
+	PerihalPengumuman string    `json:"PerihalPengumuman"`
+	OldFinalID        int       `json:"OldFinalId"`
 }
