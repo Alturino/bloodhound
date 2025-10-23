@@ -6,12 +6,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/Alturino/bloodhound/internal/common/constants"
 )
@@ -64,5 +62,3 @@ func InitTracerProvider(
 
 	return traceProvider, nil
 }
-
-var Tracer trace.Tracer = otel.Tracer("bloodhound")
