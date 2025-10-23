@@ -2,15 +2,19 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
-	req "github.com/imroc/req/v3"
+	"github.com/imroc/req/v3"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/Alturino/bloodhound/internal/client"
 	"github.com/Alturino/bloodhound/internal/common"
 	"github.com/Alturino/bloodhound/internal/jobs"
 	"github.com/Alturino/bloodhound/internal/middleware"
@@ -24,6 +28,12 @@ func main() {
 	}()
 
 	ctx := context.Background()
+	logger := log.Logger.With().Logger()
+
+	logger.Debug().Msg("adding listener sigint and sigterm")
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	logger.Info().Msg("added listener sigint and sigterm")
 
 	rootCmd := &cobra.Command{}
 
@@ -31,7 +41,8 @@ func main() {
 
 	bloodhoundDir := path.Join(homeDir, "Downloads", "bloodhound")
 	if err := os.MkdirAll(bloodhoundDir, os.FileMode(0o755)); err != nil {
-		log.Fatalln(err.Error())
+		err = fmt.Errorf("failed to create bloodhound download directory: %w", err)
+		logger.Fatal().Err(err).Msg(err.Error())
 	}
 
 	httpClient := req.ImpersonateChrome().
@@ -57,7 +68,7 @@ func main() {
 		SetUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36").
 		DisableAutoReadResponse()
 
-	repo := repository.NewHTTPRepository(httpClient)
+	repo := repository.NewHTTPRepository(client.HTTPClient{Client: httpClient})
 
 	pool := 10
 
@@ -76,6 +87,7 @@ func main() {
 	commands := []*cobra.Command{trackCmd, tillEmptyCmd}
 	rootCmd.AddCommand(commands...)
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		log.Fatalln(err.Error())
+		err = fmt.Errorf("failed to execute bloodhound command: %w", err)
+		logger.Fatal().Err(err).Msg(err.Error())
 	}
 }
