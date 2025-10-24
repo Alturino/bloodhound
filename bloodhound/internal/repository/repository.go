@@ -2,21 +2,19 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 
 	"github.com/Alturino/bloodhound/internal/client"
 	"github.com/Alturino/bloodhound/internal/common"
 	"github.com/Alturino/bloodhound/internal/common/constants"
+	"github.com/Alturino/bloodhound/internal/jobs"
 	"github.com/Alturino/bloodhound/internal/otel/otelutil"
 	"github.com/Alturino/bloodhound/internal/response"
 )
@@ -86,14 +84,12 @@ func (r HTTPRepository) Get(
 
 func (r HTTPRepository) DownloadFile(
 	ctx context.Context,
-	emiten string,
-	attachment response.Attachment,
-	announcementDate time.Time,
-) error {
+	arg jobs.DownloadAttachmentArgs,
+) (*os.File, error) {
 	ctx, span := otelutil.Tracer.Start(ctx, "DownloadFile")
 	defer span.End()
 
-	filename := strings.ReplaceAll(attachment.OriginalFilename, "/", " ")
+	filename := strings.ReplaceAll(arg.Attachment.Filename, "/", " ")
 	filename = strings.TrimSpace(filename)
 
 	excessSpaceRe := regexp.MustCompile(`\s+`)
@@ -104,15 +100,15 @@ func (r HTTPRepository) DownloadFile(
 	filename = removeDateRe.ReplaceAllString(filename, "")
 	filename = strings.ReplaceAll(filename, " ", "_")
 
-	emitenDir := filepath.Join(common.BloodhoundDir, emiten)
-	strDate := announcementDate.Format("2006_01_02")
+	emitenDir := filepath.Join(common.BloodhoundDir, arg.Emiten)
+	strDate := arg.AnnouncementDate.Format("2006_01_02")
 	filename = strings.Join([]string{strDate, filename}, "_")
 	downloadedFilepath := filepath.Join(emitenDir, filename)
 
 	logger := zerolog.Ctx(ctx).
 		With().
 		Str(constants.KEY_TAG, "HTTPRepository DownloadFile").
-		Str("url", attachment.FullSavePath).
+		Str("url", arg.Attachment.DownloadURL).
 		Str("filename", filename).
 		Str("downloaded_path", downloadedFilepath).
 		Logger()
@@ -120,85 +116,32 @@ func (r HTTPRepository) DownloadFile(
 	err := os.MkdirAll(emitenDir, os.FileMode(0o755))
 	if err != nil {
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
 
 	logger.Debug().Msg("creating directory")
 	if err := os.MkdirAll(emitenDir, os.FileMode(0o755)); err != nil {
 		err = fmt.Errorf("repository failed to create directory with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
 	logger.Debug().Msg("directory created")
 
 	file, err := os.OpenFile(downloadedFilepath, os.O_CREATE|os.O_WRONLY, os.FileMode(0o755))
 	if err != nil {
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	logger.Debug().Msg("file created")
 
 	logger.Debug().Msg("downloading file")
-	err = r.http.NewParallelDownload(attachment.FullSavePath).
-		SetOutput(file).
-		Do(ctx)
-	if err != nil {
+	if err = r.http.NewParallelDownload(arg.Attachment.DownloadURL).SetOutput(file).Do(ctx); err != nil {
 		err = fmt.Errorf("repository failed to download file with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
-
 	logger.Info().Msg("repository successfully download file")
 
-	return nil
-}
-
-func (r HTTPRepository) DownloadAnnouncement(
-	ctx context.Context,
-	announcement response.Reply,
-) error {
-	ctx, span := otelutil.Tracer.Start(ctx, "DownloadAnnouncement")
-	defer span.End()
-
-	logger := zerolog.Ctx(ctx).
-		With().
-		Ctx(ctx).
-		Str(constants.KEY_TAG, "HTTPRepository DownloadAnnouncement").
-		Str("announcement_title", announcement.Pengumuman.JudulPengumuman).
-		Str("ticker", announcement.Pengumuman.KodeEmiten).
-		Time("announcement_date", announcement.Pengumuman.TglPengumuman).
-		Logger()
-
-	var err error
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
-	for i, attachment := range announcement.Attachments {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			defer mutex.Unlock()
-			lg := logger.With().Int("attachment_i", i+1).Logger()
-			nCtx := lg.WithContext(ctx)
-			downloadErr := r.DownloadFile(
-				nCtx,
-				announcement.Pengumuman.KodeEmiten,
-				attachment,
-				announcement.Pengumuman.TglPengumuman,
-			)
-			if downloadErr != nil {
-				lg.Error().Err(downloadErr).Msg(downloadErr.Error())
-			}
-			mutex.Lock()
-			err = errors.Join(downloadErr)
-		}()
-	}
-	wg.Wait()
-
-	if err != nil {
-		err = fmt.Errorf("repository failed to download attachment with error: %w", err)
-		logger.Error().Err(err).Msg(err.Error())
-		return err
-	}
-	return nil
+	return file, nil
 }

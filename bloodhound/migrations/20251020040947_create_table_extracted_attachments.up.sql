@@ -1,8 +1,8 @@
 CREATE TABLE extracted_attachments (
     id uuid PRIMARY KEY,
     attachment_id uuid,
-    name string,
-    path string,
+    name text,
+    path text,
     created_at timestamptz,
     FOREIGN KEY (attachment_id) REFERENCES attachments (id)
 );

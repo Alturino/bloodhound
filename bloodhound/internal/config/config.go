@@ -24,6 +24,7 @@ type Config struct {
 	Application `mapstructure:"application" json:"application"`
 	Otel        `mapstructure:"otel"        json:"otel"`
 	Nats        `mapstructure:"nats"        json:"nats"`
+	Minio       `mapstructure:"minio"       json:"minio"`
 }
 
 var (

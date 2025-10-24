@@ -89,15 +89,11 @@ func errHandler(ctx context.Context) nats.ErrHandler {
 	}
 }
 
-func Get(ctx context.Context, config config.Nats) *nats.Conn {
+func Get(ctx context.Context, config config.Nats) (*nats.Conn, error) {
 	endpoint := fmt.Sprintf("%s:%d", config.Host, config.Port)
-	logger := zerolog.Ctx(ctx).
-		With().
-		Str(constants.KEY_TAG, "nats Get").
-		Str("nats_endpoint", endpoint).
-		Logger()
+	var err error
 	once.Do(func() {
-		conn, err := nats.Connect(
+		natsConn, err = nats.Connect(
 			endpoint,
 			nats.DisconnectErrHandler(disconnectErrHandler(ctx)),
 			nats.ReconnectErrHandler(reconnectErrHandler(ctx)),
@@ -108,10 +104,8 @@ func Get(ctx context.Context, config config.Nats) *nats.Conn {
 		)
 		if err != nil {
 			err = fmt.Errorf("failed connecting to nats with error: %w", err)
-			logger.Fatal().Err(err).Msg(err.Error())
 			return
 		}
-		natsConn = conn
 	})
-	return natsConn
+	return natsConn, err
 }

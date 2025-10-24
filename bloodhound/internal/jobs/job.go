@@ -14,11 +14,11 @@ type GetAnnouncementArgs struct {
 	Emiten   string
 }
 
-type DownloadFileArgs struct {
-	JobID         string
-	Emiten        string
-	TglPengumuman time.Time
-	Attachment    response.Attachment
+type DownloadAttachmentArgs struct {
+	JobID            string              `json:"job_id"`
+	Emiten           string              `json:"emiten"`
+	AnnouncementDate time.Time           `json:"announcement_date"`
+	Attachment       response.Attachment `json:"attachment"`
 }
 
 type DownloadRes struct {

@@ -37,7 +37,8 @@ func main() {
 
 	rootCmd := &cobra.Command{}
 
-	homeDir := common.GetHomeDir()
+	homeDir := common.InitDir()
+	defer os.RemoveAll(common.TempDir)
 
 	bloodhoundDir := path.Join(homeDir, "Downloads", "bloodhound")
 	if err := os.MkdirAll(bloodhoundDir, os.FileMode(0o755)); err != nil {
@@ -72,7 +73,7 @@ func main() {
 
 	pool := 10
 
-	downloadCh := make(chan jobs.DownloadFileArgs, pool)
+	downloadCh := make(chan jobs.DownloadAttachmentArgs, pool)
 	defer close(downloadCh)
 
 	resDownloadCh := make(chan jobs.DownloadRes, pool)

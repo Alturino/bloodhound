@@ -8,23 +8,21 @@ type IdxResponse struct {
 }
 
 type Reply struct {
-	Pengumuman  Pengumuman   `json:"pengumuman"`
-	Attachments []Attachment `json:"attachments"`
+	Announcement Announcement `json:"pengumuman"`
+	Attachments  []Attachment `json:"attachments"`
 }
 
 type Attachment struct {
-	FullSavePath     string `json:"FullSavePath"`
-	PDFFilename      string `json:"PDFFilename"`
-	OriginalFilename string `json:"OriginalFilename"`
-	ID               int    `json:"Id"`
+	DownloadURL string `json:"FullSavePath"`
+	Filename    string `json:"OriginalFilename"`
+	ID          int    `json:"Id"`
 }
 
-type Pengumuman struct {
-	TglPengumuman     time.Time `json:"TglPengumuman"`
-	ID2               string    `json:"Id2"`
-	KodeEmiten        string    `json:"Kode_Emiten"`
+type Announcement struct {
+	Date              time.Time `json:"TglPengumuman"`
+	ID                string    `json:"Id2"`
+	Ticker            string    `json:"Kode_Emiten"`
 	NoPengumuman      string    `json:"NoPengumuman"`
-	JudulPengumuman   string    `json:"JudulPengumuman"`
+	Title             string    `json:"JudulPengumuman"`
 	PerihalPengumuman string    `json:"PerihalPengumuman"`
-	OldFinalID        int       `json:"OldFinalId"`
 }

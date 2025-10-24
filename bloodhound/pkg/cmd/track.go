@@ -15,7 +15,7 @@ func Track(
 	ctx context.Context,
 	repo *repository.HTTPRepository,
 	pool int,
-	downloadJobCh chan jobs.DownloadFileArgs,
+	downloadJobCh chan jobs.DownloadAttachmentArgs,
 	resDownloadJobCh chan jobs.DownloadRes,
 	stopDownloadCh chan struct{},
 ) *cobra.Command {

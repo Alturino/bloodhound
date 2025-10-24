@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS announcements (
     id uuid PRIMARY KEY,
     company_id uuid,
-    name string,
+    name text,
     created_at timestamptz,
     updated_at timestamptz,
     FOREIGN KEY (company_id) REFERENCES companies (id)

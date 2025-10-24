@@ -11,9 +11,9 @@ CREATE TYPE attachment_type AS ENUM (
 CREATE TABLE IF NOT EXISTS attachments (
     id uuid PRIMARY KEY,
     announcement_id uuid,
-    name string,
-    path string,
-    source_url string,
+    name text,
+    path text,
+    source_url text,
     type attachment_type,
     created_at timestamptz,
     updated_at timestamptz,
