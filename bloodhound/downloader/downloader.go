@@ -3,9 +3,11 @@ package downloader
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 
+	"github.com/minio/minio-go/v7"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -14,11 +16,12 @@ import (
 	"github.com/Alturino/bloodhound/internal/common/constants"
 	"github.com/Alturino/bloodhound/internal/config"
 	"github.com/Alturino/bloodhound/internal/db"
+	"github.com/Alturino/bloodhound/internal/jobs"
 	"github.com/Alturino/bloodhound/internal/logging"
 	"github.com/Alturino/bloodhound/internal/nats"
+	"github.com/Alturino/bloodhound/internal/nfs"
 	"github.com/Alturino/bloodhound/internal/otel/otelutil"
 	"github.com/Alturino/bloodhound/internal/repository"
-	"github.com/Alturino/bloodhound/internal/response"
 )
 
 func StartDownloader(ctx context.Context) {
@@ -33,6 +36,7 @@ func StartDownloader(ctx context.Context) {
 		Logger()
 
 	logger.Debug().Msg("initializing db")
+	ctx = logger.WithContext(ctx)
 	pool := db.Get(ctx, cfg.Database)
 	defer func() {
 		logger.Debug().Msg("closing db")
@@ -42,13 +46,22 @@ func StartDownloader(ctx context.Context) {
 	logger.Info().Msg("initialized db")
 
 	logger.Debug().Msg("initializing nats")
-	natsConn := nats.Get(ctx, cfg.Nats)
+	ctx = logger.WithContext(ctx)
+	natsConn, err := nats.Get(ctx, cfg.Nats)
+	if err != nil {
+		logger.Fatal().Err(err).Msg(err.Error())
+	}
 	defer func() {
 		logger.Debug().Msg("closing nats")
 		natsConn.Close()
 		logger.Info().Msg("closed nats")
 	}()
 	logger.Info().Msg("initialized nats")
+
+	minioClient, err := nfs.Get(ctx, cfg)
+	if err != nil {
+		logger.Fatal().Err(err).Msg(err.Error())
+	}
 
 	js, _ := nats.GetJetStream(ctx, natsConn)
 	consumer, err := js.CreateOrUpdateConsumer(
@@ -76,40 +89,62 @@ func StartDownloader(ctx context.Context) {
 			ctx, span := otelutil.Tracer.Start(ctx, "downloader")
 			defer span.End()
 
-			var reply response.Reply
 			lg := logger.With().
 				Str("message_subject", msg.Subject()).
 				Str("message_data", string(msg.Data())).
 				Logger()
-			if err := json.Unmarshal(msg.Data(), &reply); err != nil {
-				err = fmt.Errorf("failed to unmarshal data with err: %w", err)
-				lg.Error().Err(err).Msg(err.Error())
-				if nakErr := msg.Nak(); nakErr != nil {
-					nakErr = fmt.Errorf("failed to nak message with err: %w", nakErr)
-					lg.Error().Err(nakErr).Msg(nakErr.Error())
+
+			var err error
+			defer func() {
+				if err != nil {
+					err = fmt.Errorf("failed to process message with err: %w", err)
+					if nakErr := msg.Nak(); nakErr != nil {
+						err = errors.Join(
+							err,
+							fmt.Errorf("failed to nak message with err: %w", nakErr),
+						)
+						lg.Error().Err(err).Msg(err.Error())
+					}
 					return
 				}
+				if ackErr := msg.Ack(); ackErr != nil {
+					err = errors.Join(err, fmt.Errorf("failed to ack message with err: %w", ackErr))
+					lg.Error().Err(err).Msg(err.Error())
+				}
+			}()
+
+			var data jobs.DownloadAttachmentArgs
+			if err = json.Unmarshal(msg.Data(), &data); err != nil {
+				err = fmt.Errorf("failed to unmarshal data with err: %w", err)
+				lg.Error().Err(err).Msg(err.Error())
 				return
 			}
 
-			lg = lg.With().Any("reply", reply).Logger()
+			lg = lg.With().Any("reply", data).Logger()
 			ctx = lg.WithContext(ctx)
-			if err := repo.DownloadAnnouncement(ctx, reply); err != nil {
+			downloadedFile, err := repo.DownloadFile(ctx, data)
+			if err != nil {
 				err = fmt.Errorf("failed to download announcement with err: %w", err)
 				lg.Error().Err(err).Msg(err.Error())
-				if nakErr := msg.Nak(); nakErr != nil {
-					nakErr = fmt.Errorf("failed to nak message with err: %w", nakErr)
-					lg.Error().Err(nakErr).Msg(nakErr.Error())
-					return
-				}
 				return
 			}
 			lg.Info().Msg("successfully downloaded announcement")
 
-			if err := msg.Ack(); err != nil {
-				err = fmt.Errorf("failed to ack message with err: %w", err)
+			lg.Debug().Msg("uploading file to minio")
+			info, err := minioClient.FPutObject(
+				ctx,
+				"bloodhound",
+				filepath.Base(downloadedFile.Name()),
+				downloadedFile.Name(),
+				minio.PutObjectOptions{},
+			)
+			if err != nil {
+				err = fmt.Errorf("failed to download announcement with err: %w", err)
 				lg.Error().Err(err).Msg(err.Error())
+				return
 			}
+			lg.Info().Msg("successfully uploaded file to minio")
+			_ = info
 		},
 		jetstream.ConsumeErrHandler(func(consumeCtx jetstream.ConsumeContext, err error) {
 			err = fmt.Errorf("failed to consume with err: %w", err)
