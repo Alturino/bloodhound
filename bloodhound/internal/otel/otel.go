@@ -2,9 +2,7 @@ package otel
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
@@ -13,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/Alturino/bloodhound/internal/common/constants"
 	"github.com/Alturino/bloodhound/internal/config"
@@ -94,18 +93,10 @@ func InitOtelSdk(
 	return shutdownFuncs, nil
 }
 
-func ShutdownOtel(c context.Context, shutdownFuncs []ShutdownFunc) error {
-	var wg sync.WaitGroup
-	var err error
+func ShutdownOtel(ctx context.Context, shutdownFuncs []ShutdownFunc) error {
+	erg, ctx := errgroup.WithContext(ctx)
 	for _, shutdown := range shutdownFuncs {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if newErr := shutdown(c); newErr != nil {
-				err = errors.Join(newErr)
-			}
-		}()
+		erg.Go(func() error { return shutdown(ctx) })
 	}
-	wg.Wait()
-	return err
+	return erg.Wait()
 }

@@ -14,8 +14,8 @@ import (
 
 type AnalyzedCompanies struct {
 	ID                    uuid.UUID `sql:"primary_key"`
-	CompanyID             *uuid.UUID
-	ExtractedAttachmentID *uuid.UUID
-	Path                  *string
-	CreatedAt             *time.Time
+	CompanyID             uuid.UUID
+	ExtractedAttachmentID uuid.UUID
+	Path                  string
+	CreatedAt             time.Time
 }

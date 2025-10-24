@@ -70,7 +70,7 @@ func newAnalyzedCompaniesTableImpl(schemaName, tableName, alias string) analyzed
 		CreatedAtColumn             = postgres.TimestampzColumn("created_at")
 		allColumns                  = postgres.ColumnList{IDColumn, CompanyIDColumn, ExtractedAttachmentIDColumn, PathColumn, CreatedAtColumn}
 		mutableColumns              = postgres.ColumnList{CompanyIDColumn, ExtractedAttachmentIDColumn, PathColumn, CreatedAtColumn}
-		defaultColumns              = postgres.ColumnList{}
+		defaultColumns              = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
 	return analyzedCompaniesTable{

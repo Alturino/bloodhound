@@ -24,7 +24,6 @@ type attachmentsTable struct {
 	SourceURL      postgres.ColumnString
 	Type           postgres.ColumnString
 	CreatedAt      postgres.ColumnTimestampz
-	UpdatedAt      postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -73,10 +72,9 @@ func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTab
 		SourceURLColumn      = postgres.StringColumn("source_url")
 		TypeColumn           = postgres.StringColumn("type")
 		CreatedAtColumn      = postgres.TimestampzColumn("created_at")
-		UpdatedAtColumn      = postgres.TimestampzColumn("updated_at")
-		allColumns           = postgres.ColumnList{IDColumn, AnnouncementIDColumn, NameColumn, PathColumn, SourceURLColumn, TypeColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns       = postgres.ColumnList{AnnouncementIDColumn, NameColumn, PathColumn, SourceURLColumn, TypeColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns       = postgres.ColumnList{}
+		allColumns           = postgres.ColumnList{IDColumn, AnnouncementIDColumn, NameColumn, PathColumn, SourceURLColumn, TypeColumn, CreatedAtColumn}
+		mutableColumns       = postgres.ColumnList{AnnouncementIDColumn, NameColumn, PathColumn, SourceURLColumn, TypeColumn, CreatedAtColumn}
+		defaultColumns       = postgres.ColumnList{IDColumn, TypeColumn, CreatedAtColumn}
 	)
 
 	return attachmentsTable{
@@ -90,7 +88,6 @@ func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTab
 		SourceURL:      SourceURLColumn,
 		Type:           TypeColumn,
 		CreatedAt:      CreatedAtColumn,
-		UpdatedAt:      UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

@@ -14,8 +14,8 @@ import (
 
 type ExtractedAttachments struct {
 	ID           uuid.UUID `sql:"primary_key"`
-	AttachmentID *uuid.UUID
-	Name         *string
-	Path         *string
-	CreatedAt    *time.Time
+	AttachmentID uuid.UUID
+	Name         string
+	Path         string
+	CreatedAt    time.Time
 }

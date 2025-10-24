@@ -3,7 +3,6 @@ package downloader
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -99,16 +98,13 @@ func StartDownloader(ctx context.Context) {
 				if err != nil {
 					err = fmt.Errorf("failed to process message with err: %w", err)
 					if nakErr := msg.Nak(); nakErr != nil {
-						err = errors.Join(
-							err,
-							fmt.Errorf("failed to nak message with err: %w", nakErr),
-						)
+						err = fmt.Errorf("failed to nak message with err: %w %w", err, nakErr)
 						lg.Error().Err(err).Msg(err.Error())
 					}
 					return
 				}
 				if ackErr := msg.Ack(); ackErr != nil {
-					err = errors.Join(err, fmt.Errorf("failed to ack message with err: %w", ackErr))
+					err = fmt.Errorf("failed to ack message with err: %w", ackErr)
 					lg.Error().Err(err).Msg(err.Error())
 				}
 			}()

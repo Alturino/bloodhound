@@ -21,7 +21,6 @@ type announcementsTable struct {
 	CompanyID postgres.ColumnString
 	Name      postgres.ColumnString
 	CreatedAt postgres.ColumnTimestampz
-	UpdatedAt postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -67,10 +66,9 @@ func newAnnouncementsTableImpl(schemaName, tableName, alias string) announcement
 		CompanyIDColumn = postgres.StringColumn("company_id")
 		NameColumn      = postgres.StringColumn("name")
 		CreatedAtColumn = postgres.TimestampzColumn("created_at")
-		UpdatedAtColumn = postgres.TimestampzColumn("updated_at")
-		allColumns      = postgres.ColumnList{IDColumn, CompanyIDColumn, NameColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns  = postgres.ColumnList{CompanyIDColumn, NameColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns  = postgres.ColumnList{}
+		allColumns      = postgres.ColumnList{IDColumn, CompanyIDColumn, NameColumn, CreatedAtColumn}
+		mutableColumns  = postgres.ColumnList{CompanyIDColumn, NameColumn, CreatedAtColumn}
+		defaultColumns  = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
 	return announcementsTable{
@@ -81,7 +79,6 @@ func newAnnouncementsTableImpl(schemaName, tableName, alias string) announcement
 		CompanyID: CompanyIDColumn,
 		Name:      NameColumn,
 		CreatedAt: CreatedAtColumn,
-		UpdatedAt: UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

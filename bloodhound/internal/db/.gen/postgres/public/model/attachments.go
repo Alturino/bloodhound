@@ -14,11 +14,10 @@ import (
 
 type Attachments struct {
 	ID             uuid.UUID `sql:"primary_key"`
-	AnnouncementID *uuid.UUID
-	Name           *string
-	Path           *string
-	SourceURL      *string
-	Type           *AttachmentType
-	CreatedAt      *time.Time
-	UpdatedAt      *time.Time
+	AnnouncementID uuid.UUID
+	Name           string
+	Path           string
+	SourceURL      string
+	Type           AttachmentType
+	CreatedAt      time.Time
 }

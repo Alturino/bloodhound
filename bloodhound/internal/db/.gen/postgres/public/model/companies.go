@@ -13,6 +13,6 @@ import (
 
 type Companies struct {
 	ID     uuid.UUID `sql:"primary_key"`
-	Name   *string
-	Ticker *string
+	Name   string
+	Ticker string
 }

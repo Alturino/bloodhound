@@ -14,8 +14,7 @@ import (
 
 type Announcements struct {
 	ID        uuid.UUID `sql:"primary_key"`
-	CompanyID *uuid.UUID
-	Name      *string
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
+	CompanyID uuid.UUID
+	Name      string
+	CreatedAt time.Time
 }

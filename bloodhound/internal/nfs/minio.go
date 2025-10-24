@@ -10,21 +10,18 @@ import (
 	"github.com/Alturino/bloodhound/internal/config"
 )
 
-var (
-	once   sync.Once
-	client *minio.Client
-)
-
 func Get(ctx context.Context, config config.Config) (*minio.Client, error) {
 	endpoint := fmt.Sprintf("%s:%d", config.Minio.Host, config.Minio.Port)
-	var err error
-	once.Do(func() {
-		client, err = minio.New(endpoint, &minio.Options{})
+	return sync.OnceValues(func() (*minio.Client, error) {
+		client, err := minio.New(endpoint, &minio.Options{})
 		if err != nil {
 			err = fmt.Errorf("error creating minio client: %w", err)
-			return
+			return nil, err
 		}
-		client.MakeBucket(ctx, "bloodhound", minio.MakeBucketOptions{})
-	})
-	return client, err
+		if err := client.MakeBucket(ctx, "bloodhound", minio.MakeBucketOptions{}); err != nil {
+			err = fmt.Errorf("error creating bucket: %w", err)
+			return nil, err
+		}
+		return client, nil
+	})()
 }

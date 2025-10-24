@@ -66,7 +66,7 @@ func newCompaniesTableImpl(schemaName, tableName, alias string) companiesTable {
 		TickerColumn   = postgres.StringColumn("ticker")
 		allColumns     = postgres.ColumnList{IDColumn, NameColumn, TickerColumn}
 		mutableColumns = postgres.ColumnList{NameColumn, TickerColumn}
-		defaultColumns = postgres.ColumnList{}
+		defaultColumns = postgres.ColumnList{IDColumn}
 	)
 
 	return companiesTable{

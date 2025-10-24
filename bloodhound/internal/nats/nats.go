@@ -12,11 +12,6 @@ import (
 	"github.com/Alturino/bloodhound/internal/config"
 )
 
-var (
-	once     sync.Once
-	natsConn *nats.Conn
-)
-
 func disconnectErrHandler(ctx context.Context) nats.ConnErrHandler {
 	logger := zerolog.Ctx(ctx).
 		With().
@@ -91,9 +86,8 @@ func errHandler(ctx context.Context) nats.ErrHandler {
 
 func Get(ctx context.Context, config config.Nats) (*nats.Conn, error) {
 	endpoint := fmt.Sprintf("%s:%d", config.Host, config.Port)
-	var err error
-	once.Do(func() {
-		natsConn, err = nats.Connect(
+	return sync.OnceValues(func() (*nats.Conn, error) {
+		natsConn, err := nats.Connect(
 			endpoint,
 			nats.DisconnectErrHandler(disconnectErrHandler(ctx)),
 			nats.ReconnectErrHandler(reconnectErrHandler(ctx)),
@@ -104,8 +98,8 @@ func Get(ctx context.Context, config config.Nats) (*nats.Conn, error) {
 		)
 		if err != nil {
 			err = fmt.Errorf("failed connecting to nats with error: %w", err)
-			return
+			return nil, err
 		}
-	})
-	return natsConn, err
+		return natsConn, nil
+	})()
 }

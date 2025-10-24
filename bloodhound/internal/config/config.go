@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/Alturino/bloodhound/internal/common/constants"
@@ -32,8 +32,8 @@ var (
 	once   sync.Once
 )
 
-func Get(c context.Context, filename string) Config {
-	logger := zerolog.Ctx(c).With().
+func Get(c context.Context, filename string) (Config, error) {
+	logger := log.Logger.With().
 		Str(constants.KEY_TAG, "config Get").
 		Str("filename", filename).
 		Logger()
@@ -48,35 +48,52 @@ func Get(c context.Context, filename string) Config {
 
 	once.Do(func() {
 		viper.OnConfigChange(func(in fsnotify.Event) {
-			logger.Info().
+			lg := logger.With().
+				Str(constants.KEY_TAG, "config viper.OnConfigChange").
 				Str("filename", in.Name).
 				Str("operation", in.Op.String()).
-				Msg("config file changed")
-			Get(c, in.Name)
+				Logger()
+
+			lg.Info().Msg("config file changed")
+
+			lg.Debug().Msg("merging config")
 			if err := viper.MergeInConfig(); err != nil {
-				err = fmt.Errorf("error merging config with error: %w", err)
-				logger.Warn().Err(err).Msg(err.Error())
+				err = fmt.Errorf("failed merging config with error: %w", err)
+				lg.Warn().Err(err).Msg(err.Error())
+				return
 			}
+			lg.Debug().Msg("merged config")
+
+			lg.Debug().Msg("unmarshaling config")
+			if err := viper.Unmarshal(&config); err != nil {
+				err = fmt.Errorf("failed unmarshaling config with error: %w", err)
+				lg.Warn().Err(err).Msg(err.Error())
+				return
+			}
+			lg.Debug().Msg("marshalled config")
+
+			lg.Info().Msg("config reloaded successfully")
 		})
 		viper.WatchConfig()
 	})
 
 	logger = logger.With().Str(constants.KEY_PROCESS, "reading config").Logger()
-	logger.Trace().Msg("reading config")
+	logger.Debug().Msg("reading config")
 	err := viper.ReadInConfig()
 	if err != nil {
 		err = fmt.Errorf("error when reading config with error: %w", err)
-		logger.Fatal().Err(err).Msg(err.Error())
+		return Config{}, err
 	}
-	logger.Info().Msg("read config")
+	logger.Debug().Msg("read config")
 
 	logger = logger.With().Str(constants.KEY_PROCESS, "unmarshaling config").Logger()
-	logger.Trace().Msg("unmarshaling config")
+	logger.Debug().Msg("unmarshaling config")
 	err = viper.Unmarshal(&config)
 	if err != nil {
 		err = fmt.Errorf("error unmarshaling config with error: %w", err)
-		logger.Fatal().Err(err).Msg(err.Error())
+		return Config{}, err
 	}
-	logger.Info().Any(constants.KEY_PROCESS, config).Msg("marshalled config")
-	return config
+	logger.Debug().Any(constants.KEY_PROCESS, config).Msg("marshalled config")
+
+	return config, nil
 }

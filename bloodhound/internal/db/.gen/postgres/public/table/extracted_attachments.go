@@ -70,7 +70,7 @@ func newExtractedAttachmentsTableImpl(schemaName, tableName, alias string) extra
 		CreatedAtColumn    = postgres.TimestampzColumn("created_at")
 		allColumns         = postgres.ColumnList{IDColumn, AttachmentIDColumn, NameColumn, PathColumn, CreatedAtColumn}
 		mutableColumns     = postgres.ColumnList{AttachmentIDColumn, NameColumn, PathColumn, CreatedAtColumn}
-		defaultColumns     = postgres.ColumnList{}
+		defaultColumns     = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
 	return extractedAttachmentsTable{

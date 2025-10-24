@@ -14,58 +14,60 @@ import (
 
 	"github.com/Alturino/bloodhound/internal/common/constants"
 	"github.com/Alturino/bloodhound/internal/config"
+	"github.com/Alturino/bloodhound/internal/otel/otelutil"
 )
 
-var (
-	once sync.Once
-	pool *pgxpool.Pool
-)
+var pool *pgxpool.Pool
 
 func Get(
 	ctx context.Context,
 	config config.Database,
-) *pgxpool.Pool {
-	once.Do(func() {
-		// ctx, span := trace.Tracer.Start(ctx, "main NewDatabaseClient")
-		// defer span.End()
+) (*pgxpool.Pool, error) {
+	ctx, span := otelutil.Tracer.Start(ctx, "main NewDatabaseClient")
+	defer span.End()
 
-		logger := zerolog.Ctx(ctx).
-			With().
-			Str(constants.KEY_PROCESS, "connecting to database").
-			Logger()
+	logger := zerolog.Ctx(ctx).
+		With().
+		Str(constants.KEY_PROCESS, "connecting to database").
+		Str(constants.KEY_TAG, "db Get").
+		Logger()
 
+	return sync.OnceValues(func() (*pgxpool.Pool, error) {
 		logger.Debug().Msg("connecting to database")
 
 		logger.Debug().Msg("parsing postgres url")
-		postgresUrl := postgresUrl(config)
+		postgresURL := postgresURL(config)
 
 		logger = logger.With().Str(constants.KEY_PROCESS, "initializing pgx config").Logger()
-		logger.Trace().Msg("initializing pgx config")
-		pgxConfig, err := pgxpool.ParseConfig(postgresUrl)
+		logger.Debug().Msg("initializing pgx config")
+		pgxConfig, err := pgxpool.ParseConfig(postgresURL)
 		if err != nil {
 			err = fmt.Errorf("failed creating pgx config with error: %w", err)
-			logger.Fatal().Err(err).Msg(err.Error())
+			return nil, err
 		}
-		logger.Info().Msg("initialized pgx config")
+		logger.Debug().Msg("initialized pgx config")
 
+		logger = logger.With().Str(constants.KEY_PROCESS, "attaching otel to pgx").Logger()
+		logger.Debug().Msg("attaching otel to pgx")
 		pgxConfig.AfterConnect = func(ctx context.Context, pgxConn *pgx.Conn) error {
 			pgxUUID.Register(pgxConn.TypeMap())
 			return nil
 		}
+		logger.Debug().Msg("attached otel tracer to pgx config")
 
 		logger = logger.With().Str(constants.KEY_PROCESS, "attaching otel tracer to pgx").Logger()
 		logger.Trace().Msg("attaching otel tracer to pgx")
 		pgxConfig.ConnConfig.Tracer = otelpgx.NewTracer(
 			otelpgx.WithTracerAttributes(semconv.DBSystemPostgreSQL),
 		)
-		logger.Info().Msgf("attached otel tracer to pgx")
+		logger.Info().Msg("attached otel tracer to pgx")
 
 		logger = logger.With().Str(constants.KEY_PROCESS, "creating connection pool").Logger()
 		logger.Trace().Msg("creating connection pool")
 		pool, err = pgxpool.NewWithConfig(ctx, pgxConfig)
 		if err != nil {
 			err = fmt.Errorf("failed creating connection pool with error: %w", err)
-			logger.Fatal().Err(err).Msg(err.Error())
+			return nil, err
 		}
 		logger.Info().Msg("created connection pool")
 
@@ -73,23 +75,22 @@ func Get(
 		err = pool.Ping(ctx)
 		if err != nil {
 			err = fmt.Errorf("failed ping db with error: %w", err)
-			logger.Error().Err(err).Msg(err.Error())
-			return
+			return nil, err
 		}
 		logger.Info().Msg("pinged database")
 
-		if err = MigrateUp(ctx, config, pool, postgresUrl); err != nil {
+		logger = logger.With().Str(constants.KEY_PROCESS, "running migrations").Logger()
+		logger.Debug().Msg("running migrations")
+		if err = MigrateUp(ctx, config, pool, postgresURL); err != nil {
 			err = fmt.Errorf("failed migration up with error: %w", err)
-			logger.Fatal().Err(err).Msg(err.Error())
+			return nil, err
 		}
-
-		logger.Info().Msg("created connection to database")
-	})
-
-	return pool
+		logger.Debug().Msg("ran migrations")
+		return pool, nil
+	})()
 }
 
-func postgresUrl(config config.Database) string {
+func postgresURL(config config.Database) string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		config.Username,
