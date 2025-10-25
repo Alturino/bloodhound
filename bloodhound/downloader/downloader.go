@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/minio/minio-go/v7"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/Alturino/bloodhound/internal/common/constants"
 	"github.com/Alturino/bloodhound/internal/config"
 	"github.com/Alturino/bloodhound/internal/db"
+	. "github.com/Alturino/bloodhound/internal/db/.gen/postgres/public/table"
 	"github.com/Alturino/bloodhound/internal/jobs"
 	"github.com/Alturino/bloodhound/internal/logging"
 	"github.com/Alturino/bloodhound/internal/nats"
@@ -24,11 +27,16 @@ import (
 )
 
 func StartDownloader(ctx context.Context) {
+	logger := log.Logger
 	configPath := filepath.Join(".", "downloader.yaml")
 
-	cfg := config.Get(ctx, configPath)
+	cfg, err := config.Get(ctx, configPath)
+	if err != nil {
+		err = fmt.Errorf("failed to get config with error: %w", err)
+		logger.Fatal().Err(err).Msg(err.Error())
+	}
 
-	logger := logging.Get().With().
+	logger = logging.Get().With().
 		Str(constants.KEY_TAG, "downloader StartDownloader").
 		Str(constants.KEY_APP, "downloader").
 		Any(constants.KEY_CONFIG, cfg).
@@ -36,7 +44,11 @@ func StartDownloader(ctx context.Context) {
 
 	logger.Debug().Msg("initializing db")
 	ctx = logger.WithContext(ctx)
-	pool := db.Get(ctx, cfg.Database)
+	pool, err := db.Get(ctx, cfg.Database)
+	if err != nil {
+		err = fmt.Errorf("failed get pgxpool with error: %w", err)
+		logger.Fatal().Err(err).Msg(err.Error())
+	}
 	defer func() {
 		logger.Debug().Msg("closing db")
 		pool.Close()
@@ -48,6 +60,7 @@ func StartDownloader(ctx context.Context) {
 	ctx = logger.WithContext(ctx)
 	natsConn, err := nats.Get(ctx, cfg.Nats)
 	if err != nil {
+		err = fmt.Errorf("failed to get nats with error: %w", err)
 		logger.Fatal().Err(err).Msg(err.Error())
 	}
 	defer func() {
@@ -139,8 +152,15 @@ func StartDownloader(ctx context.Context) {
 				lg.Error().Err(err).Msg(err.Error())
 				return
 			}
+			lg = lg.With().
+				Str("saved_path", info.Location).
+				Str("version_id", info.VersionID).
+				Logger()
 			lg.Info().Msg("successfully uploaded file to minio")
-			_ = info
+
+			Announcements.INSERT(Announcements.AllColumns).VALUES()
+			Attachments.INSERT(Attachments.AllColumns).
+				VALUES(String(data.Attachment.Filename), String())
 		},
 		jetstream.ConsumeErrHandler(func(consumeCtx jetstream.ConsumeContext, err error) {
 			err = fmt.Errorf("failed to consume with err: %w", err)

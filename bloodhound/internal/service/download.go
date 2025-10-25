@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
 	"github.com/Alturino/bloodhound/internal/common/constants"
@@ -54,11 +55,14 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadAttachmentArgs, jobs.Do
 				}
 				jobLogger.Debug().Msg("downloading file")
 				ctx = jobLogger.WithContext(ctx)
-				err := track.repo.DownloadFile(
+				_, err := track.repo.DownloadFile(
 					ctx,
-					job.Emiten,
-					job.Attachment,
-					job.AnnouncementDate,
+					jobs.DownloadAttachmentArgs{
+						JobID:            uuid.NewString(),
+						Emiten:           job.Emiten,
+						AnnouncementDate: job.AnnouncementDate,
+						Attachment:       job.Attachment,
+					},
 				)
 				if err != nil {
 					err = fmt.Errorf("failed to download file with error: %w", err)

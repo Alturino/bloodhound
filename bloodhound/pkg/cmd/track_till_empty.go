@@ -1,29 +1,31 @@
 package cmd
 
 import (
-	"context"
 	"log"
 
 	"github.com/spf13/cobra"
 
+	"github.com/Alturino/bloodhound/internal/client"
 	"github.com/Alturino/bloodhound/internal/jobs"
 	"github.com/Alturino/bloodhound/internal/repository"
 	"github.com/Alturino/bloodhound/internal/service"
 )
 
-func TrackTillEmpty(
-	ctx context.Context,
-	repo *repository.HTTPRepository,
-	pool int,
-	downloadJobCh chan jobs.DownloadAttachmentArgs,
-	resDownloadJobCh chan jobs.DownloadRes,
-	stopDownloadCh chan struct{},
-) *cobra.Command {
+func TrackTillEmpty() *cobra.Command {
 	var emiten, keyword string
 	var page, pageSize int
 
-	track := service.NewTrack(ctx, repo, pool, downloadJobCh, resDownloadJobCh, stopDownloadCh)
-	tillEmptyCmd := &cobra.Command{
+	pool := 10
+	downloadCh := make(chan jobs.DownloadAttachmentArgs, pool)
+	defer close(downloadCh)
+
+	resDownloadCh := make(chan jobs.DownloadRes, pool)
+	defer close(resDownloadCh)
+
+	stopDownloadCh := make(chan struct{}, pool)
+	defer close(stopDownloadCh)
+
+	cmd := &cobra.Command{
 		Use:     "track-empty",
 		Short:   "get all stock announcements",
 		Aliases: []string{"te"},
@@ -32,12 +34,24 @@ func TrackTillEmpty(
 			if err := cmd.ValidateArgs(args); err != nil {
 				log.Fatalln(err.Error())
 			}
-			track.TrackTillEmpty(cmd.Context(), emiten, keyword, page, pageSize)
+
+			repo := repository.NewHTTPRepository(client.NewHTTPClient(cmd.Context()))
+			track := service.NewTrack(
+				cmd.Context(),
+				repo,
+				pool,
+				downloadCh,
+				resDownloadCh,
+				stopDownloadCh,
+			)
+			if err := track.TrackTillEmpty(cmd.Context(), emiten, keyword, page, pageSize); err != nil {
+				log.Fatalln(err.Error())
+			}
 		},
 	}
-	tillEmptyCmd.Flags().StringVarP(&emiten, "emiten", "e", "", "specify the stock ticker")
-	tillEmptyCmd.Flags().StringVarP(&keyword, "keyword", "k", "", "specify title of the document")
-	tillEmptyCmd.Flags().IntVarP(&pageSize, "size", "s", 200, "specify how much each page sized")
-	tillEmptyCmd.Flags().IntVarP(&page, "page", "p", 0, "specify page")
-	return tillEmptyCmd
+	cmd.Flags().StringVarP(&emiten, "emiten", "e", "", "specify the stock ticker")
+	cmd.Flags().StringVarP(&keyword, "keyword", "k", "", "specify title of the document")
+	cmd.Flags().IntVarP(&pageSize, "size", "s", 200, "specify how much each page sized")
+	cmd.Flags().IntVarP(&page, "page", "p", 0, "specify page")
+	return cmd
 }
