@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS analyzed_companies (
-    id uuid PRIMARY KEY,
-    company_id uuid,
-    extracted_attachment_id uuid,
-    path text,
-    created_at timestamptz,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL,
+    extracted_attachment_id uuid NOT NULL,
+    path text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
     FOREIGN KEY (company_id) REFERENCES companies (id),
     FOREIGN KEY (extracted_attachment_id) REFERENCES extracted_attachments (id)
 );

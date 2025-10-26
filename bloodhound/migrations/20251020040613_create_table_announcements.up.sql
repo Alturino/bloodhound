@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS announcements (
-    id uuid PRIMARY KEY,
-    company_id uuid,
-    name text,
-    created_at timestamptz,
-    updated_at timestamptz,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL,
+    name text NOT NULL,
+    published_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
     FOREIGN KEY (company_id) REFERENCES companies (id)
 );
 
