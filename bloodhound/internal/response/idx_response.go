@@ -1,6 +1,9 @@
 package response
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type IdxResponse struct {
 	Replies     []Reply `json:"Replies"`
@@ -18,11 +21,26 @@ type Attachment struct {
 	ID          int    `json:"Id"`
 }
 
+type Time struct {
+	time.Time
+}
+
+func (t *Time) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	s = strings.Trim(s, "\"")
+	nt, err := time.Parse("2006-01-02T15:04:05", s)
+	if err != nil {
+		return err
+	}
+	t.Time = nt
+	return nil
+}
+
 type Announcement struct {
-	Date              time.Time `json:"TglPengumuman"`
-	ID                string    `json:"Id2"`
-	Ticker            string    `json:"Kode_Emiten"`
-	NoPengumuman      string    `json:"NoPengumuman"`
-	Title             string    `json:"JudulPengumuman"`
-	PerihalPengumuman string    `json:"PerihalPengumuman"`
+	Date              Time   `json:"TglPengumuman"`
+	ID                string `json:"Id2"`
+	Ticker            string `json:"Kode_Emiten"`
+	NoPengumuman      string `json:"NoPengumuman"`
+	Title             string `json:"JudulPengumuman"`
+	PerihalPengumuman string `json:"PerihalPengumuman"`
 }
