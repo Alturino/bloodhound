@@ -96,7 +96,7 @@ func (t Track) TrackTillEmpty(
 	logger.Debug().Msg("directory created")
 
 	currentPage := page
-	responses := make([]response.IdxResponse, 0, 100)
+	responses := make([]response.IdxResponse, 0, pageSize)
 	for {
 		pageLogger := logger.With().Int("page", currentPage).Logger()
 		res, err := t.repo.Get(ctx, emiten, keyword, currentPage, pageSize)
@@ -143,7 +143,7 @@ func (t Track) TrackTillEmpty(
 					Str("job_emiten", emiten).
 					Logger()
 				pageLogger.Debug().Msg("sending job")
-				t.downloadJobCh <- jobs.DownloadAttachmentArgs{JobID: jobID, Emiten: emiten, Attachment: attachment, AnnouncementDate: reply.Announcement.Date}
+				t.downloadJobCh <- jobs.DownloadAttachmentArgs{JobID: jobID, Emiten: emiten, Attachment: attachment, AnnouncementDate: reply.Announcement.Date.Time}
 				pageLogger.Info().Msg("job sent")
 			}
 		}
