@@ -6,7 +6,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Alturino/bloodhound/internal/client"
+	"github.com/Alturino/bloodhound/internal/common"
 	"github.com/Alturino/bloodhound/internal/jobs"
+	"github.com/Alturino/bloodhound/internal/logging"
 	"github.com/Alturino/bloodhound/internal/repository"
 	"github.com/Alturino/bloodhound/internal/service"
 )
@@ -16,14 +18,6 @@ func TrackTillEmpty() *cobra.Command {
 	var page, pageSize int
 
 	pool := 10
-	downloadCh := make(chan jobs.DownloadAttachmentArgs, pool)
-	defer close(downloadCh)
-
-	resDownloadCh := make(chan jobs.DownloadRes, pool)
-	defer close(resDownloadCh)
-
-	stopDownloadCh := make(chan struct{}, pool)
-	defer close(stopDownloadCh)
 
 	cmd := &cobra.Command{
 		Use:     "track-empty",
@@ -34,6 +28,17 @@ func TrackTillEmpty() *cobra.Command {
 			if err := cmd.ValidateArgs(args); err != nil {
 				log.Fatalln(err.Error())
 			}
+			logging.Get()
+			common.InitDir()
+
+			downloadCh := make(chan jobs.DownloadAttachmentArgs, pool)
+			defer close(downloadCh)
+
+			resDownloadCh := make(chan jobs.DownloadRes, pool)
+			defer close(resDownloadCh)
+
+			stopDownloadCh := make(chan struct{}, pool)
+			defer close(stopDownloadCh)
 
 			repo := repository.NewHTTPRepository(client.NewHTTPClient(cmd.Context()))
 			track := service.NewTrack(
