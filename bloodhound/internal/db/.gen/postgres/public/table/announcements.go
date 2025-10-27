@@ -17,10 +17,11 @@ type announcementsTable struct {
 	postgres.Table
 
 	// Columns
-	ID        postgres.ColumnString
-	CompanyID postgres.ColumnString
-	Name      postgres.ColumnString
-	CreatedAt postgres.ColumnTimestampz
+	ID          postgres.ColumnString
+	CompanyID   postgres.ColumnString
+	Name        postgres.ColumnString
+	PublishedAt postgres.ColumnTimestampz
+	CreatedAt   postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -62,23 +63,25 @@ func newAnnouncementsTable(schemaName, tableName, alias string) *AnnouncementsTa
 
 func newAnnouncementsTableImpl(schemaName, tableName, alias string) announcementsTable {
 	var (
-		IDColumn        = postgres.StringColumn("id")
-		CompanyIDColumn = postgres.StringColumn("company_id")
-		NameColumn      = postgres.StringColumn("name")
-		CreatedAtColumn = postgres.TimestampzColumn("created_at")
-		allColumns      = postgres.ColumnList{IDColumn, CompanyIDColumn, NameColumn, CreatedAtColumn}
-		mutableColumns  = postgres.ColumnList{CompanyIDColumn, NameColumn, CreatedAtColumn}
-		defaultColumns  = postgres.ColumnList{IDColumn, CreatedAtColumn}
+		IDColumn          = postgres.StringColumn("id")
+		CompanyIDColumn   = postgres.StringColumn("company_id")
+		NameColumn        = postgres.StringColumn("name")
+		PublishedAtColumn = postgres.TimestampzColumn("published_at")
+		CreatedAtColumn   = postgres.TimestampzColumn("created_at")
+		allColumns        = postgres.ColumnList{IDColumn, CompanyIDColumn, NameColumn, PublishedAtColumn, CreatedAtColumn}
+		mutableColumns    = postgres.ColumnList{CompanyIDColumn, NameColumn, PublishedAtColumn, CreatedAtColumn}
+		defaultColumns    = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
 	return announcementsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:        IDColumn,
-		CompanyID: CompanyIDColumn,
-		Name:      NameColumn,
-		CreatedAt: CreatedAtColumn,
+		ID:          IDColumn,
+		CompanyID:   CompanyIDColumn,
+		Name:        NameColumn,
+		PublishedAt: PublishedAtColumn,
+		CreatedAt:   CreatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

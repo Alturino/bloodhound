@@ -21,8 +21,10 @@ type attachmentsTable struct {
 	AnnouncementID postgres.ColumnString
 	Name           postgres.ColumnString
 	Path           postgres.ColumnString
+	Checksum       postgres.ColumnString
 	SourceURL      postgres.ColumnString
 	Type           postgres.ColumnString
+	PublishedAt    postgres.ColumnTimestampz
 	CreatedAt      postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
@@ -69,11 +71,13 @@ func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTab
 		AnnouncementIDColumn = postgres.StringColumn("announcement_id")
 		NameColumn           = postgres.StringColumn("name")
 		PathColumn           = postgres.StringColumn("path")
+		ChecksumColumn       = postgres.StringColumn("checksum")
 		SourceURLColumn      = postgres.StringColumn("source_url")
 		TypeColumn           = postgres.StringColumn("type")
+		PublishedAtColumn    = postgres.TimestampzColumn("published_at")
 		CreatedAtColumn      = postgres.TimestampzColumn("created_at")
-		allColumns           = postgres.ColumnList{IDColumn, AnnouncementIDColumn, NameColumn, PathColumn, SourceURLColumn, TypeColumn, CreatedAtColumn}
-		mutableColumns       = postgres.ColumnList{AnnouncementIDColumn, NameColumn, PathColumn, SourceURLColumn, TypeColumn, CreatedAtColumn}
+		allColumns           = postgres.ColumnList{IDColumn, AnnouncementIDColumn, NameColumn, PathColumn, ChecksumColumn, SourceURLColumn, TypeColumn, PublishedAtColumn, CreatedAtColumn}
+		mutableColumns       = postgres.ColumnList{AnnouncementIDColumn, NameColumn, PathColumn, ChecksumColumn, SourceURLColumn, TypeColumn, PublishedAtColumn, CreatedAtColumn}
 		defaultColumns       = postgres.ColumnList{IDColumn, TypeColumn, CreatedAtColumn}
 	)
 
@@ -85,8 +89,10 @@ func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTab
 		AnnouncementID: AnnouncementIDColumn,
 		Name:           NameColumn,
 		Path:           PathColumn,
+		Checksum:       ChecksumColumn,
 		SourceURL:      SourceURLColumn,
 		Type:           TypeColumn,
+		PublishedAt:    PublishedAtColumn,
 		CreatedAt:      CreatedAtColumn,
 
 		AllColumns:     allColumns,

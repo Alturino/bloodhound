@@ -17,7 +17,9 @@ type Attachments struct {
 	AnnouncementID uuid.UUID
 	Name           string
 	Path           string
+	Checksum       string
 	SourceURL      string
 	Type           AttachmentType
+	PublishedAt    time.Time
 	CreatedAt      time.Time
 }

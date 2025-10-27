@@ -12,7 +12,11 @@ import (
 )
 
 type Companies struct {
-	ID     uuid.UUID `sql:"primary_key"`
-	Name   string
-	Ticker string
+	ID          uuid.UUID `sql:"primary_key"`
+	Name        string
+	Sector      SectorType
+	SubSector   SubSectorType
+	Industry    IndustryType
+	SubIndustry SubIndustryType
+	Ticker      string
 }

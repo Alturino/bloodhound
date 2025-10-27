@@ -17,9 +17,13 @@ type companiesTable struct {
 	postgres.Table
 
 	// Columns
-	ID     postgres.ColumnString
-	Name   postgres.ColumnString
-	Ticker postgres.ColumnString
+	ID          postgres.ColumnString
+	Name        postgres.ColumnString
+	Sector      postgres.ColumnString
+	SubSector   postgres.ColumnString
+	Industry    postgres.ColumnString
+	SubIndustry postgres.ColumnString
+	Ticker      postgres.ColumnString
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -61,21 +65,29 @@ func newCompaniesTable(schemaName, tableName, alias string) *CompaniesTable {
 
 func newCompaniesTableImpl(schemaName, tableName, alias string) companiesTable {
 	var (
-		IDColumn       = postgres.StringColumn("id")
-		NameColumn     = postgres.StringColumn("name")
-		TickerColumn   = postgres.StringColumn("ticker")
-		allColumns     = postgres.ColumnList{IDColumn, NameColumn, TickerColumn}
-		mutableColumns = postgres.ColumnList{NameColumn, TickerColumn}
-		defaultColumns = postgres.ColumnList{IDColumn}
+		IDColumn          = postgres.StringColumn("id")
+		NameColumn        = postgres.StringColumn("name")
+		SectorColumn      = postgres.StringColumn("sector")
+		SubSectorColumn   = postgres.StringColumn("sub_sector")
+		IndustryColumn    = postgres.StringColumn("industry")
+		SubIndustryColumn = postgres.StringColumn("sub_industry")
+		TickerColumn      = postgres.StringColumn("ticker")
+		allColumns        = postgres.ColumnList{IDColumn, NameColumn, SectorColumn, SubSectorColumn, IndustryColumn, SubIndustryColumn, TickerColumn}
+		mutableColumns    = postgres.ColumnList{NameColumn, SectorColumn, SubSectorColumn, IndustryColumn, SubIndustryColumn, TickerColumn}
+		defaultColumns    = postgres.ColumnList{IDColumn, SectorColumn, SubSectorColumn, IndustryColumn, SubIndustryColumn}
 	)
 
 	return companiesTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:     IDColumn,
-		Name:   NameColumn,
-		Ticker: TickerColumn,
+		ID:          IDColumn,
+		Name:        NameColumn,
+		Sector:      SectorColumn,
+		SubSector:   SubSectorColumn,
+		Industry:    IndustryColumn,
+		SubIndustry: SubIndustryColumn,
+		Ticker:      TickerColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
