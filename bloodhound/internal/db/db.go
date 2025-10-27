@@ -2,12 +2,14 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sync"
 
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/zerolog"
 	pgxUUID "github.com/vgarvardt/pgx-google-uuid/v5"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -16,8 +18,6 @@ import (
 	"github.com/Alturino/bloodhound/internal/config"
 	"github.com/Alturino/bloodhound/internal/otel/otelutil"
 )
-
-var pool *pgxpool.Pool
 
 func Get(
 	ctx context.Context,
@@ -64,7 +64,7 @@ func Get(
 
 		logger = logger.With().Str(constants.KEY_PROCESS, "creating connection pool").Logger()
 		logger.Trace().Msg("creating connection pool")
-		pool, err = pgxpool.NewWithConfig(ctx, pgxConfig)
+		pool, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 		if err != nil {
 			err = fmt.Errorf("failed creating connection pool with error: %w", err)
 			return nil, err
@@ -87,6 +87,12 @@ func Get(
 		}
 		logger.Debug().Msg("ran migrations")
 		return pool, nil
+	})()
+}
+
+func GetSQL(pool *pgxpool.Pool) *sql.DB {
+	return sync.OnceValue(func() *sql.DB {
+		return stdlib.OpenDBFromPool(pool)
 	})()
 }
 
