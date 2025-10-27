@@ -1,0 +1,24 @@
+application:
+  env: development # production
+  name: bloodhound
+  host: 0.0.0.0
+  port: 80
+db:
+  name: postgres
+  host: localhost
+  username: postgres
+  password: postgres
+  port: 5432
+  timezone: Asia/Jakarta
+  migration_path: file://migrations/
+  max_connections: 10
+  min_connections: 5
+otel:
+  host: localhost
+  port: 4317
+nats:
+  host: localhost
+  port: 4222
+minio:
+  host: localhost
+  port: 9000
