@@ -7,8 +7,10 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 
 	"github.com/Alturino/bloodhound/internal/common/constants"
@@ -36,7 +38,7 @@ func MigrateUp(
 	logger.Info().Msg("created postgres driver for migration")
 
 	logger.Debug().Msg("creating migration instance")
-	migration, err := migrate.NewWithDatabaseInstance(config.MigrationPath, postgresURL, driver)
+	migration, err := migrate.NewWithDatabaseInstance(config.MigrationPath, "postgres", driver)
 	if err != nil {
 		err = fmt.Errorf("failed migration postgres with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
