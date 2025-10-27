@@ -32,8 +32,9 @@ func main() {
 
 	trackCmd := cmd.Track()
 	tillEmptyCmd := cmd.TrackTillEmpty()
+	downloadCmd := cmd.Downloader()
 
-	commands := []*cobra.Command{trackCmd, tillEmptyCmd}
+	commands := []*cobra.Command{trackCmd, tillEmptyCmd, downloadCmd}
 	rootCmd.AddCommand(commands...)
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		err = fmt.Errorf("failed to execute bloodhound command: %w", err)
