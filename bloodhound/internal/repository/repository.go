@@ -100,8 +100,8 @@ func (r HTTPRepository) DownloadFile(
 	filename = removeDateRe.ReplaceAllString(filename, "")
 	filename = strings.ReplaceAll(filename, " ", "_")
 
-	emitenDir := filepath.Join(common.BloodhoundDir, arg.Emiten)
-	strDate := arg.AnnouncementDate.Format("2006_01_02")
+	emitenDir := filepath.Join(common.BloodhoundDir, arg.Announcement.Ticker)
+	strDate := arg.Announcement.Date.Format("2006_01_02")
 	filename = strings.Join([]string{strDate, filename}, "_")
 	downloadedFilepath := filepath.Join(emitenDir, filename)
 

@@ -3,6 +3,7 @@ package otel
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
@@ -20,13 +21,13 @@ import (
 type ShutdownFunc func(context.Context) error
 
 func InitOtelSdk(
-	c context.Context,
+	ctx context.Context,
 	serviceName string,
 	config config.Otel,
 ) (shutdownFuncs []ShutdownFunc, err error) {
-	logger := zerolog.Ctx(c).
+	logger := zerolog.Ctx(ctx).
 		With().
-		Ctx(c).
+		Ctx(ctx).
 		Str(constants.KEY_TAG, "main InitOtelSdk").
 		Logger()
 
@@ -42,7 +43,7 @@ func InitOtelSdk(
 	logger.Info().Msg("initialized otel propagator")
 
 	res, err := resource.New(
-		c,
+		ctx,
 		resource.WithFromEnv(),
 		resource.WithProcess(),
 		resource.WithContainer(),
@@ -60,9 +61,9 @@ func InitOtelSdk(
 
 	logger = logger.With().Str(constants.KEY_PROCESS, "initializing otel tracerProvider").Logger()
 	logger.Info().Msg("initializing otel tracerProvider")
-	c = logger.WithContext(c)
+	ctx = logger.WithContext(ctx)
 	tracerProvider, err := InitTracerProvider(
-		c,
+		ctx,
 		fmt.Sprintf("%s:%d", config.Host, config.Port),
 		serviceName,
 		res,
@@ -78,9 +79,9 @@ func InitOtelSdk(
 
 	logger = logger.With().Str(constants.KEY_PROCESS, "initializing meterProvider").Logger()
 	logger.Info().Msg("initializing meterProvider")
-	c = logger.WithContext(c)
+	ctx = logger.WithContext(ctx)
 	metricEndpoint := fmt.Sprintf("%s:%d", config.Host, config.Port)
-	meterProvider, err := InitMetricProvider(c, metricEndpoint, res)
+	meterProvider, err := InitMetricProvider(ctx, metricEndpoint, res)
 	if err != nil {
 		err = fmt.Errorf("failed initializing otel meterProvider with error=%w", err)
 		logger.Error().Err(err).Msg(err.Error())
@@ -94,6 +95,8 @@ func InitOtelSdk(
 }
 
 func ShutdownOtel(ctx context.Context, shutdownFuncs []ShutdownFunc) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
 	erg, ctx := errgroup.WithContext(ctx)
 	for _, shutdown := range shutdownFuncs {
 		erg.Go(func() error { return shutdown(ctx) })

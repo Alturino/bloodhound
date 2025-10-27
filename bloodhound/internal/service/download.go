@@ -42,7 +42,7 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadAttachmentArgs, jobs.Do
 					return
 				}
 				jobLogger := logger.With().
-					Str("emiten", job.Emiten).
+					Str("emiten", job.Announcement.Ticker).
 					Str("job_id", job.JobID).
 					Str("filename", job.Attachment.Filename).
 					Str("url", job.Attachment.DownloadURL).
@@ -50,7 +50,7 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadAttachmentArgs, jobs.Do
 				if !strings.HasSuffix(job.Attachment.Filename, ".pdf") {
 					err := errors.New("attachment is not a pdf, skipping")
 					jobLogger.Debug().Err(err).Msg(err.Error())
-					resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.DownloadURL, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
+					resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.DownloadURL, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Announcement.Ticker}
 					continue
 				}
 				jobLogger.Debug().Msg("downloading file")
@@ -58,19 +58,18 @@ func downloadWorkerFunc() worker.WorkerFunc[jobs.DownloadAttachmentArgs, jobs.Do
 				_, err := track.repo.DownloadFile(
 					ctx,
 					jobs.DownloadAttachmentArgs{
-						JobID:            uuid.NewString(),
-						Emiten:           job.Emiten,
-						AnnouncementDate: job.AnnouncementDate,
-						Attachment:       job.Attachment,
+						JobID:        uuid.NewString(),
+						Announcement: job.Announcement,
+						Attachment:   job.Attachment,
 					},
 				)
 				if err != nil {
 					err = fmt.Errorf("failed to download file with error: %w", err)
 					jobLogger.Error().Err(err).Msg(err.Error())
-					resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.DownloadURL, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
+					resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.DownloadURL, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Announcement.Ticker}
 					continue
 				}
-				resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.DownloadURL, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Emiten}
+				resCh <- jobs.DownloadRes{Err: err, URL: job.Attachment.DownloadURL, AttachmentID: job.Attachment.ID, WorkerID: workerID, JobID: job.JobID, Emiten: job.Announcement.Ticker}
 				jobLogger.Info().Msg("successfully downloaded file")
 				time.Sleep(time.Second * 7)
 			}

@@ -1,8 +1,6 @@
 package jobs
 
 import (
-	"time"
-
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
@@ -15,10 +13,9 @@ type GetAnnouncementArgs struct {
 }
 
 type DownloadAttachmentArgs struct {
-	JobID            string              `json:"job_id"`
-	Emiten           string              `json:"emiten"`
-	AnnouncementDate time.Time           `json:"announcement_date"`
-	Attachment       response.Attachment `json:"attachment"`
+	JobID        string                `json:"job_id"`
+	Announcement response.Announcement `json:"announcement"`
+	Attachment   response.Attachment   `json:"attachment"`
 }
 
 type DownloadRes struct {
