@@ -8,21 +8,22 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
-	req "github.com/imroc/req/v3"
 	"github.com/rs/zerolog"
 
+	"github.com/Alturino/bloodhound/internal/client"
 	"github.com/Alturino/bloodhound/internal/common"
-	"github.com/Alturino/bloodhound/internal/logging"
+	"github.com/Alturino/bloodhound/internal/common/constants"
+	"github.com/Alturino/bloodhound/internal/jobs"
+	"github.com/Alturino/bloodhound/internal/otel/otelutil"
 	"github.com/Alturino/bloodhound/internal/response"
 )
 
 type HTTPRepository struct {
-	http *req.Client
+	http client.HTTPClient
 }
 
-func NewHTTPRepository(http *req.Client) *HTTPRepository {
+func NewHTTPRepository(http client.HTTPClient) *HTTPRepository {
 	return &HTTPRepository{http: http}
 }
 
@@ -34,7 +35,7 @@ func (r HTTPRepository) Get(
 	url := "https://idx.co.id/primary/ListedCompany/GetAnnouncement"
 
 	logger := zerolog.Ctx(ctx).With().
-		Str(logging.KEY_TAG, "HTTPRepository Get").
+		Str(constants.KEY_TAG, "HTTPRepository Get").
 		Str("emiten", emiten).
 		Str("keyword", keyword).
 		Str("url", url).
@@ -83,11 +84,12 @@ func (r HTTPRepository) Get(
 
 func (r HTTPRepository) DownloadFile(
 	ctx context.Context,
-	emiten string,
-	attachment response.Attachment,
-	announcementDate time.Time,
-) error {
-	filename := strings.ReplaceAll(attachment.OriginalFilename, "/", " ")
+	arg jobs.DownloadAttachmentArgs,
+) (*os.File, error) {
+	ctx, span := otelutil.Tracer.Start(ctx, "DownloadFile")
+	defer span.End()
+
+	filename := strings.ReplaceAll(arg.Attachment.Filename, "/", " ")
 	filename = strings.TrimSpace(filename)
 
 	excessSpaceRe := regexp.MustCompile(`\s+`)
@@ -98,15 +100,15 @@ func (r HTTPRepository) DownloadFile(
 	filename = removeDateRe.ReplaceAllString(filename, "")
 	filename = strings.ReplaceAll(filename, " ", "_")
 
-	emitenDir := filepath.Join(common.BloodhoundDir, emiten)
-	strDate := announcementDate.Format("2006_01_02")
+	emitenDir := filepath.Join(common.BloodhoundDir, arg.Announcement.Ticker)
+	strDate := arg.Announcement.Date.Format("2006_01_02")
 	filename = strings.Join([]string{strDate, filename}, "_")
 	downloadedFilepath := filepath.Join(emitenDir, filename)
 
 	logger := zerolog.Ctx(ctx).
 		With().
-		Str(logging.KEY_TAG, "HTTPRepository DownloadFile").
-		Str("url", attachment.FullSavePath).
+		Str(constants.KEY_TAG, "HTTPRepository DownloadFile").
+		Str("url", arg.Attachment.DownloadURL).
 		Str("filename", filename).
 		Str("downloaded_path", downloadedFilepath).
 		Logger()
@@ -114,36 +116,32 @@ func (r HTTPRepository) DownloadFile(
 	err := os.MkdirAll(emitenDir, os.FileMode(0o755))
 	if err != nil {
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
 
 	logger.Debug().Msg("creating directory")
 	if err := os.MkdirAll(emitenDir, os.FileMode(0o755)); err != nil {
 		err = fmt.Errorf("repository failed to create directory with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
 	logger.Debug().Msg("directory created")
 
 	file, err := os.OpenFile(downloadedFilepath, os.O_CREATE|os.O_WRONLY, os.FileMode(0o755))
 	if err != nil {
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	logger.Debug().Msg("file created")
 
 	logger.Debug().Msg("downloading file")
-	err = r.http.NewParallelDownload(attachment.FullSavePath).
-		SetOutput(file).
-		Do(ctx)
-	if err != nil {
+	if err = r.http.NewParallelDownload(arg.Attachment.DownloadURL).SetOutput(file).Do(ctx); err != nil {
 		err = fmt.Errorf("repository failed to download file with error: %w", err)
 		logger.Error().Err(err).Msg(err.Error())
-		return err
+		return nil, err
 	}
-
 	logger.Info().Msg("repository successfully download file")
 
-	return nil
+	return file, nil
 }

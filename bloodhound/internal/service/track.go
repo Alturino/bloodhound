@@ -18,8 +18,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/Alturino/bloodhound/internal/common"
+	"github.com/Alturino/bloodhound/internal/common/constants"
 	"github.com/Alturino/bloodhound/internal/jobs"
-	"github.com/Alturino/bloodhound/internal/logging"
 	"github.com/Alturino/bloodhound/internal/repository"
 	"github.com/Alturino/bloodhound/internal/response"
 	"github.com/Alturino/bloodhound/internal/worker"
@@ -28,7 +28,7 @@ import (
 type Track struct {
 	repo             *repository.HTTPRepository
 	pool             int
-	downloadJobCh    chan jobs.DownloadJob
+	downloadJobCh    chan jobs.DownloadAttachmentArgs
 	resDownloadJobCh chan jobs.DownloadRes
 	stopDownloadCh   chan struct{}
 }
@@ -42,7 +42,7 @@ func NewTrack(
 	ctx context.Context,
 	repository *repository.HTTPRepository,
 	pool int,
-	downloadJobCh chan jobs.DownloadJob,
+	downloadJobCh chan jobs.DownloadAttachmentArgs,
 	resDownloadJobCh chan jobs.DownloadRes,
 	stopDownloadCh chan struct{},
 ) *Track {
@@ -79,7 +79,7 @@ func (t Track) TrackTillEmpty(
 
 	logger := zerolog.Ctx(ctx).
 		With().
-		Str(logging.KEY_TAG, "Track TrackTillEmpty").
+		Str(constants.KEY_TAG, "Track TrackTillEmpty").
 		Str("search_emiten", emiten).
 		Str("keyword", keyword).
 		Str("dir", dir).
@@ -96,7 +96,7 @@ func (t Track) TrackTillEmpty(
 	logger.Debug().Msg("directory created")
 
 	currentPage := page
-	responses := make([]response.IdxResponse, 0, 100)
+	responses := make([]response.IdxResponse, 0, pageSize)
 	for {
 		pageLogger := logger.With().Int("page", currentPage).Logger()
 		res, err := t.repo.Get(ctx, emiten, keyword, currentPage, pageSize)
@@ -130,7 +130,7 @@ func (t Track) TrackTillEmpty(
 		for _, reply := range res.Replies {
 			if len(emiten) == 0 {
 				re := regexp.MustCompile(`\s+`)
-				emiten = re.ReplaceAllString(reply.Pengumuman.KodeEmiten, "")
+				emiten = re.ReplaceAllString(reply.Announcement.Ticker, "")
 				emiten = strings.TrimSpace(emiten)
 				pageLogger.Debug().
 					Str("emiten", emiten).
@@ -143,7 +143,7 @@ func (t Track) TrackTillEmpty(
 					Str("job_emiten", emiten).
 					Logger()
 				pageLogger.Debug().Msg("sending job")
-				t.downloadJobCh <- jobs.DownloadJob{JobID: jobID, Emiten: emiten, Attachment: attachment, TglPengumuman: reply.Pengumuman.TglPengumuman.Time}
+				t.downloadJobCh <- jobs.DownloadAttachmentArgs{JobID: jobID, Announcement: reply.Announcement, Attachment: attachment}
 				pageLogger.Info().Msg("job sent")
 			}
 		}

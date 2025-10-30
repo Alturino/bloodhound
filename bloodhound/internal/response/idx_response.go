@@ -1,7 +1,8 @@
 package response
 
 import (
-	"github.com/Alturino/bloodhound/internal/common"
+	"strings"
+	"time"
 )
 
 type IdxResponse struct {
@@ -10,22 +11,36 @@ type IdxResponse struct {
 }
 
 type Reply struct {
-	Pengumuman  Pengumuman   `json:"pengumuman"`
-	Attachments []Attachment `json:"attachments"`
+	Announcement Announcement `json:"pengumuman"`
+	Attachments  []Attachment `json:"attachments"`
 }
 
 type Attachment struct {
-	FullSavePath     string `json:"FullSavePath"`
-	PDFFilename      string `json:"PDFFilename"`
-	OriginalFilename string `json:"OriginalFilename"`
-	ID               int    `json:"Id"`
+	DownloadURL string `json:"FullSavePath"`
+	Filename    string `json:"OriginalFilename"`
+	ID          int    `json:"Id"`
 }
 
-type Pengumuman struct {
-	TglPengumuman     common.LocalTime `json:"TglPengumuman"`
-	KodeEmiten        string           `json:"Kode_Emiten"`
-	NoPengumuman      string           `json:"NoPengumuman"`
-	JudulPengumuman   string           `json:"JudulPengumuman"`
-	PerihalPengumuman string           `json:"PerihalPengumuman"`
-	OldFinalID        int              `json:"OldFinalId"`
+type Time struct {
+	time.Time
+}
+
+func (t *Time) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	s = strings.Trim(s, "\"")
+	nt, err := time.Parse("2006-01-02T15:04:05", s)
+	if err != nil {
+		return err
+	}
+	t.Time = nt
+	return nil
+}
+
+type Announcement struct {
+	Date              Time   `json:"TglPengumuman"`
+	ID                string `json:"Id2"`
+	Ticker            string `json:"Kode_Emiten"`
+	NoPengumuman      string `json:"NoPengumuman"`
+	Title             string `json:"JudulPengumuman"`
+	PerihalPengumuman string `json:"PerihalPengumuman"`
 }

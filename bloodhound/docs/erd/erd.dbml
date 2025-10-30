@@ -1,0 +1,51 @@
+Table companies {
+  id uuid [pk]
+  name string
+  ticker string
+}
+
+Table analyzed_companies {
+  id uuid [pk]
+  company_id uuid [ref: > companies.id]
+  extracted_attachment_id uuid [ref: < extracted_attachments.id]
+  path string
+  created_at timestamptz
+}
+
+Table announcements {
+  id uuid [pk]
+  company_id uuid [ref: > companies.id]
+  name string
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+enum attachment_type {
+  public_expose
+  corp_action
+  earning_call
+  pers
+  shares_ownerships_update
+  shares_outstanding_update
+  others
+}
+
+Table attachments {
+  id uuid [pk]
+  announcement_id uuid [ref: > announcements.id]
+  name string
+  path string
+  source_url string
+  type attachment_type
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table extracted_attachments {
+  id uuid [pk]
+  attachment_id uuid [ref: - attachments.id]
+  name string
+  path string
+  created_at timestamptz
+  updated_at timestamptz
+}
