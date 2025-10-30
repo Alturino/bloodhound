@@ -173,107 +173,125 @@ func handleMessage(
 			}
 		}()
 
-		tx, err := sqlDB.BeginTx(ctx, &sql.TxOptions{})
-		if err != nil {
-			err = fmt.Errorf("failed to begin transaction with error: %w", err)
-			return
-		}
-		defer func() {
+		err = func() error {
+			tx, err := sqlDB.BeginTx(ctx, &sql.TxOptions{})
 			if err != nil {
-				err = fmt.Errorf("rolling back because of error: %w", err)
-				if rbErr := tx.Rollback(); rbErr != nil {
-					rbErr = fmt.Errorf(
-						"%w failed rolling back transaction with error: %w",
-						err,
-						rbErr,
-					)
-					if !errors.Is(rbErr, sql.ErrTxDone) {
-						logger.Error().Err(rbErr).Msg(rbErr.Error())
-						otelutil.RecordError(rbErr, span)
-						return
-					}
-					logger.Warn().Err(rbErr).Msg(rbErr.Error())
-					span.AddEvent(rbErr.Error())
-				}
-				return
+				return fmt.Errorf("failed to begin transaction with error: %w", err)
 			}
-			if cmtErr := tx.Commit(); cmtErr != nil {
-				cmtErr = fmt.Errorf("failed committing transaction with error: %w", cmtErr)
-				if !errors.Is(cmtErr, sql.ErrTxDone) {
-					logger.Error().Err(cmtErr).Msg(cmtErr.Error())
-					otelutil.RecordError(cmtErr, span)
+			defer func() {
+				if err != nil {
+					err = fmt.Errorf("rolling back because of error: %w", err)
+					if rbErr := tx.Rollback(); rbErr != nil {
+						rbErr = fmt.Errorf("failed rolling back transaction with error: %w", rbErr)
+						err = errors.Join(err, rbErr)
+						if !errors.Is(err, sql.ErrTxDone) {
+							logger.Error().Err(rbErr).Msg(rbErr.Error())
+							otelutil.RecordError(rbErr, span)
+							return
+						}
+						logger.Warn().Err(rbErr).Msg(rbErr.Error())
+						span.AddEvent(rbErr.Error())
+					}
 					return
 				}
-				logger.Warn().Err(cmtErr).Msg(cmtErr.Error())
-				return
+				if err := tx.Commit(); err != nil {
+					err = fmt.Errorf("failed committing transaction with error: %w", err)
+					if !errors.Is(err, sql.ErrTxDone) {
+						logger.Error().Err(err).Msg(err.Error())
+						otelutil.RecordError(err, span)
+						return
+					}
+					logger.Warn().Err(err).Msg(err.Error())
+					return
+				}
+				logger.Info().Msg("successfully committed transaction")
+			}()
+
+			var data jobs.DownloadAttachmentArgs
+			if err = json.Unmarshal(msg.Data(), &data); err != nil {
+				return fmt.Errorf("failed to unmarshal data with err: %w", err)
 			}
-			logger.Info().Msg("successfully committed transaction")
+
+			var company model.Companies
+			err = Companies.SELECT(Companies.AllColumns).
+				WHERE(Companies.Ticker.EQ(String(data.Announcement.Ticker))).
+				QueryContext(ctx, tx, &company)
+			if err != nil {
+				if errors.Is(err, qrm.ErrNoRows) {
+					return fmt.Errorf("company not found with err: %w", err)
+				}
+				return fmt.Errorf("failed to get company with err: %w", err)
+			}
+
+			logger = logger.With().Any("data", data).Logger()
+			ctx = logger.WithContext(ctx)
+			downloadedFile, err := repo.DownloadFile(ctx, data)
+			if err != nil {
+				return fmt.Errorf("failed to download announcement with err: %w", err)
+			}
+			logger.Info().Msg("successfully downloaded announcement")
+
+			logger.Debug().Msg("uploading file to minio")
+			info, err := minioClient.FPutObject(
+				ctx,
+				"bloodhound",
+				filepath.Base(downloadedFile.Name()),
+				downloadedFile.Name(),
+				minio.PutObjectOptions{
+					ContentType: "application/pdf",
+					UserTags: map[string]string{
+						"emiten":       data.Announcement.Ticker,
+						"sector":       company.Sector.String(),
+						"subsector":    company.SubSector.String(),
+						"industry":     company.Industry.String(),
+						"sub_industry": company.SubIndustry.String(),
+					},
+				},
+			)
+			if err != nil {
+				err = fmt.Errorf("failed to download announcement with err: %w", err)
+				return err
+			}
+			logger = logger.With().
+				Str("saved_path", info.Location).
+				Str("version_id", info.VersionID).
+				Str("checksum", info.ChecksumSHA256).
+				Logger()
+			logger.Info().Msg("successfully uploaded file to minio")
+
+			logger.Debug().Msg("getting announcement from db")
+			var announcement model.Announcements
+			err = Announcements.SELECT(Announcements.AllColumns).
+				WHERE(Announcements.Name.EQ(String(data.Announcement.Title))).
+				QueryContext(ctx, tx, &announcement)
+			if err != nil {
+				if errors.Is(err, qrm.ErrNoRows) {
+					return fmt.Errorf("company not found with error: %w", err)
+				}
+				return fmt.Errorf("failed to get announcement with error: %w", err)
+			}
+			logger.Debug().Msg("got announcement from db")
+
+			logger.Debug().Msg("creating attachment")
+			attachment := model.Attachments{
+				AnnouncementID: announcement.ID,
+				Name:           data.Attachment.Filename,
+				Path:           info.Location,
+				Checksum:       info.ChecksumSHA256,
+				SourceURL:      data.Attachment.DownloadURL,
+				Type:           model.AttachmentType_Others,
+				PublishedAt:    data.Announcement.Date.Time,
+				CreatedAt:      info.LastModified,
+			}
+			err = Attachments.INSERT(Attachments.EXCLUDED.ID).
+				MODEL(attachment).
+				RETURNING(Attachments.AllColumns).
+				QueryContext(ctx, tx, &attachment)
+			if err != nil {
+				return fmt.Errorf("attachment is not inserted with error: %w", err)
+			}
+			logger.Debug().Msg("created attachment")
+			return nil
 		}()
-
-		var data jobs.DownloadAttachmentArgs
-		if err = json.Unmarshal(msg.Data(), &data); err != nil {
-			err = fmt.Errorf("failed to unmarshal data with err: %w", err)
-			return
-		}
-
-		logger = logger.With().Any("reply", data).Logger()
-		ctx = logger.WithContext(ctx)
-		downloadedFile, err := repo.DownloadFile(ctx, data)
-		if err != nil {
-			err = fmt.Errorf("failed to download announcement with err: %w", err)
-			return
-		}
-		logger.Info().Msg("successfully downloaded announcement")
-
-		logger.Debug().Msg("uploading file to minio")
-		info, err := minioClient.FPutObject(
-			ctx,
-			"bloodhound",
-			filepath.Base(downloadedFile.Name()),
-			downloadedFile.Name(),
-			minio.PutObjectOptions{},
-		)
-		if err != nil {
-			err = fmt.Errorf("failed to download announcement with err: %w", err)
-			return
-		}
-		logger = logger.With().
-			Str("saved_path", info.Location).
-			Str("version_id", info.VersionID).
-			Str("checksum", info.ChecksumSHA256).
-			Logger()
-		logger.Info().Msg("successfully uploaded file to minio")
-
-		logger.Debug().Msg("getting announcement from db")
-		var announcement model.Announcements
-		err = Announcements.SELECT(Announcements.AllColumns).
-			WHERE(Announcements.Name.EQ(String(data.Announcement.Title))).
-			QueryContext(ctx, tx, &announcement)
-		if errors.Is(err, qrm.ErrNoRows) {
-			err = fmt.Errorf("company not found with error: %w", err)
-			return
-		}
-		logger.Debug().Msg("got announcement from db")
-
-		logger.Debug().Msg("creating attachment")
-		attachment := model.Attachments{
-			AnnouncementID: announcement.ID,
-			Name:           data.Attachment.Filename,
-			Path:           info.Location,
-			Checksum:       info.ChecksumSHA256,
-			SourceURL:      data.Attachment.DownloadURL,
-			Type:           model.AttachmentType_Others,
-			PublishedAt:    data.Announcement.Date.Time,
-			CreatedAt:      info.LastModified,
-		}
-		err = Attachments.INSERT(Attachments.AnnouncementID, Attachments.Name, Attachments.Path, Attachments.Checksum, Attachments.SourceURL, Attachments.Type, Attachments.PublishedAt).
-			MODEL(attachment).
-			RETURNING(Attachments.AllColumns).
-			QueryContext(ctx, tx, &attachment)
-		if errors.Is(err, qrm.ErrNoRows) {
-			err = fmt.Errorf("attachment is not inserted with error: %w", err)
-			return
-		}
-		logger.Debug().Msg("created attachment")
 	}
 }
