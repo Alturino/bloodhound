@@ -1,0 +1,32 @@
+app:
+  name: bloodhound
+  environment: development # production, development
+  log_level: info # debug, info, error
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: bloodhound
+  sslmode: disable
+
+minio:
+  endpoint: localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket: bloodhound
+  use_ssl: false
+
+idx:
+  base_url: https://idx.co.id/primary/ListedCompany/GetAnnouncement
+  page_size: 10
+
+scheduler:
+  interval: 15m
+  cron_expr: "*/15 * * * *"
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "otlp"
+  service_name: bloodhound
