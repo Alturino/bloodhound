@@ -20,6 +20,9 @@ app:
   stockbit:
     base_url: https://exodus.stockbit.com
     token: ""
+  log_level: info # debug, info, error
+  log_level: -4 # -4 debug, 0 info, 4 warn, 8 error
+  log_dir: ./logs/
 
 database:
   host: localhost
