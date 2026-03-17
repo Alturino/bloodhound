@@ -18,4 +18,12 @@ type Store interface {
 	RecordAttachment(ctx context.Context, annID string, att models.Attachment, checksum string, storagePath string) error
 	// UpsertMarketDetector inserts or updates market detector summaries and transactions
 	UpsertMarketDetector(ctx context.Context, summary models.MarketDetectorSummary, transactions []models.BrokerTransaction) error
+)
+
+// Store defines the interface for state persistence
+type Store interface {
+	// GetLastProcessedID returns the ID of the last processed announcement
+	GetLastProcessedID(ctx context.Context) (string, error)
+	// SetLastProcessedID sets the ID of the last processed announcement
+	SetLastProcessedID(ctx context.Context, id string) error
 }
