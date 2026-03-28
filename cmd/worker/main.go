@@ -15,6 +15,8 @@ import (
 	"github.com/alturino/bloodhound/internal/state"
 	"github.com/alturino/bloodhound/internal/storage"
 	"github.com/alturino/bloodhound/internal/worker"
+	_ "github.com/lib/pq"
+	"database/sql"
 )
 
 func main() {
@@ -40,10 +42,17 @@ func main() {
 		log.Fatalf("failed to initialize storage: %v", err)
 	}
 
-	stateStore, err := state.NewFileStore("data/state.json")
+	db, err := sql.Open("postgres", cfg.Database.DSN())
 	if err != nil {
-		log.Fatalf("failed to initialize state store: %v", err)
+		log.Fatalf("failed to open database: %v", err)
 	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("failed to ping database: %v", err)
+	}
+
+	stateStore := state.NewDBStore(db)
 
 	idxClient := http.NewClient(
 		cfg.App.IDX.BaseURL,

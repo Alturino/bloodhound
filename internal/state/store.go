@@ -2,12 +2,16 @@ package state
 
 import (
 	"context"
+
+	"github.com/alturino/bloodhound/internal/models"
 )
 
 // Store defines the interface for state persistence
 type Store interface {
-	// GetLastProcessedID returns the ID of the last processed announcement
-	GetLastProcessedID(ctx context.Context) (string, error)
-	// SetLastProcessedID sets the ID of the last processed announcement
-	SetLastProcessedID(ctx context.Context, id string) error
+	// IsProcessed checks if an announcement has already been processed
+	IsProcessed(ctx context.Context, id string) (bool, error)
+	// RecordAnnouncement saves announcement metadata to the database
+	RecordAnnouncement(ctx context.Context, ann models.Announcement) error
+	// RecordAttachment saves attachment metadata to the database
+	RecordAttachment(ctx context.Context, annID string, att models.Attachment, checksum string, storagePath string) error
 }
