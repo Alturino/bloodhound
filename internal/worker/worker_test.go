@@ -1,45 +1,81 @@
 package worker
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"strings"
+	"context"
+	"log/slog"
+	"os"
 	"testing"
-	"time"
 
+	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/http"
 	"github.com/alturino/bloodhound/internal/models"
+	"github.com/alturino/bloodhound/internal/state"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCalculateChecksum(t *testing.T) {
-	data := []byte("hello world")
-	expectedHash := sha256.Sum256(data)
-	expected := hex.EncodeToString(expectedHash[:])
-
-	actual := calculateChecksum(data)
-	if actual != expected {
-		t.Errorf("expected %s, got %s", expected, actual)
+func TestWorker_Process_ReversePaging(t *testing.T) {
+	fakeIDX := &http.FakeClient{
+		Responses: make(map[int]models.AnnouncementResponse),
 	}
-}
-
-func TestNamingLogic(t *testing.T) {
-	ann := models.Announcement{
-		StockCode:        "TLKM",
-		AnnouncementDate: time.Date(2026, 3, 16, 17, 0, 0, 0, time.UTC),
+	fakeStore := &state.FakeStore{
+		Processed: make(map[string]bool),
 	}
-	originalFilename := "Financial_Report.PDF"
-	data := []byte("some content")
-	checksum := calculateChecksum(data)
-	shortChecksum := checksum[:8]
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	// Simulated naming logic from worker.go
-	datePrefix := ann.AnnouncementDate.Format("2006-01-02")
-	stockCode := "TLKM"                   // already trimmed and uppercase in test prep
-	originalName := strings.ToLower(originalFilename) // lowercased
+	w := &Worker{
+		idxClient:  fakeIDX,
+		stateStore: fakeStore,
+		config: &config.Config{
+			App: config.AppConfig{
+				IDX: config.IDXConfig{
+					PageSize: 10,
+				},
+			},
+		},
+		logger: logger,
+	}
+
+	ctx := context.Background()
+
+	// Setup data for total 25 items, page size 10
+	// We want to verify that it fetches: Page 1 (for count), then Page 3, 2, 1.
 	
-	actual := datePrefix + "_" + stockCode + "_" + shortChecksum + "_" + originalName
-	expected := "2026-03-16_TLKM_" + shortChecksum + "_financial_report.pdf"
-
-	if actual != expected {
-		t.Errorf("expected %s, got %s", expected, actual)
+	// Page 1 initial response
+	fakeIDX.Responses[1] = models.AnnouncementResponse{
+		ResultCount: 25,
+		Replies: []models.Reply{
+			{Announcement: models.Announcement{ID2: "item1"}},
+		},
 	}
+	
+	// Page 2 response
+	fakeIDX.Responses[2] = models.AnnouncementResponse{
+		ResultCount: 25,
+		Replies: []models.Reply{
+			{Announcement: models.Announcement{ID2: "item11"}},
+		},
+	}
+	
+	// Page 3 response
+	fakeIDX.Responses[3] = models.AnnouncementResponse{
+		ResultCount: 25,
+		Replies: []models.Reply{
+			{Announcement: models.Announcement{ID2: "item21"}},
+		},
+	}
+
+	err := w.Process(ctx)
+	assert.NoError(t, err)
+
+	// Verify fetch order: 1 (count), 3, 2, 1
+	expectedLog := []int{1, 3, 2, 1}
+	assert.Equal(t, expectedLog, fakeIDX.FetchLog)
+
+	// Verify items processed (should be in order of discovery: item21, item11, item1)
+	expectedIDs := []string{"item21", "item11", "item1"}
+	var savedIDs []string
+	for _, ann := range fakeStore.SavedAnnouncements {
+		savedIDs = append(savedIDs, ann.ID2)
+	}
+	assert.Equal(t, expectedIDs, savedIDs)
 }
