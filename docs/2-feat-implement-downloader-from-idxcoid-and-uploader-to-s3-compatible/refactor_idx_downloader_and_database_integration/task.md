@@ -1,0 +1,19 @@
+- [x] Reorganize configuration structure
+	- [x] Nest `IDXConfig` in `AppConfig` in `config/config.go`
+	- [x] Update `viper` defaults for nested config
+- [x] Refactor Database Store
+	- [x] Update `DBStore` to use `go-jet` generated models from `internal/db/.gen/`
+	- [x] Map `IDX ID` to the new `idx_id` column
+- [x] Refactor Background Worker
+	- [x] Update `Worker` to accept `config.AppConfig`
+	- [x] Simplify inner processing loop (remove reversal)
+	- [x] Verify paging logic in tests
+- [x] Test Refactoring
+	- [x] Replace `testify/mock` with manual fakes in `worker_test.go`
+	- [x] Extract `FakeStore` to `internal/state/fake_store.go`
+	- [x] Extract `FakeStorage` to `internal/storage/fake_storage.go`
+	- [x] Extract `FakeClient` to `internal/http/fake_client.go`
+- [x] Finalize Integration
+	- [x] Update `main.go` initialization
+	- [x] Run `go mod tidy`
+	- [x] Verify build and tests
