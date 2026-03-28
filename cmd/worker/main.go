@@ -46,8 +46,8 @@ func main() {
 	}
 
 	idxClient := http.NewClient(
-		cfg.IDX.BaseURL,
-		cfg.IDX.PageSize,
+		cfg.App.IDX.BaseURL,
+		cfg.App.IDX.PageSize,
 		logger,
 		otel.Tracer("bloodhound-idx"),
 	)
@@ -57,8 +57,7 @@ func main() {
 		idxClient,
 		stg,
 		stateStore,
-		cfg.MinIO.Bucket,
-		cfg.Scheduler.Interval,
+		&cfg,
 		logger,
 	)
 
