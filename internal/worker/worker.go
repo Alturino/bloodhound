@@ -69,58 +69,75 @@ func (w *Worker) Start(ctx context.Context) error {
 	}
 }
 
-// Process executes one cycle of polling and processing
+// Process executes one cycle of polling and processing with reverse paging
 func (w *Worker) Process(ctx context.Context) error {
-	lastID, err := w.stateStore.GetLastProcessedID(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get last processed ID: %w", err)
-	}
+	w.logger.DebugContext(ctx, "starting processing cycle")
 
-	w.logger.DebugContext(ctx, "starting processing cycle", slog.String("last_id", lastID))
-
-	// Fetch first page
+	// 1. Fetch first page to determine ResultCount
 	resp, err := w.idxClient.FetchAnnouncements(ctx, 1)
 	if err != nil {
-		return fmt.Errorf("failed to fetch announcements: %w", err)
+		return fmt.Errorf("failed to fetch initial page: %w", err)
 	}
 
-	if len(resp.Replies) == 0 {
+	if resp.ResultCount == 0 || len(resp.Replies) == 0 {
 		w.logger.DebugContext(ctx, "no announcements found")
 		return nil
 	}
 
-	newAnnouncements := make([]models.Reply, 0)
-	for _, reply := range resp.Replies {
-		if reply.Announcement.ID2 == lastID {
-			break
-		}
-		newAnnouncements = append(newAnnouncements, reply)
-	}
+	totalItems := resp.ResultCount
 
-	if len(newAnnouncements) == 0 {
-		w.logger.DebugContext(ctx, "no new announcements since last run")
-		return nil
-	}
+	// 2. Calculate the total number of pages
+	// Example: total=25, size=10 -> totalPages = (25 + 10 - 1) / 10 = 3
+	pageSize := w.config.App.IDX.PageSize
+	totalPages := (totalItems + pageSize - 1) / pageSize
+	
+	w.logger.InfoContext(ctx, "processing historical announcements", 
+		slog.Int("total_items", totalItems),
+		slog.Int("page_size", pageSize),
+		slog.Int("total_pages", totalPages),
+	)
 
-	w.logger.InfoContext(ctx, "found new announcements", slog.Int("count", len(newAnnouncements)))
-
-	// Process from oldest to newest to maintain state correctness if interrupted
-	for i := len(newAnnouncements) - 1; i >= 0; i-- {
-		reply := newAnnouncements[i]
-		if err := w.processAnnouncement(ctx, reply.Announcement); err != nil {
-			w.logger.ErrorContext(ctx, "failed to process announcement",
-				slog.String("id2", reply.Announcement.ID2),
-				slog.Any("error", err),
-			)
+	// 3. Iterate from the last page down to page 1
+	for currPage := totalPages; currPage >= 1; currPage-- {
+		w.logger.DebugContext(ctx, "fetching page", slog.Int("page", currPage))
+		
+		pageResp, err := w.idxClient.FetchAnnouncements(ctx, currPage)
+		if err != nil {
+			w.logger.ErrorContext(ctx, "failed to fetch page", slog.Int("page", currPage), slog.Any("error", err))
 			continue
 		}
 
-		// Update state after each successful announcement processing
-		if err := w.stateStore.SetLastProcessedID(ctx, reply.Announcement.ID2); err != nil {
-			w.logger.ErrorContext(ctx, "failed to update state",
-				slog.String("id2", reply.Announcement.ID2),
-				slog.Any("error", err),
-			)
+		// Process announcements on this page (IDX returns newest first on EACH page usually).
+		// Per user request, we don't have to reverse this inner loop.
+		for i := 0; i < len(pageResp.Replies); i++ {
+			ann := pageResp.Replies[i].Announcement
+			
+			// Check if already processed
+			processed, err := w.stateStore.IsProcessed(ctx, ann.ID2)
+			if err != nil {
+				w.logger.ErrorContext(ctx, "failed to check if processed", slog.String("id2", ann.ID2), slog.Any("error", err))
+				continue
+			}
+			
+			if processed {
+				continue
+			}
+
+			if err := w.processAnnouncement(ctx, ann); err != nil {
+				w.logger.ErrorContext(ctx, "failed to process announcement",
+					slog.String("id2", ann.ID2),
+					slog.Any("error", err),
+				)
+				continue
+			}
+
+			// Record as processed
+			if err := w.stateStore.RecordAnnouncement(ctx, ann); err != nil {
+				w.logger.ErrorContext(ctx, "failed to record announcement",
+					slog.String("id2", ann.ID2),
+					slog.Any("error", err),
+				)
+			}
 		}
 	}
 
@@ -171,15 +188,20 @@ func (w *Worker) processAttachment(ctx context.Context, ann models.Announcement,
 		return fmt.Errorf("failed to check existence: %w", err)
 	}
 
-	if exists {
-		w.logger.DebugContext(ctx, "file already exists in storage, skipping", slog.String("name", targetName))
-		return nil
+	if !exists {
+		// Upload
+		err = w.storage.Upload(ctx, bucket, targetName, bytes.NewReader(data), int64(len(data)), contentType)
+		if err != nil {
+			return fmt.Errorf("failed to upload file: %w", err)
+		}
+		w.logger.InfoContext(ctx, "successfully archived attachment", slog.String("name", targetName))
+	} else {
+		w.logger.DebugContext(ctx, "file already exists in storage, skipping upload", slog.String("name", targetName))
 	}
 
-	// Upload
-	err = w.storage.Upload(ctx, w.bucket, targetName, bytes.NewReader(data), int64(len(data)), contentType)
-	if err != nil {
-		return fmt.Errorf("failed to upload file: %w", err)
+	// Record in database
+	if err := w.stateStore.RecordAttachment(ctx, ann.ID2, att, checksum, targetName); err != nil {
+		return fmt.Errorf("failed to record attachment status: %w", err)
 	}
 
 	return nil
