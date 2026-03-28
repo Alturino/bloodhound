@@ -101,6 +101,8 @@ func Load(configPath string) (Config, error) {
 	v.SetDefault("app.idx.base_url", "https://idx.co.id/primary/ListedCompany/GetAnnouncement")
 	v.SetDefault("app.idx.page_size", 10)
 	v.SetDefault("app.stockbit.token", "")
+	v.SetDefault("idx.base_url", "https://idx.co.id/primary/ListedCompany/GetAnnouncement")
+	v.SetDefault("idx.page_size", 10)
 
 	v.SetDefault("scheduler.interval", 15*time.Minute)
 	v.SetDefault("scheduler.cron_expr", "*/15 * * * *")

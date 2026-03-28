@@ -8,6 +8,15 @@ app:
   stockbit:
     base_url: https://exodus.stockbit.com
     token: ""
+  log_level: -4 # -4 debug, 0 info, 4 warn, 8 error
+  log_dir: ./logs/
+  log_level: -4 # -4 debug, 0 info, 4 warn, 8 error
+  log_dir: ./logs/
+  log_level: info # debug, info, error
+  log_level: info # debug, info, error
+  idx:
+    base_url: https://idx.co.id/primary/ListedCompany/GetAnnouncement
+    page_size: 10
 
 database:
   host: localhost

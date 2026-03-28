@@ -349,28 +349,27 @@ type Worker struct {
 	idxClient  IDXClient
 	storage    storage.Storage
 	stateStore state.Store
-	bucket     string
-	interval   time.Duration
+	config     *config.Config
 	logger     *slog.Logger
 }
 
 // NewWorker creates a new background worker
-func NewWorker(idxClient IDXClient, storage storage.Storage, stateStore state.Store, bucket string, interval time.Duration, logger *slog.Logger) *Worker {
+func NewWorker(idxClient IDXClient, storage storage.Storage, stateStore state.Store, cfg *config.Config, logger *slog.Logger) *Worker {
 	return &Worker{
 		idxClient:  idxClient,
 		storage:    storage,
 		stateStore: stateStore,
-		bucket:     bucket,
-		interval:   interval,
+		config:     cfg,
 		logger:     logger,
 	}
 }
 
 // Start starts the background worker loop
 func (w *Worker) Start(ctx context.Context) error {
-	w.logger.InfoContext(ctx, "starting background worker", slog.Duration("interval", w.interval))
+	interval := w.config.Scheduler.Interval
+	w.logger.InfoContext(ctx, "starting background worker", slog.Duration("interval", interval))
 
-	ticker := time.NewTicker(w.interval)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	// Run once immediately
@@ -486,8 +485,9 @@ func (w *Worker) processAttachment(ctx context.Context, ann models.Announcement,
 	
 	targetName := fmt.Sprintf("%s_%s_%s_%s", datePrefix, stockCode, shortChecksum, originalName)
 
-	// Check if exists
-	exists, err := w.storage.Exists(ctx, w.bucket, targetName)
+	// Check if exists in storage
+	bucket := w.config.MinIO.Bucket
+	exists, err := w.storage.Exists(ctx, bucket, targetName)
 	if err != nil {
 		return fmt.Errorf("failed to check existence: %w", err)
 	}
@@ -503,7 +503,6 @@ func (w *Worker) processAttachment(ctx context.Context, ann models.Announcement,
 		return fmt.Errorf("failed to upload file: %w", err)
 	}
 
-	w.logger.InfoContext(ctx, "successfully archived attachment", slog.String("name", targetName))
 	return nil
 }
 
