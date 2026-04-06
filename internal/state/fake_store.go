@@ -12,6 +12,10 @@ type FakeStore struct {
 	SavedAnnouncements []models.Announcement
 }
 
+func (f *FakeStore) HasSavedAnnouncements(ctx context.Context) (bool, error) {
+	return len(f.Processed) > 0, nil
+}
+
 func (f *FakeStore) IsProcessed(ctx context.Context, id string) (bool, error) {
 	return f.Processed[id], nil
 }

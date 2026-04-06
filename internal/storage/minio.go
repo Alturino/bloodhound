@@ -48,16 +48,16 @@ func (s *MinIOStorage) Upload(ctx context.Context, bucketName, objectName string
 	return nil
 }
 
-// Exists checks if an object exists in MinIO
+// Exists checks if an object exists in MinIO and is not empty
 func (s *MinIOStorage) Exists(ctx context.Context, bucketName, objectName string) (bool, error) {
-	_, err := s.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
+	info, err := s.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
 		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
 			return false, nil
 		}
-		return false, fmt.Errorf("MinIOStorage.Exists: failed to stat object %s in bucket %s: %w", objectName, bucketName, err)
+		return false, fmt.Errorf("MinIOStorage.Exists: stat object %s in bucket %s: %w", objectName, bucketName, err)
 	}
-	return true, nil
+	return info.Size > 0, nil
 }
 
 // Download downloads an object from MinIO

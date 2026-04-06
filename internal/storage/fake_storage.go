@@ -23,6 +23,9 @@ func (f *FakeStorage) Exists(ctx context.Context, bucket, key string) (bool, err
 	if f.Files == nil {
 		return false, nil
 	}
-	_, ok := f.Files[key]
-	return ok, nil
+	data, ok := f.Files[key]
+	if !ok {
+		return false, nil
+	}
+	return len(data) > 0, nil
 }

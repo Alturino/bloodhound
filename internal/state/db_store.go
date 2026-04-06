@@ -3,9 +3,11 @@ package state
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/go-jet/jet/v2/qrm"
 
 	. "github.com/alturino/bloodhound/internal/db/.gen/postgres/public/table"
 	"github.com/alturino/bloodhound/internal/models"
@@ -14,6 +16,19 @@ import (
 // DBStore implements the Store interface using PostgreSQL and go-jet
 type DBStore struct {
 	db *sql.DB
+}
+
+func (s *DBStore) HasSavedAnnouncements(ctx context.Context) (bool, error) {
+	var ann models.Announcement
+	stmt := SELECT(Announcements.AllColumns).FROM(Announcements).LIMIT(1)
+	err := stmt.QueryContext(ctx, s.db, &ann)
+	if err != nil {
+		if errors.Is(err, qrm.ErrNoRows){
+			return false, nil
+		}
+		return false, fmt.Errorf("DBStore.HasSavedAnnouncements: %w", err)
+	}
+	return true, nil
 }
 
 // NewDBStore creates a new PostgreSQL-backed store

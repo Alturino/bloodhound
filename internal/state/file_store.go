@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/alturino/bloodhound/internal/models"
 )
 
 // FileStore implements Store interface using a local JSON file
@@ -69,5 +71,33 @@ func (s *FileStore) SetLastProcessedID(ctx context.Context, id string) error {
 		return fmt.Errorf("FileStore.SetLastProcessedID: failed to write state file: %w", err)
 	}
 
+	return nil
+}
+
+// HasSavedAnnouncements checks if there are any processed announcements
+func (s *FileStore) HasSavedAnnouncements(ctx context.Context) (bool, error) {
+	lastID, err := s.GetLastProcessedID(ctx)
+	if err != nil {
+		return false, err
+	}
+	return lastID != "", nil
+}
+
+// IsProcessed checks if an announcement ID matches the last processed ID
+func (s *FileStore) IsProcessed(ctx context.Context, id string) (bool, error) {
+	lastID, err := s.GetLastProcessedID(ctx)
+	if err != nil {
+		return false, err
+	}
+	return id == lastID, nil
+}
+
+// RecordAnnouncement updates the last processed ID
+func (s *FileStore) RecordAnnouncement(ctx context.Context, ann models.Announcement) error {
+	return s.SetLastProcessedID(ctx, ann.ID2)
+}
+
+// RecordAttachment is a no-op for FileStore (simplified version)
+func (s *FileStore) RecordAttachment(ctx context.Context, annID string, att models.Attachment, checksum string, storagePath string) error {
 	return nil
 }

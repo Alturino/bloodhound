@@ -53,7 +53,7 @@ func (w *Worker) Start(ctx context.Context) error {
 
 	// Run once immediately
 	if err := w.Process(ctx); err != nil {
-		w.logger.ErrorContext(ctx, "failed initial processing", slog.Any("error", err))
+		w.logger.ErrorContext(ctx, "initial processing", slog.Any("error", err))
 	}
 
 	for {
@@ -63,81 +63,115 @@ func (w *Worker) Start(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			if err := w.Process(ctx); err != nil {
-				w.logger.ErrorContext(ctx, "failed processing", slog.Any("error", err))
+				w.logger.ErrorContext(ctx, "processing cycle", slog.Any("error", err))
 			}
 		}
 	}
 }
 
-// Process executes one cycle of polling and processing with reverse paging
+// Process executes one cycle of polling and processing
 func (w *Worker) Process(ctx context.Context) error {
 	w.logger.DebugContext(ctx, "starting processing cycle")
 
-	// 1. Fetch first page to determine ResultCount
-	resp, err := w.idxClient.FetchAnnouncements(ctx, 1)
+	hasData, err := w.stateStore.HasSavedAnnouncements(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to fetch initial page: %w", err)
+		return fmt.Errorf("check if store has data: %w", err)
 	}
 
-	if resp.ResultCount == 0 || len(resp.Replies) == 0 {
-		w.logger.DebugContext(ctx, "no announcements found")
-		return nil
+	if !hasData {
+		return w.processInitial(ctx)
+	}
+
+	return w.processIncremental(ctx)
+}
+
+// processInitial performs a full scan from last page to first to seed the database
+func (w *Worker) processInitial(ctx context.Context) error {
+	w.logger.InfoContext(ctx, "starting initial deep scan for seeding")
+
+	resp, err := w.idxClient.FetchAnnouncements(ctx, 1)
+	if err != nil {
+		return fmt.Errorf("initial fetch: %w", err)
 	}
 
 	totalItems := resp.ResultCount
-
-	// 2. Calculate the total number of pages
-	// Example: total=25, size=10 -> totalPages = (25 + 10 - 1) / 10 = 3
 	pageSize := w.config.App.IDX.PageSize
 	totalPages := (totalItems + pageSize - 1) / pageSize
-	
-	w.logger.InfoContext(ctx, "processing historical announcements", 
+
+	w.logger.InfoContext(ctx, "seeding historical announcements",
 		slog.Int("total_items", totalItems),
 		slog.Int("page_size", pageSize),
 		slog.Int("total_pages", totalPages),
 	)
 
-	// 3. Iterate from the last page down to page 1
-	for currPage := totalPages; currPage >= 1; currPage-- {
-		w.logger.DebugContext(ctx, "fetching page", slog.Int("page", currPage))
-		
-		pageResp, err := w.idxClient.FetchAnnouncements(ctx, currPage)
+	for p := totalPages; p >= 1; p-- {
+		indexFrom := (p-1)*pageSize + 1
+		pageResp, err := w.idxClient.FetchAnnouncements(ctx, indexFrom)
 		if err != nil {
-			w.logger.ErrorContext(ctx, "failed to fetch page", slog.Int("page", currPage), slog.Any("error", err))
+			w.logger.ErrorContext(ctx, "fetch page during seed", slog.Int("page", p), slog.Int("index_from", indexFrom), slog.Any("error", err))
 			continue
 		}
 
-		// Process announcements on this page (IDX returns newest first on EACH page usually).
-		// Per user request, we don't have to reverse this inner loop.
-		for i := 0; i < len(pageResp.Replies); i++ {
-			ann := pageResp.Replies[i].Announcement
-			
-			// Check if already processed
-			processed, err := w.stateStore.IsProcessed(ctx, ann.ID2)
-			if err != nil {
-				w.logger.ErrorContext(ctx, "failed to check if processed", slog.String("id2", ann.ID2), slog.Any("error", err))
+		for _, reply := range pageResp.Replies {
+			if err := w.processAnnouncement(ctx, reply.Announcement); err != nil {
 				continue
 			}
-			
-			if processed {
+			if err := w.stateStore.RecordAnnouncement(ctx, reply.Announcement); err != nil {
+				w.logger.ErrorContext(ctx, "record during seed", slog.String("id2", reply.Announcement.ID2), slog.Any("error", err))
+			}
+		}
+	}
+
+	return nil
+}
+
+// processIncremental polls page 1 and stops when it hits a processed announcement
+func (w *Worker) processIncremental(ctx context.Context) error {
+	w.logger.DebugContext(ctx, "starting incremental poll")
+
+	currPage := 1
+	for {
+		resp, err := w.idxClient.FetchAnnouncements(ctx, currPage)
+		if err != nil {
+			return fmt.Errorf("incremental fetch at page %d: %w", currPage, err)
+		}
+
+		if len(resp.Replies) == 0 {
+			break
+		}
+
+		caughtUp := false
+		for _, reply := range resp.Replies {
+			ann := reply.Announcement
+
+			processed, err := w.stateStore.IsProcessed(ctx, ann.ID2)
+			if err != nil {
+				w.logger.ErrorContext(ctx, "processed check", slog.String("id2", ann.ID2), slog.Any("error", err))
 				continue
+			}
+
+			if processed {
+				w.logger.DebugContext(ctx, "reached already processed announcement, stopping", slog.String("id2", ann.ID2))
+				caughtUp = true
+				break
 			}
 
 			if err := w.processAnnouncement(ctx, ann); err != nil {
-				w.logger.ErrorContext(ctx, "failed to process announcement",
-					slog.String("id2", ann.ID2),
-					slog.Any("error", err),
-				)
 				continue
 			}
-
-			// Record as processed
 			if err := w.stateStore.RecordAnnouncement(ctx, ann); err != nil {
-				w.logger.ErrorContext(ctx, "failed to record announcement",
-					slog.String("id2", ann.ID2),
-					slog.Any("error", err),
-				)
+				w.logger.ErrorContext(ctx, "record announcement", slog.String("id2", ann.ID2), slog.Any("error", err))
 			}
+		}
+
+		if caughtUp {
+			break
+		}
+
+		currPage++
+		// Safety break to avoid infinite loops if something goes wrong
+		if currPage > 10 {
+			break
 		}
 	}
 
@@ -153,7 +187,7 @@ func (w *Worker) processAnnouncement(ctx context.Context, ann models.Announcemen
 
 	for _, att := range ann.Attachments {
 		if err := w.processAttachment(ctx, ann, att); err != nil {
-			w.logger.ErrorContext(ctx, "failed to process attachment",
+			w.logger.ErrorContext(ctx, "process attachment",
 				slog.String("filename", att.OriginalFilename),
 				slog.Any("error", err),
 			)
@@ -164,44 +198,43 @@ func (w *Worker) processAnnouncement(ctx context.Context, ann models.Announcemen
 }
 
 func (w *Worker) processAttachment(ctx context.Context, ann models.Announcement, att models.Attachment) error {
-	// Download file
-	data, contentType, err := w.downloadFile(ctx, att.FullSavePath)
-	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
-	}
-
-	// Calculate checksum
-	checksum := calculateChecksum(data)
-	shortChecksum := checksum[:8]
-
-	// Rename file: yyyy-MM-dd_KODE_EMITEN_checksum_original_filename.ext
+	// Rename file: yyyy-MM-dd_{id2}_original_filename.ext
 	datePrefix := ann.AnnouncementDate.Format("2006-01-02")
-	stockCode := strings.TrimSpace(ann.StockCode)
 	originalName := strings.ToLower(att.OriginalFilename)
-	
-	targetName := fmt.Sprintf("%s_%s_%s_%s", datePrefix, stockCode, shortChecksum, originalName)
+	targetName := fmt.Sprintf("%s_%s_%s", datePrefix, ann.ID2, originalName)
 
-	// Check if exists in storage
+	// Check if exists in storage BEFORE downloading
 	bucket := w.config.MinIO.Bucket
 	exists, err := w.storage.Exists(ctx, bucket, targetName)
 	if err != nil {
-		return fmt.Errorf("failed to check existence: %w", err)
+		return fmt.Errorf("check existence for %s: %w", targetName, err)
 	}
 
-	if !exists {
-		// Upload
-		err = w.storage.Upload(ctx, bucket, targetName, bytes.NewReader(data), int64(len(data)), contentType)
-		if err != nil {
-			return fmt.Errorf("failed to upload file: %w", err)
-		}
-		w.logger.InfoContext(ctx, "successfully archived attachment", slog.String("name", targetName))
-	} else {
-		w.logger.DebugContext(ctx, "file already exists in storage, skipping upload", slog.String("name", targetName))
+	if exists {
+		w.logger.DebugContext(ctx, "file already exists and is not empty, skipping download", slog.String("name", targetName))
+		return nil
 	}
+
+	// Download file
+	data, contentType, err := w.downloadFile(ctx, att.FullSavePath)
+	if err != nil {
+		return fmt.Errorf("download from %s: %w", att.FullSavePath, err)
+	}
+
+	// Calculate checksum for DB record
+	checksum := calculateChecksum(data)
+
+	// Upload
+	err = w.storage.Upload(ctx, bucket, targetName, bytes.NewReader(data), int64(len(data)), contentType)
+	if err != nil {
+		return fmt.Errorf("upload for %s: %w", targetName, err)
+	}
+
+	w.logger.InfoContext(ctx, "successfully archived attachment", slog.String("name", targetName))
 
 	// Record in database
 	if err := w.stateStore.RecordAttachment(ctx, ann.ID2, att, checksum, targetName); err != nil {
-		return fmt.Errorf("failed to record attachment status: %w", err)
+		return fmt.Errorf("record attachment for %s: %w", targetName, err)
 	}
 
 	return nil
@@ -222,7 +255,7 @@ func (w *Worker) downloadFile(ctx context.Context, url string) ([]byte, string, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("failed to download, status: %d", resp.StatusCode)
+		return nil, "", fmt.Errorf("download, status: %d", resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
