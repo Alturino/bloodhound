@@ -1,4 +1,4 @@
-package http
+package idx
 
 import (
 	"context"
@@ -6,59 +6,63 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/imroc/req/v3"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/models"
+	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
+// IDXClient defines the subset of IDX client methods needed by the worker
+type Client interface {
+	FetchAnnouncements(ctx context.Context, indexFrom int) (models.AnnouncementResponse, error)
+}
+
 // Client handles API requests to IDX
-type Client struct {
-	httpClient *req.Client
-	baseURL    string
-	pageSize   int
+type client struct {
+	httpclient *req.Client
+	config     *config.IDX
 	logger     *slog.Logger
 	tracer     trace.Tracer
 }
 
 // NewClient creates a new IDX HTTP client with Chrome browser impersonation
-func NewClient(baseURL string, pageSize int, logger *slog.Logger, tracer trace.Tracer) *Client {
-	client := req.C().
-		EnableAutoDecompress().
-		ImpersonateChrome().
-		SetTimeout(30*time.Second).
-		SetCommonRetryCount(3).
-		SetCommonRetryBackoffInterval(1*time.Second, 5*time.Second).
-		// AddCommonRetryCondition(middleware.ShouldGetCookie()).
-		SetCommonRetryCount(2).
-		// SetCommonRetryHook(middleware.GetCookie(ctx)).
-		SetCommonHeaders(map[string]string{
-			"Connection":         "keep-alive",
-			"Accept-Encoding":    "gzip",
-			"Host":               "idx.co.id",
-			"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
-			"Sec-Fetch-Dest":     "document",
-			"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
-			"Sec-Fetch-Mode":     "navigate",
-			"Sec-Fetch-Site":     "none",
-			"sec-ch-ua-platform": `"Linux"`,
-		}).
-		// SetOutputDirectory(common.BloodhoundDir).
-		DisableAutoReadResponse()
+func NewClient(
+	httpclient *req.Client,
+	config *config.IDX,
+	logger *slog.Logger,
+	tracer trace.Tracer,
+) Client {
+	if logger == nil {
+		logger = slog.Default().With(slog.String("tag", "stockbit.Client"))
+	}
+	if tracer == nil {
+		tracer = telemetry.AppTelemetry.Tracer
+	}
+	httpclient = httpclient.SetCommonHeaders(map[string]string{
+		"Connection":         "keep-alive",
+		"Accept-Encoding":    "gzip",
+		"Host":               "idx.co.id",
+		"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
+		"Sec-Fetch-Dest":     "document",
+		"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
+		"Sec-Fetch-Mode":     "navigate",
+		"Sec-Fetch-Site":     "none",
+		"sec-ch-ua-platform": `"Linux"`,
+	}).SetBaseURL(config.BaseURL)
 
-	return &Client{
-		httpClient: client,
-		baseURL:    baseURL,
-		pageSize:   pageSize,
+	return &client{
+		httpclient: httpclient,
+		config:     config,
 		logger:     logger,
 		tracer:     tracer,
 	}
 }
 
 // FetchAnnouncements fetches announcements from IDX API
-func (c Client) FetchAnnouncements(
+func (c client) FetchAnnouncements(
 	ctx context.Context,
 	indexFrom int,
 ) (models.AnnouncementResponse, error) {
@@ -67,22 +71,26 @@ func (c Client) FetchAnnouncements(
 
 	c.logger.DebugContext(ctx, "fetching announcements",
 		slog.Int("index_from", indexFrom),
-		slog.Int("page_size", c.pageSize),
+		slog.Int("page_size", c.config.PageSize),
 	)
-	resp, err := c.httpClient.R().
+	resp, err := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
 			"indexfrom": fmt.Sprintf("%d", indexFrom),
-			"pagesize":  fmt.Sprintf("%d", c.pageSize),
+			"pagesize":  fmt.Sprintf("%d", c.config.PageSize),
 		}).
-		Get(c.baseURL)
+		Get("/primary/ListedCompany/GetAnnouncement")
 	if err != nil {
 		err = fmt.Errorf("failed to fetch announcements: %w", err)
 		return models.AnnouncementResponse{}, err
 	}
 
 	if !resp.IsSuccessState() {
-		err := fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		err := fmt.Errorf(
+			"unexpected status code: %d, body: %s",
+			resp.StatusCode,
+			string(resp.Bytes()),
+		)
 		return models.AnnouncementResponse{}, err
 	}
 
@@ -104,7 +112,7 @@ func (c Client) FetchAnnouncements(
 }
 
 // convertToModel converts raw API response to our model
-func (c Client) convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
+func (c client) convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
 	result := models.AnnouncementResponse{
 		ResultCount: raw.ResultCount,
 		SearchParams: models.SearchParams{

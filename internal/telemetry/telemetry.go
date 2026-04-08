@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
@@ -32,8 +33,11 @@ type Telemetry struct {
 	Logger         *slog.Logger
 }
 
+var AppTelemetry Telemetry
+
 // New creates a new Telemetry instance with configured providers
-func New(ctx context.Context, cfg config.Config) (*Telemetry, error) {
+// TODO: refactor use otelconf package to simplify configuration and initialization
+func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 	if !cfg.Telemetry.Enabled {
 		tp, mp := tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider()
 		otel.SetTracerProvider(tp)
@@ -73,29 +77,26 @@ func New(ctx context.Context, cfg config.Config) (*Telemetry, error) {
 	// 3. Initialize Logger
 	logger := initLogger(cfg)
 
-	return &Telemetry{
+	AppTelemetry = Telemetry{
 		TracerProvider: tp,
 		MeterProvider:  mp,
 		Tracer:         tp.Tracer(cfg.Telemetry.ServiceName),
 		Meter:          mp.Meter(cfg.Telemetry.ServiceName),
 		Logger:         logger,
-	}, nil
+	}
+	return &AppTelemetry, nil
 }
 
 func initTracer(
 	ctx context.Context,
-	cfg config.Config,
+	cfg *config.Config,
 	res *resource.Resource,
 ) (*sdktrace.TracerProvider, error) {
 	var exporter sdktrace.SpanExporter
 	var err error
 
-	if cfg.App.Environment == "production" {
-		exporter, err = otlptracegrpc.New(
-			ctx,
-			otlptracegrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint),
-		)
-	} else {
+	exporter, err = otlptracegrpc.New(ctx, otlptracegrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint))
+	if cfg.App.Environment != "production" {
 		exporter, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
 	}
 
@@ -118,18 +119,14 @@ func initTracer(
 
 func initMeter(
 	ctx context.Context,
-	cfg config.Config,
+	cfg *config.Config,
 	res *resource.Resource,
 ) (*sdkmetric.MeterProvider, error) {
 	var exporter sdkmetric.Exporter
 	var err error
 
-	if cfg.App.Environment == "production" {
-		exporter, err = otlpmetricgrpc.New(
-			ctx,
-			otlpmetricgrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint),
-		)
-	} else {
+	exporter, err = otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint))
+	if cfg.App.Environment != "production" {
 		exporter, err = stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	}
 
@@ -146,17 +143,15 @@ func initMeter(
 	return mp, nil
 }
 
-func initLogger(cfg config.Config) *slog.Logger {
+func initLogger(cfg *config.Config) *slog.Logger {
 	var handler slog.Handler
 	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
 
-	if cfg.App.Environment == "production" {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
-	} else {
+	handler = slog.NewJSONHandler(os.Stdout, opts)
+	if cfg.App.Environment != "production" {
 		opts.Level = slog.LevelDebug
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-
 	return slog.New(handler)
 }
 
@@ -173,4 +168,13 @@ func (t *Telemetry) Shutdown(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func RecordError(span trace.Span, err error) {
+	if err == nil {
+		return
+	}
+	span.AddEvent(err.Error())
+	span.SetStatus(codes.Error, err.Error())
+	span.RecordError(err)
 }
