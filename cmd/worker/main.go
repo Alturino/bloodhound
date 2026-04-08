@@ -118,6 +118,7 @@ func main() {
 	// Create and start worker
 	w := worker.NewWorker(
 		idxClient,
+		stockbitClient,
 		stg,
 		stateStore,
 		&cfg,

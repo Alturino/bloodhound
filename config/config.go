@@ -19,6 +19,32 @@ type Config struct {
 }
 
 type AppConfig struct {
+	Name        string     `mapstructure:"name"`
+	Environment string     `mapstructure:"environment"` // development, production
+	LogDir      string     `mapstructure:"log_dir"`
+	LogLevel    slog.Level `mapstructure:"log_level"` // debug, info, warn, error
+	Name        string `mapstructure:"name"`
+	Environment string `mapstructure:"environment"` // development, production
+	LogLevel    string `mapstructure:"log_level"`   // debug, info, warn, error
+	Name        string    `mapstructure:"name"`
+	Environment string    `mapstructure:"environment"` // development, production
+	LogLevel    string    `mapstructure:"log_level"`   // debug, info, warn, error
+	IDX         IDXConfig `mapstructure:"idx"`
+	Name        string     `mapstructure:"name"`
+	Environment string     `mapstructure:"environment"` // development, production
+	LogDir      string     `mapstructure:"log_dir"`
+	LogLevel    slog.Level `mapstructure:"log_level"` // debug, info, warn, error
+	Name        string `mapstructure:"name"`
+	Environment string `mapstructure:"environment"` // development, production
+	LogLevel    string `mapstructure:"log_level"`   // debug, info, warn, error
+	Name        string    `mapstructure:"name"`
+	Environment string    `mapstructure:"environment"` // development, production
+	LogLevel    string    `mapstructure:"log_level"`   // debug, info, warn, error
+	IDX         IDXConfig `mapstructure:"idx"`
+	Name        string    `mapstructure:"name"`
+	Environment string    `mapstructure:"environment"` // development, production
+	LogLevel    string    `mapstructure:"log_level"`   // debug, info, warn, error
+	IDX         IDXConfig `mapstructure:"idx"`
 	Name        string         `mapstructure:"name"`
 	Environment string         `mapstructure:"environment"` // development, production
 	LogLevel    slog.Level     `mapstructure:"log_level"`   // debug, info, warn, error
