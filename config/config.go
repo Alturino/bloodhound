@@ -13,15 +13,15 @@ type Config struct {
 	App       AppConfig       `mapstructure:"app"`
 	Database  DatabaseConfig  `mapstructure:"database"`
 	MinIO     MinIOConfig     `mapstructure:"minio"`
-	IDX       IDXConfig       `mapstructure:"idx"`
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 	Telemetry TelemetryConfig `mapstructure:"telemetry"`
 }
 
 type AppConfig struct {
-	Name        string `mapstructure:"name"`
-	Environment string `mapstructure:"environment"` // development, production
-	LogLevel    string `mapstructure:"log_level"`   // debug, info, warn, error
+	Name        string    `mapstructure:"name"`
+	Environment string    `mapstructure:"environment"` // development, production
+	LogLevel    string    `mapstructure:"log_level"`   // debug, info, warn, error
+	IDX         IDXConfig `mapstructure:"idx"`
 }
 
 type DatabaseConfig struct {
@@ -91,8 +91,8 @@ func Load(configPath string) (Config, error) {
 	v.SetDefault("minio.bucket", "idx-announcements")
 	v.SetDefault("minio.use_ssl", false)
 
-	v.SetDefault("idx.base_url", "https://idx.co.id/primary/ListedCompany/GetAnnouncement")
-	v.SetDefault("idx.page_size", 10)
+	v.SetDefault("app.idx.base_url", "https://idx.co.id/primary/ListedCompany/GetAnnouncement")
+	v.SetDefault("app.idx.page_size", 10)
 
 	v.SetDefault("scheduler.interval", 15*time.Minute)
 	v.SetDefault("scheduler.cron_expr", "*/15 * * * *")

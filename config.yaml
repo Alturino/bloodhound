@@ -2,6 +2,9 @@ app:
   name: bloodhound
   environment: development # production, development
   log_level: info # debug, info, error
+  idx:
+    base_url: https://idx.co.id/primary/ListedCompany/GetAnnouncement
+    page_size: 10
 
 database:
   host: localhost
@@ -17,10 +20,6 @@ minio:
   secret_key: minioadmin
   bucket: bloodhound
   use_ssl: false
-
-idx:
-  base_url: https://idx.co.id/primary/ListedCompany/GetAnnouncement
-  page_size: 10
 
 scheduler:
   interval: 15m

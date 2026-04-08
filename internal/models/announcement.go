@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/alturino/bloodhound/internal/db/.gen/postgres/public/model"
+)
 
 // AnnouncementResponse is the top-level API response from IDX
 type AnnouncementResponse struct {
@@ -56,6 +60,16 @@ type Announcement struct {
 	Attachments         []Attachment `json:"attachments"`
 }
 
+func (a Announcement) ToAnnouncements() model.Announcements {
+	return model.Announcements{
+		IdxID:             a.ID2,
+		StockCode:         a.StockCode,
+		AnnouncementDate:  a.AnnouncementDate,
+		AnnouncementTitle: a.AnnouncementTitle,
+		CreatedAt:         a.CreatedDate,
+	}
+}
+
 // Attachment contains PDF attachment details
 type Attachment struct {
 	ID               int    `json:"id"`
@@ -65,4 +79,13 @@ type Attachment struct {
 	CorrelationID    string `json:"correlation_id"`
 	IsAttachment     bool   `json:"is_attachment"`
 	OriginalFilename string `json:"original_filename"` // OriginalFilename
+}
+
+func (a Attachment) ToAttachments(announcementID, checksum, storagePath string) model.Attachments {
+	return model.Attachments{
+		AnnouncementID:   announcementID,
+		OriginalFilename: a.OriginalFilename,
+		Checksum:         checksum,
+		StoragePath:      storagePath,
+	}
 }
