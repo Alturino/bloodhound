@@ -1,0 +1,5 @@
+- `[x]` Re-implement `Store` interface and implementations with `HasSavedData` check
+- `[x]` Re-implement `Worker.Process` with initial seeding and incremental polling
+- `[x]` Re-apply `id2` naming convention and optimized storage check
+- `[x]` Restore comprehensive unit tests
+- `[x]` Final verification
