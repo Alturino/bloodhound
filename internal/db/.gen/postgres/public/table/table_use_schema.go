@@ -12,5 +12,7 @@ package table
 func UseSchema(schema string) {
 	Announcements = Announcements.FromSchema(schema)
 	Attachments = Attachments.FromSchema(schema)
+	BrokerTransactions = BrokerTransactions.FromSchema(schema)
+	MarketDetectorSummaries = MarketDetectorSummaries.FromSchema(schema)
 	SchemaMigrations = SchemaMigrations.FromSchema(schema)
 }

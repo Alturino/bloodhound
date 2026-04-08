@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -18,10 +19,16 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Name        string    `mapstructure:"name"`
-	Environment string    `mapstructure:"environment"` // development, production
-	LogLevel    string    `mapstructure:"log_level"`   // debug, info, warn, error
-	IDX         IDXConfig `mapstructure:"idx"`
+	Name        string         `mapstructure:"name"`
+	Environment string         `mapstructure:"environment"` // development, production
+	LogLevel    slog.Level     `mapstructure:"log_level"`   // debug, info, warn, error
+	IDX         IDXConfig      `mapstructure:"idx"`
+	Stockbit    StockbitConfig `mapstructure:"stockbit"`
+}
+
+type StockbitConfig struct {
+	Token   string `mapstructure:"token"`
+	BaseURL string `mapstructure:"base_url"`
 }
 
 type DatabaseConfig struct {
@@ -93,6 +100,7 @@ func Load(configPath string) (Config, error) {
 
 	v.SetDefault("app.idx.base_url", "https://idx.co.id/primary/ListedCompany/GetAnnouncement")
 	v.SetDefault("app.idx.page_size", 10)
+	v.SetDefault("app.stockbit.token", "")
 
 	v.SetDefault("scheduler.interval", 15*time.Minute)
 	v.SetDefault("scheduler.cron_expr", "*/15 * * * *")
