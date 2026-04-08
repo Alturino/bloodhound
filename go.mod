@@ -1,6 +1,6 @@
 module github.com/alturino/bloodhound
 
-go 1.26.0
+go 1.25
 
 require (
 	github.com/go-jet/jet/v2 v2.14.1
@@ -8,6 +8,7 @@ require (
 	github.com/imroc/req/v3 v3.57.0
 	github.com/lib/pq v1.12.0
 	github.com/minio/minio-go/v7 v7.0.99
+	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.40.0

@@ -13,6 +13,7 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/http"
 	"github.com/alturino/bloodhound/internal/state"
+	"github.com/alturino/bloodhound/internal/stockbit"
 	"github.com/alturino/bloodhound/internal/storage"
 	"github.com/alturino/bloodhound/internal/worker"
 	_ "github.com/lib/pq"
@@ -20,15 +21,15 @@ import (
 )
 
 func main() {
-	// Initialize logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	slog.SetDefault(logger)
-
 	// Load configuration
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+
+	// Initialize logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.App.LogLevel}))
+	slog.SetDefault(logger)
 
 	// Initialize components
 	stg, err := storage.NewMinIOStorage(
@@ -61,9 +62,17 @@ func main() {
 		otel.Tracer("bloodhound-idx"),
 	)
 
+	stockbitClient := stockbit.NewClient(
+		&cfg.App.Stockbit,
+		os.Getenv("IDX_STOCKBIT_TOKEN"), // or from cfg if mapped
+		logger,
+		otel.Tracer("bloodhound-stockbit"),
+	)
+
 	// Create and start worker
 	w := worker.NewWorker(
 		idxClient,
+		stockbitClient,
 		stg,
 		stateStore,
 		&cfg,

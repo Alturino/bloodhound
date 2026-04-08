@@ -16,4 +16,6 @@ type Store interface {
 	RecordAnnouncement(ctx context.Context, ann models.Announcement) error
 	// RecordAttachment saves attachment metadata to the database
 	RecordAttachment(ctx context.Context, annID string, att models.Attachment, checksum string, storagePath string) error
+	// UpsertMarketDetector inserts or updates market detector summaries and transactions
+	UpsertMarketDetector(ctx context.Context, summary models.MarketDetectorSummary, transactions []models.BrokerTransaction) error
 }

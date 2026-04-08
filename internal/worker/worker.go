@@ -23,23 +23,37 @@ type IDXClient interface {
 	FetchAnnouncements(ctx context.Context, indexFrom int) (models.AnnouncementResponse, error)
 }
 
-// Worker handles the orchestration of fetching and processing announcements
-type Worker struct {
-	idxClient  IDXClient
-	storage    storage.Storage
-	stateStore state.Store
-	config     *config.Config
-	logger     *slog.Logger
+// StockbitClient defines the subset of Stockbit client methods needed by the worker
+type StockbitClient interface {
+	FetchMarketDetector(ctx context.Context, symbol, dateFrom, dateTo string) (models.StockbitMarketDetectorResponse, error)
 }
 
-// NewWorker creates a new background worker
-func NewWorker(idxClient IDXClient, storage storage.Storage, stateStore state.Store, cfg *config.Config, logger *slog.Logger) *Worker {
+// Worker handles the orchestration of fetching and processing announcements
+type Worker struct {
+	idxClient      IDXClient
+	stockbitClient StockbitClient
+	storage        storage.Storage
+	stateStore     state.Store
+	config         *config.Config
+	logger         *slog.Logger
+}
+
+// NewWorker initializes a new background worker
+func NewWorker(
+	idxClient IDXClient,
+	stockbitClient StockbitClient,
+	storage storage.Storage,
+	stateStore state.Store,
+	cfg *config.Config,
+	logger *slog.Logger,
+) *Worker {
 	return &Worker{
-		idxClient:  idxClient,
-		storage:    storage,
-		stateStore: stateStore,
-		config:     cfg,
-		logger:     logger,
+		idxClient:      idxClient,
+		stockbitClient: stockbitClient,
+		storage:        storage,
+		stateStore:     stateStore,
+		config:         cfg,
+		logger:         logger,
 	}
 }
 
@@ -193,6 +207,70 @@ func (w *Worker) processAnnouncement(ctx context.Context, ann models.Announcemen
 			)
 		}
 	}
+
+	if err := w.syncMarketDetector(ctx, ann.StockCode, ann.AnnouncementDate); err != nil {
+		w.logger.ErrorContext(ctx, "failed to sync market detector",
+			slog.String("symbol", ann.StockCode),
+			slog.Any("error", err),
+		)
+	}
+
+	return nil
+}
+
+func (w *Worker) syncMarketDetector(ctx context.Context, symbol string, date time.Time) error {
+	dateStr := date.Format("2006-01-02")
+	
+	resp, err := w.stockbitClient.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
+	if err != nil {
+		return fmt.Errorf("fetch: %w", err)
+	}
+
+	summary := models.MarketDetectorSummary{
+		Symbol:        symbol,
+		TradeDate:     dateStr,
+		AccDistStatus: resp.Data.BandarDetector.BrokerAccDist,
+		TotalValue:    resp.Data.BandarDetector.Value,
+	}
+
+	var txns []models.BrokerTransaction
+	for _, b := range resp.Data.BrokerSummary.BrokersBuy {
+		lots := b.BLot.IntPart()
+		txns = append(txns, models.BrokerTransaction{
+			Symbol:       symbol,
+			TradeDate:    dateStr,
+			BrokerCode:   b.BrokerCode,
+			Side:         "BUY",
+			Lots:         lots,
+			Frequency:    b.Freq,
+			InvestorType: b.InvestorType,
+			AvgPrice:     b.BuyAvgPrice,
+		})
+	}
+
+	for _, b := range resp.Data.BrokerSummary.BrokersSell {
+		lots := b.SLot.IntPart()
+		txns = append(txns, models.BrokerTransaction{
+			Symbol:       symbol,
+			TradeDate:    dateStr,
+			BrokerCode:   b.BrokerCode,
+			Side:         "SELL",
+			Lots:         lots,
+			Frequency:    b.Freq,
+			InvestorType: b.InvestorType,
+			AvgPrice:     b.SellAvgPrice,
+		})
+	}
+
+	if err := w.stateStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
+		return fmt.Errorf("upsert: %w", err)
+	}
+
+	w.logger.InfoContext(ctx, "synced market detector data",
+		slog.String("symbol", symbol),
+		slog.String("date", dateStr),
+		slog.Int("txns", len(txns)),
+	)
 
 	return nil
 }

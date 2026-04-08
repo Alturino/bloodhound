@@ -5,6 +5,9 @@ app:
   idx:
     base_url: https://idx.co.id/primary/ListedCompany/GetAnnouncement
     page_size: 10
+  stockbit:
+    base_url: https://exodus.stockbit.com
+    token: ""
 
 database:
   host: localhost

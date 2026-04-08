@@ -13,6 +13,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type FakeStockbitClient struct {
+	Response models.StockbitMarketDetectorResponse
+	Err      error
+}
+
+func (f *FakeStockbitClient) FetchMarketDetector(ctx context.Context, symbol, dateFrom, dateTo string) (models.StockbitMarketDetectorResponse, error) {
+	return f.Response, f.Err
+}
+
 func TestWorker_Process_InitialSeeding(t *testing.T) {
 	fakeIDX := &http.FakeClient{
 		Responses: make(map[int]models.AnnouncementResponse),
@@ -23,8 +32,9 @@ func TestWorker_Process_InitialSeeding(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	w := &Worker{
-		idxClient:  fakeIDX,
-		stateStore: fakeStore,
+		idxClient:      fakeIDX,
+		stockbitClient: &FakeStockbitClient{},
+		stateStore:     fakeStore,
 		config: &config.Config{
 			App: config.AppConfig{
 				IDX: config.IDXConfig{
@@ -87,8 +97,9 @@ func TestWorker_Process_Incremental(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	w := &Worker{
-		idxClient:  fakeIDX,
-		stateStore: fakeStore,
+		idxClient:      fakeIDX,
+		stockbitClient: &FakeStockbitClient{},
+		stateStore:     fakeStore,
 		config: &config.Config{
 			App: config.AppConfig{
 				IDX: config.IDXConfig{

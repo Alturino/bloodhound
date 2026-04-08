@@ -35,3 +35,7 @@ func (f *FakeStore) RecordAnnouncement(ctx context.Context, ann models.Announcem
 func (f *FakeStore) RecordAttachment(ctx context.Context, idxID string, att models.Attachment, checksum string, storagePath string) error {
 	return nil
 }
+
+func (f *FakeStore) UpsertMarketDetector(ctx context.Context, summary models.MarketDetectorSummary, transactions []models.BrokerTransaction) error {
+	return nil
+}
