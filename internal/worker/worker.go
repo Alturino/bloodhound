@@ -65,6 +65,7 @@ func (w *Worker) Start(ctx context.Context) error {
 	// Run once immediately
 	if err := w.Process(ctx); err != nil {
 		w.logger.ErrorContext(ctx, "initial processing", slog.Any("error", err))
+		return err
 	}
 
 	for {
