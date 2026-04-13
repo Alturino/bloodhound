@@ -29,7 +29,7 @@ func Get(config *config.App) *slog.Logger {
 		AddSource: true,
 	}
 	var sinkHandler slog.Handler = slog.NewJSONHandler(logDestination, sinkHandlerOption)
-	if config.Environment == "development" {
+	if config.Environment != "production" {
 		config.LogLevelVar.Set(slog.LevelDebug)
 		logfile.Filename = filepath.Join(config.LogDir, "bloodhound-dev.log")
 		sinkHandler = slog.NewTextHandler(logDestination, sinkHandlerOption)
