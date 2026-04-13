@@ -5,40 +5,48 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/imroc/req/v3"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/models"
+	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
+type Client interface {
+	FetchMarketDetector(
+		ctx context.Context,
+		symbol, dateFrom, dateTo string,
+	) (models.StockbitMarketDetectorResponse, error)
+}
+
 // Client handles API requests to Stockbit
-type Client struct {
-	httpClient *req.Client
-	config     *config.StockbitConfig
+type client struct {
+	httpclient *req.Client
+	config     *config.Stockbit
 	logger     *slog.Logger
 	tracer     trace.Tracer
 }
 
 // NewClient creates a new Stockbit HTTP client
 func NewClient(
-	config *config.StockbitConfig,
-	token string,
+	httpclient *req.Client,
+	config *config.Stockbit,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-) *Client {
-	client := req.C().
-		EnableAutoDecompress().
-		ImpersonateChrome().
-		SetTimeout(30*time.Second).
-		SetCommonRetryCount(3).
-		SetCommonRetryBackoffInterval(1*time.Second, 5*time.Second).
+) Client {
+	if logger == nil {
+		logger = slog.Default().With(slog.String("tag", "stockbit.Client"))
+	}
+	if tracer == nil {
+		tracer = telemetry.AppTelemetry.Tracer
+	}
+	httpclient = httpclient.
 		SetCommonHeaders(map[string]string{
 			"accept":             "application/json",
 			"accept-language":    "en,en-US;q=0.9,id;q=0.8",
-			"authorization":      "Bearer " + token,
+			"authorization":      "Bearer " + config.Token,
 			"dnt":                "1",
 			"origin":             "https://stockbit.com",
 			"priority":           "u=1, i",
@@ -50,11 +58,10 @@ func NewClient(
 			"sec-fetch-mode":     "cors",
 			"sec-fetch-site":     "same-site",
 			"user-agent":         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
-		}).
-		DisableAutoReadResponse()
+		}).SetBaseURL(config.BaseURL)
 
-	return &Client{
-		httpClient: client,
+	return &client{
+		httpclient: httpclient,
 		config:     config,
 		logger:     logger,
 		tracer:     tracer,
@@ -62,11 +69,9 @@ func NewClient(
 }
 
 // FetchMarketDetector fetches broker flow and summary from Stockbit API
-func (c Client) FetchMarketDetector(
+func (c client) FetchMarketDetector(
 	ctx context.Context,
-	symbol string,
-	dateFrom string,
-	dateTo string,
+	symbol, dateFrom, dateTo string,
 ) (models.StockbitMarketDetectorResponse, error) {
 	ctx, span := c.tracer.Start(ctx, "StockbitClient.FetchMarketDetector")
 	defer span.End()
@@ -78,9 +83,8 @@ func (c Client) FetchMarketDetector(
 	)
 
 	// API Endpoint: https://exodus.stockbit.com/marketdetectors/{symbol}
-	url := fmt.Sprintf("%s/marketdetectors/%s", c.config.BaseURL, symbol)
-
-	resp, err := c.httpClient.R().
+	url := "/marketdetectors/" + symbol
+	resp, err := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
 			"from":             dateFrom,
@@ -92,13 +96,13 @@ func (c Client) FetchMarketDetector(
 		}).
 		Get(url)
 	if err != nil {
-		err = fmt.Errorf("failed to fetch stockbit market detector: %w", err)
+		err = fmt.Errorf("fetch stockbit market detector: %w", err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
 
 	if resp.StatusCode == 401 {
-		c.logger.ErrorContext(ctx, "stockbit token unauthorized or expired")
-		return models.StockbitMarketDetectorResponse{}, fmt.Errorf("stockbit unauthorized")
+		err = fmt.Errorf("stockbit token unauthorized or expired: %w", err)
+		return models.StockbitMarketDetectorResponse{}, err
 	}
 
 	if !resp.IsSuccessState() {
@@ -108,7 +112,7 @@ func (c Client) FetchMarketDetector(
 
 	var rawResp models.StockbitMarketDetectorResponse
 	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
-		err = fmt.Errorf("failed to parse response: %w", err)
+		err = fmt.Errorf("unmarshal response: %w", err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
 

@@ -27,7 +27,10 @@ func NewFileStore(filePath string) (*FileStore, error) {
 	// Ensure directory exists
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("FileStore.NewFileStore: failed to create directory for state file: %w", err)
+		return nil, fmt.Errorf(
+			"FileStore.NewFileStore: failed to create directory for state file: %w",
+			err,
+		)
 	}
 
 	return &FileStore{filePath: filePath}, nil
@@ -64,11 +67,13 @@ func (s *FileStore) SetLastProcessedID(ctx context.Context, id string) error {
 
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
-		return fmt.Errorf("FileStore.SetLastProcessedID: failed to marshal state: %w", err)
+		err = fmt.Errorf("FileStore.SetLastProcessedID: failed to marshal state: %w", err)
+return err
 	}
 
 	if err := os.WriteFile(s.filePath, data, 0o644); err != nil {
-		return fmt.Errorf("FileStore.SetLastProcessedID: failed to write state file: %w", err)
+		err = fmt.Errorf("FileStore.SetLastProcessedID: failed to write state file: %w", err)
+return err
 	}
 
 	return nil
@@ -98,6 +103,12 @@ func (s *FileStore) RecordAnnouncement(ctx context.Context, ann models.Announcem
 }
 
 // RecordAttachment is a no-op for FileStore (simplified version)
-func (s *FileStore) RecordAttachment(ctx context.Context, annID string, att models.Attachment, checksum string, storagePath string) error {
+func (s *FileStore) RecordAttachment(
+	ctx context.Context,
+	annID string,
+	att models.Attachment,
+	checksum string,
+	storagePath string,
+) error {
 	return nil
 }

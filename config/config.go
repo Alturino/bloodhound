@@ -6,41 +6,53 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
+var cfg Config
+
+func init() {
+	cfg.App.LogLevelVar = &slog.LevelVar{}
+}
+
 // Config holds all application configuration
 type Config struct {
-	App       AppConfig       `mapstructure:"app"`
-	Database  DatabaseConfig  `mapstructure:"database"`
-	MinIO     MinIOConfig     `mapstructure:"minio"`
-	Scheduler SchedulerConfig `mapstructure:"scheduler"`
-	Telemetry TelemetryConfig `mapstructure:"telemetry"`
+	Scheduler Scheduler `mapstructure:"scheduler"`
+	Telemetry Telemetry `mapstructure:"telemetry"`
+	MinIO     MinIO     `mapstructure:"minio"`
+	Database  Database  `mapstructure:"database"`
+	App       App       `mapstructure:"app"`
 }
 
-type AppConfig struct {
-	Name        string         `mapstructure:"name"`
-	Environment string         `mapstructure:"environment"` // development, production
-	LogLevel    slog.Level     `mapstructure:"log_level"`   // debug, info, warn, error
-	IDX         IDXConfig      `mapstructure:"idx"`
-	Stockbit    StockbitConfig `mapstructure:"stockbit"`
+type App struct {
+	LogLevel    slog.Level `mapstructure:"log_level"` // debug, info, warn, error
+	LogLevelVar *slog.LevelVar
+	Name        string   `mapstructure:"name"`
+	Environment string   `mapstructure:"environment"` // development, production
+	LogDir      string   `mapstructure:"log_dir"`
+	IDX         IDX      `mapstructure:"idx"`
+	Stockbit    Stockbit `mapstructure:"stockbit"`
 }
 
-type StockbitConfig struct {
+type Stockbit struct {
 	Token   string `mapstructure:"token"`
 	BaseURL string `mapstructure:"base_url"`
 }
 
-type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	DBName   string `mapstructure:"dbname"`
-	SSLMode  string `mapstructure:"sslmode"`
+type Database struct {
+	MaxConnections int    `mapstructure:"max_connections" json:"max_connections"`
+	MinConnections int    `mapstructure:"min_connections" json:"min_connections"`
+	Port           int    `mapstructure:"port"`
+	Host           string `mapstructure:"host"`
+	MigrationPath  string `mapstructure:"migration_path"  json:"migration_path"`
+	User           string `mapstructure:"user"`
+	Password       string `mapstructure:"password"`
+	DBName         string `mapstructure:"dbname"`
+	SSLMode        string `mapstructure:"sslmode"`
 }
 
-func (d DatabaseConfig) DSN() string {
+func (d Database) DSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		d.User,
@@ -52,33 +64,39 @@ func (d DatabaseConfig) DSN() string {
 	)
 }
 
-type MinIOConfig struct {
+type MinIO struct {
+	UseSSL    bool   `mapstructure:"use_ssl"`
 	Endpoint  string `mapstructure:"endpoint"`
 	AccessKey string `mapstructure:"access_key"`
 	SecretKey string `mapstructure:"secret_key"`
 	Bucket    string `mapstructure:"bucket"`
-	UseSSL    bool   `mapstructure:"use_ssl"`
 }
 
-type IDXConfig struct {
-	BaseURL  string `mapstructure:"base_url"`
+type IDX struct {
 	PageSize int    `mapstructure:"page_size"`
+	BaseURL  string `mapstructure:"base_url"`
+	Token    string `mapstructure:"token"`
+	MockMode bool   `mapstructure:"mock_mode"`
 }
 
-type SchedulerConfig struct {
+type Scheduler struct {
 	Interval time.Duration `mapstructure:"interval"`
 	CronExpr string        `mapstructure:"cron_expr"` // e.g., "*/15 * * * *"
 }
 
-type TelemetryConfig struct {
+type Telemetry struct {
 	Enabled      bool   `mapstructure:"enabled"`
 	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
 	ServiceName  string `mapstructure:"service_name"`
 }
 
 // Load reads configuration from file and environment variables
-func Load(configPath string) (Config, error) {
-	v := viper.New()
+func Load(configPath string) (*Config, error) {
+	v := viper.GetViper()
+	v.SetEnvPrefix("bloodhound")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	v.WatchConfig()
 
 	// Set defaults
 	v.SetDefault("app.name", "bloodhound")
@@ -98,8 +116,10 @@ func Load(configPath string) (Config, error) {
 	v.SetDefault("minio.bucket", "idx-announcements")
 	v.SetDefault("minio.use_ssl", false)
 
-	v.SetDefault("app.idx.base_url", "https://idx.co.id/primary/ListedCompany/GetAnnouncement")
+	v.SetDefault("app.idx.base_url", "https://idx.co.id")
 	v.SetDefault("app.idx.page_size", 10)
+
+	v.SetDefault("app.stockbit.base_url", "https://exodus.stockbit.com")
 	v.SetDefault("app.stockbit.token", "")
 
 	v.SetDefault("scheduler.interval", 15*time.Minute)
@@ -112,29 +132,32 @@ func Load(configPath string) (Config, error) {
 	if configPath != "" {
 		v.SetConfigFile(configPath)
 	} else {
-		v.SetConfigName("config")
+		v.SetConfigName("bloodhound")
 		v.SetConfigType("yaml")
 		v.AddConfigPath(".")
-		v.AddConfigPath("./config")
+		v.AddConfigPath("./env")
 	}
-
-	// Environment variables
-	v.SetEnvPrefix("IDX")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-
-	// Read config file (optional)
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return Config{}, fmt.Errorf("failed to read config file: %w", err)
+	v.OnConfigChange(func(in fsnotify.Event) {
+		if err := v.MergeInConfig(); err != nil {
+			err = fmt.Errorf("merge config file: %w", err)
+			slog.Error(err.Error())
 		}
-		// Config file not found is OK, we use defaults + env vars
+
+		if err := v.Unmarshal(&cfg); err != nil {
+			err = fmt.Errorf("unmarshal config: %w", err)
+			slog.Error(err.Error())
+		}
+	})
+
+	if err := v.ReadInConfig(); err != nil {
+		err = fmt.Errorf("read config file: %w", err)
+		return &cfg, err
 	}
 
-	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
+		err = fmt.Errorf("unmarshal config: %w", err)
+		return &cfg, err
 	}
 
-	return cfg, nil
+	return &cfg, nil
 }

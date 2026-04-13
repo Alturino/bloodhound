@@ -1,4 +1,4 @@
-package http
+package idx
 
 import (
 	"context"
@@ -12,7 +12,10 @@ type FakeClient struct {
 	FetchLog  []int
 }
 
-func (f *FakeClient) FetchAnnouncements(ctx context.Context, indexFrom int) (models.AnnouncementResponse, error) {
+func (f *FakeClient) FetchAnnouncements(
+	ctx context.Context,
+	indexFrom int,
+) (models.AnnouncementResponse, error) {
 	if f.FetchLog == nil {
 		f.FetchLog = []int{}
 	}
