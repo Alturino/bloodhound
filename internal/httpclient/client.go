@@ -22,10 +22,9 @@ func NewClient(config *config.Config) *req.Client {
 		// AddCommonRetryCondition(middleware.ShouldGetCookie()).
 		// SetCommonRetryHook(middleware.GetCookie(ctx)).
 		// SetOutputDirectory(common.BloodhoundDir).
-		SetCookieJar(jar).
-		DisableAutoReadResponse()
+		SetCookieJar(jar)
 	if config.App.Environment != "production" {
-		client = client.DevMode()
+		client = client.DevMode().EnableAutoReadResponse()
 	}
 	return client
 }
