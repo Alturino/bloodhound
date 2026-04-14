@@ -2,8 +2,11 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 )
+
+var ErrBucketExists = errors.New("bucket already exists")
 
 // Storage defines the interface for file storage operations
 type Storage interface {
@@ -13,4 +16,6 @@ type Storage interface {
 	Exists(ctx context.Context, bucketName, objectName string) (bool, error)
 	// Download downloads a file from the storage
 	Download(ctx context.Context, bucketName, objectName string) (io.ReadCloser, error)
+	// CreateBucket creates a bucket if it doesn't exist
+	CreateBucket(ctx context.Context, bucketName string) error
 }

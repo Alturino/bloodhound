@@ -164,3 +164,32 @@ func (s *MinIO) Download(
 
 	return obj, nil
 }
+
+// CreateBucket creates a bucket if it doesn't exist
+func (s *MinIO) CreateBucket(ctx context.Context, bucketName string) error {
+	ctx, span := s.tracer.Start(
+		ctx,
+		"storage.MinIOStorage.CreateBucket",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(attribute.String("bucket", bucketName)),
+	)
+	defer span.End()
+
+	logger := s.logger.With(slog.String("bucket", bucketName))
+
+	logger.DebugContext(ctx, "creating bucket in MinIO")
+	span.AddEvent("creating bucket in MinIO")
+
+	err := s.client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "BucketAlreadyExists" {
+			return ErrBucketExists
+		}
+		err = fmt.Errorf("storage.MinIOStorage.CreateBucket create bucket %s: %w", bucketName, err)
+		return err
+	}
+
+	logger.InfoContext(ctx, "successfully created bucket")
+	span.AddEvent("successfully created bucket")
+	return nil
+}
