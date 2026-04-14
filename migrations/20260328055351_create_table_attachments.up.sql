@@ -1,7 +1,7 @@
 -- attachments tracks individual files associated with an announcement and their S3 status
 CREATE TABLE IF NOT EXISTS attachments (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
-    announcement_id TEXT NOT NULL REFERENCES announcements(idx_id) ON DELETE CASCADE,
+    announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
     original_filename TEXT NOT NULL,
     checksum TEXT NOT NULL, -- SHA256 first 8 chars
     storage_path TEXT NOT NULL, -- S3 key
