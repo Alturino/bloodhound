@@ -1,7 +1,5 @@
 package idx
 
-import "time"
-
 // RawAnnouncementResponse matches the exact API response structure
 type rawAnnouncementResponse struct {
 	ResultCount  int `json:"ResultCount"`
@@ -19,29 +17,29 @@ type rawAnnouncementResponse struct {
 	} `json:"SearchParams"`
 	Replies []struct {
 		Pengumuman struct {
-			ID                  int       `json:"Id"`
-			OldFinalId          int       `json:"OldFinalId"`
-			NoPengumuman        string    `json:"NoPengumuman"`
-			FinalId             string    `json:"FinalId"`
-			Id2                 string    `json:"Id2"`
-			JudulPengumuman     string    `json:"JudulPengumuman"`
-			JenisPengumuman     string    `json:"JenisPengumuman"`
-			Kode_Emiten         string    `json:"Kode_Emiten"`
-			Form_Id             string    `json:"Form_Id"`
-			PerihalPengumuman   string    `json:"PerihalPengumuman"`
-			JMSXGroupID         string    `json:"JMSXGroupID"`
-			Divisi              string    `json:"Divisi"`
-			KodeDivisi          string    `json:"KodeDivisi"`
-			JenisEmiten         string    `json:"JenisEmiten"`
-			EfekEmiten_DIRE     bool      `json:"EfekEmiten_DIRE"`
-			EfekEmiten_DINFRA   bool      `json:"EfekEmiten_DINFRA"`
-			EfekEmiten_Saham    bool      `json:"EfekEmiten_Saham"`
-			EfekEmiten_Obligasi bool      `json:"EfekEmiten_Obligasi"`
-			EfekEmiten_EBA      bool      `json:"EfekEmiten_EBA"`
-			EfekEmiten_ETF      bool      `json:"EfekEmiten_ETF"`
-			EfekEmiten_SPEI     bool      `json:"EfekEmiten_SPEI"`
-			TglPengumuman       time.Time `json:"TglPengumuman"`
-			CreatedDate         time.Time `json:"CreatedDate"`
+			ID                  int      `json:"Id"`
+			OldFinalId          int      `json:"OldFinalId"`
+			NoPengumuman        string   `json:"NoPengumuman"`
+			FinalId             string   `json:"FinalId"`
+			Id2                 string   `json:"Id2"`
+			JudulPengumuman     string   `json:"JudulPengumuman"`
+			JenisPengumuman     string   `json:"JenisPengumuman"`
+			Kode_Emiten         string   `json:"Kode_Emiten"`
+			Form_Id             string   `json:"Form_Id"`
+			PerihalPengumuman   string   `json:"PerihalPengumuman"`
+			JMSXGroupID         string   `json:"JMSXGroupID"`
+			Divisi              string   `json:"Divisi"`
+			KodeDivisi          string   `json:"KodeDivisi"`
+			JenisEmiten         string   `json:"JenisEmiten"`
+			EfekEmiten_DIRE     bool     `json:"EfekEmiten_DIRE"`
+			EfekEmiten_DINFRA   bool     `json:"EfekEmiten_DINFRA"`
+			EfekEmiten_Saham    bool     `json:"EfekEmiten_Saham"`
+			EfekEmiten_Obligasi bool     `json:"EfekEmiten_Obligasi"`
+			EfekEmiten_EBA      bool     `json:"EfekEmiten_EBA"`
+			EfekEmiten_ETF      bool     `json:"EfekEmiten_ETF"`
+			EfekEmiten_SPEI     bool     `json:"EfekEmiten_SPEI"`
+			TglPengumuman       JsonTime `json:"TglPengumuman"`
+			CreatedDate         JsonTime `json:"CreatedDate"`
 		} `json:"pengumuman"`
 		Attachments []struct {
 			ID               int    `json:"Id"`
