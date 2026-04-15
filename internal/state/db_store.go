@@ -57,8 +57,8 @@ func (s *DBStore) ShouldUpdate(ctx context.Context) (bool, error) {
 	logger.InfoContext(ctx, "got latest announcements")
 	span.AddEvent("got latest announcements")
 
-	logger.DebugContext(ctx, "check if latest announcement is outdated")
-	span.AddEvent("check if latest announcement is outdated")
+	logger.DebugContext(ctx, "is latest announcement outdated")
+	span.AddEvent("is latest announcement outdated")
 	isOutdated := ann.AnnouncementDate.Before(now)
 	logger = logger.With(
 		slog.Time("latest_announcement_date", ann.AnnouncementDate),
