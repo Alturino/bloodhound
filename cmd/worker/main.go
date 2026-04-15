@@ -78,7 +78,7 @@ func main() {
 
 	httpClient := httpclient.NewClient(cfg)
 	idxClient := idx.NewClient(
-		httpClient.Clone(),
+		httpClient,
 		&cfg.App.IDX,
 		logger.With(slog.String("tag", "idx.Client")),
 		telemetry.AppTelemetry.Tracer,
