@@ -26,8 +26,8 @@ import (
 
 // Telemetry holds the OpenTelemetry providers
 type Telemetry struct {
-	TracerProvider *sdktrace.TracerProvider
-	MeterProvider  *sdkmetric.MeterProvider
+	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 	Tracer         trace.Tracer
 	Meter          metric.Meter
 	Logger         *slog.Logger
@@ -42,13 +42,14 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		tp, mp := tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider()
 		otel.SetTracerProvider(tp)
 		otel.SetMeterProvider(mp)
-		return &Telemetry{
-			TracerProvider: nil,
-			MeterProvider:  nil,
+		AppTelemetry = Telemetry{
+			TracerProvider: tp,
+			MeterProvider:  mp,
 			Tracer:         tp.Tracer(cfg.Telemetry.ServiceName),
 			Meter:          mp.Meter(cfg.Telemetry.ServiceName),
 			Logger:         slog.Default(),
-		}, nil
+		}
+		return &AppTelemetry, nil
 	}
 
 	res, err := resource.New(
@@ -157,13 +158,13 @@ func initLogger(cfg *config.Config) *slog.Logger {
 
 // Shutdown gracefully shuts down the telemetry providers
 func (t *Telemetry) Shutdown(ctx context.Context) error {
-	if t.TracerProvider != nil {
-		if err := t.TracerProvider.Shutdown(ctx); err != nil {
+	if tp, ok := t.TracerProvider.(*sdktrace.TracerProvider); t.TracerProvider != nil && ok {
+		if err := tp.Shutdown(ctx); err != nil {
 			return err
 		}
 	}
-	if t.MeterProvider != nil {
-		if err := t.MeterProvider.Shutdown(ctx); err != nil {
+	if mp, ok := t.MeterProvider.(*sdkmetric.MeterProvider); mp.MeterProvider != nil && ok {
+		if err := mp.Shutdown(ctx); err != nil {
 			return err
 		}
 	}
