@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
@@ -87,7 +86,6 @@ func (w *Worker) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
 		"worker.Worker.Process",
-		trace.WithAttributes(attribute.String("tag", "worker.Worker.Process")),
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
@@ -145,11 +143,22 @@ func (w *Worker) processInitial(ctx context.Context) error {
 	for p := totalPages; p >= 1; p-- {
 		indexFrom := (p-1)*pageSize + 1
 
-		logger.DebugContext(ctx, "fetching announcements from page", slog.Int("page", p), slog.Int("index_from", indexFrom))
+		logger.DebugContext(
+			ctx,
+			"fetching announcements from page",
+			slog.Int("page", p),
+			slog.Int("index_from", indexFrom),
+		)
 		span.AddEvent(fmt.Sprintf("fetching announcements from page %d", p))
 		pageResp, err := w.idxClient.FetchAnnouncements(ctx, indexFrom)
 		if err != nil {
-			logger.ErrorContext(ctx, "failed to fetch page during initial seeding", slog.Int("page", p), slog.Int("index_from", indexFrom), slog.Any("error", err))
+			logger.ErrorContext(
+				ctx,
+				"failed to fetch page during initial seeding",
+				slog.Int("page", p),
+				slog.Int("index_from", indexFrom),
+				slog.Any("error", err),
+			)
 			continue
 		}
 
@@ -158,14 +167,25 @@ func (w *Worker) processInitial(ctx context.Context) error {
 				continue
 			}
 			if err := w.stateStore.RecordAnnouncement(ctx, reply.Announcement); err != nil {
-				logger.ErrorContext(ctx, "failed to record announcement during initial seeding", slog.String("id2", reply.Announcement.ID2), slog.Any("error", err))
+				logger.ErrorContext(
+					ctx,
+					"failed to record announcement during initial seeding",
+					slog.String("idx_announcement_id", reply.Announcement.ID2),
+					slog.Any("error", err),
+				)
 			}
 			processedCount++
 		}
 	}
 
-	logger.InfoContext(ctx, "completed initial seeding", slog.Int("processed_count", processedCount))
-	span.AddEvent(fmt.Sprintf("completed initial seeding, processed %d announcements", processedCount))
+	logger.InfoContext(
+		ctx,
+		"completed initial seeding",
+		slog.Int("processed_count", processedCount),
+	)
+	span.AddEvent(
+		fmt.Sprintf("completed initial seeding, processed %d announcements", processedCount),
+	)
 
 	return nil
 }
@@ -199,18 +219,28 @@ func (w *Worker) processIncremental(ctx context.Context) error {
 		for _, reply := range resp.Replies {
 			ann := reply.Announcement
 
-			logger.DebugContext(ctx, "checking if announcement already processed", slog.String("id2", ann.ID2), slog.String("stockCode", ann.StockCode))
-			span.AddEvent(fmt.Sprintf("checking if announcement %s already processed", ann.ID2))
+			logger := logger.With(
+				slog.String("idx_announcement_id", ann.ID2),
+				slog.String("stock_code", ann.StockCode),
+			)
 
+			logger.DebugContext(ctx, "is announcement processed")
+			span.AddEvent(
+				"is announcement processed",
+				trace.WithAttributes(attribute.String("idx_announcement_id", ann.ID2)),
+			)
 			processed, err := w.stateStore.IsProcessed(ctx, ann.ID2)
 			if err != nil {
-				logger.ErrorContext(ctx, "failed to check if announcement is processed", slog.String("id2", ann.ID2), slog.Any("error", err))
+				err = fmt.Errorf("announcement is processed: %w", err)
+				logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 				continue
 			}
-
 			if processed {
-				logger.DebugContext(ctx, "reached already processed announcement, stopping incremental poll", slog.String("id2", ann.ID2))
-				span.AddEvent(fmt.Sprintf("reached already processed announcement %s, stopping", ann.ID2))
+				logger.DebugContext(ctx, "reached already processed announcement, stopping")
+				span.AddEvent(
+					"reached already processed announcement, stopping",
+					trace.WithAttributes(attribute.String("idx_announcement_id", ann.ID2)),
+				)
 				caughtUp = true
 				break
 			}
@@ -219,7 +249,12 @@ func (w *Worker) processIncremental(ctx context.Context) error {
 				continue
 			}
 			if err := w.stateStore.RecordAnnouncement(ctx, ann); err != nil {
-				logger.ErrorContext(ctx, "failed to record announcement", slog.String("id2", ann.ID2), slog.Any("error", err))
+				logger.ErrorContext(
+					ctx,
+					"failed to record announcement",
+					slog.String("idx_announcement_id", ann.ID2),
+					slog.Any("error", err),
+				)
 			}
 			processedCount++
 		}
@@ -234,27 +269,58 @@ func (w *Worker) processIncremental(ctx context.Context) error {
 		}
 	}
 
-	logger.InfoContext(ctx, "completed incremental sync", slog.Int("processed_count", processedCount))
-	span.AddEvent(fmt.Sprintf("completed incremental sync, processed %d new announcements", processedCount))
+	logger.InfoContext(
+		ctx,
+		"completed incremental sync",
+		slog.Int("processed_count", processedCount),
+	)
+	span.AddEvent(
+		fmt.Sprintf("completed incremental sync, processed %d new announcements", processedCount),
+	)
 
 	return nil
 }
 
 func (w *Worker) processAnnouncement(ctx context.Context, ann models.Announcement) error {
-	ctx, span := w.tracer.Start(ctx, "worker.processAnnouncement")
+	ctx, span := w.tracer.Start(
+		ctx,
+		"worker.processAnnouncement",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("tag", "worker.processAnnouncement"),
+			attribute.String("idx_announcement_id", ann.ID2),
+			attribute.String("stock_code", ann.StockCode),
+			attribute.String("announcement_date", ann.AnnouncementDate.String()),
+		),
+	)
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.processAnnouncement"))
-	logger.InfoContext(ctx, "processing announcement for stock code", slog.String("id2", ann.ID2), slog.String("stockCode", ann.StockCode), slog.Time("date", ann.AnnouncementDate))
-	span.AddEvent(fmt.Sprintf("processing announcement %s for stock %s", ann.ID2, ann.StockCode))
+	logger := w.logger.With(
+		slog.String("tag", "worker.processAnnouncement"),
+		slog.String("idx_announcement_id", ann.ID2),
+		slog.String("stock_code", ann.StockCode),
+		slog.Time("announcement_date", ann.AnnouncementDate),
+	)
+	logger.InfoContext(ctx, "processing announcement")
+	span.AddEvent(
+		"processing announcement for stock code",
+		trace.WithAttributes(
+			attribute.String("idx_announcement_id", ann.ID2),
+			attribute.String("stock_code", ann.StockCode),
+		),
+	)
 
+	logger.DebugContext(ctx, "processing attachments in announcement")
+	var err error
 	for _, att := range ann.Attachments {
-		if err := w.processAttachment(ctx, ann, att); err != nil {
-			logger.ErrorContext(ctx, "failed to process attachment", slog.String("filename", att.OriginalFilename), slog.Any("error", err))
+		if processErr := w.processAttachment(ctx, ann, att); processErr != nil {
+			processErr = fmt.Errorf("process attachment %s: %w", att.OriginalFilename, processErr)
+			err = errors.Join(err, processErr)
 		}
 	}
+	logger.InfoContext(ctx, "processed attachments in announcement")
 
-	return nil
+	return err
 }
 
 func (w *Worker) syncMarketDetector(ctx context.Context, symbol string, date time.Time) error {
@@ -264,12 +330,16 @@ func (w *Worker) syncMarketDetector(ctx context.Context, symbol string, date tim
 	dateStr := date.Format("2006-01-02")
 
 	logger := w.logger.With(slog.String("tag", "worker.syncMarketDetector"))
-	logger.DebugContext(ctx, "fetching market detector data", slog.String("symbol", symbol), slog.String("date", dateStr))
+	logger.DebugContext(
+		ctx,
+		"fetching market detector data",
+		slog.String("symbol", symbol),
+		slog.String("date", dateStr),
+	)
 	span.AddEvent(fmt.Sprintf("fetching market detector data for symbol %s on %s", symbol, dateStr))
 
 	resp, err := w.stockbitClient.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
 	if err != nil {
-		err = fmt.Errorf("fetch: %w", err)
 		return err
 	}
 
@@ -309,7 +379,11 @@ func (w *Worker) syncMarketDetector(ctx context.Context, symbol string, date tim
 		})
 	}
 
-	logger.DebugContext(ctx, "upserting market detector data to database", slog.Int("txns", len(txns)))
+	logger.DebugContext(
+		ctx,
+		"upserting market detector data to database",
+		slog.Int("txns", len(txns)),
+	)
 	span.AddEvent(fmt.Sprintf("upserting market detector data with %d transactions", len(txns)))
 
 	if err := w.stateStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
@@ -317,116 +391,112 @@ func (w *Worker) syncMarketDetector(ctx context.Context, symbol string, date tim
 		return err
 	}
 
-	logger.InfoContext(ctx, "successfully synced market detector data", slog.String("symbol", symbol), slog.String("date", dateStr), slog.Int("txns", len(txns)))
+	logger.InfoContext(
+		ctx,
+		"successfully synced market detector data",
+		slog.String("symbol", symbol),
+		slog.String("date", dateStr),
+		slog.Int("txns", len(txns)),
+	)
 	span.AddEvent(fmt.Sprintf("successfully synced market detector data for symbol %s", symbol))
 
 	return nil
 }
 
-func (w Worker) processAttachment(ctx context.Context, ann models.Announcement, att models.Attachment) error {
-	ctx, span := w.tracer.Start(ctx, "worker.processAttachment")
-	defer span.End()
-
-	logger := w.logger.With(slog.String("tag", "worker.processAttachment"))
+func (w Worker) processAttachment(
+	ctx context.Context,
+	ann models.Announcement,
+	att models.Attachment,
+) error {
+	bucket := w.config.MinIO.Bucket
 	datePrefix := ann.AnnouncementDate.Format("2006-01-02")
 	originalName := strings.ToLower(att.OriginalFilename)
-	targetName := fmt.Sprintf("%s_%s_%s", datePrefix, ann.ID2, originalName)
+	filename := fmt.Sprintf(
+		"%s/%s_%s_%s",
+		strings.ToLower(ann.StockCode),
+		datePrefix,
+		strings.ToLower(ann.AnnouncementTitle),
+		originalName,
+	)
 
-	bucket := w.config.MinIO.Bucket
-
-	logger.DebugContext(ctx, "checking if attachment exists in MinIO storage", slog.String("bucket", bucket), slog.String("filename", targetName))
-	span.AddEvent(fmt.Sprintf("checking if attachment %s exists in storage", targetName))
-
-	exists, err := w.storage.Exists(ctx, bucket, targetName)
-	if err != nil {
-		err = fmt.Errorf("check existence for %s: %w", targetName, err)
-		return err
-	}
-
-	logger.DebugContext(ctx, "creating bucket if not exists", slog.String("bucket", bucket))
-	span.AddEvent(fmt.Sprintf("ensuring bucket %s exists", bucket))
-
-	if err := w.storage.CreateBucket(ctx, bucket); err != nil {
-		if !errors.Is(err, storage.ErrBucketExists) {
-			logger.ErrorContext(ctx, "failed to create bucket", slog.String("bucket", bucket), slog.Any("error", err))
-		}
-	}
-
-	if exists {
-		logger.DebugContext(ctx, "attachment already exists in storage, skipping download", slog.String("name", targetName))
-		span.AddEvent(fmt.Sprintf("attachment %s already exists, skipping", targetName))
-		return nil
-	}
-
-	logger.DebugContext(ctx, "downloading attachment from URL", slog.String("url", att.FullSavePath))
-	span.AddEvent(fmt.Sprintf("downloading attachment from %s", att.FullSavePath))
-
-	data, contentType, err := w.downloadFile(ctx, att.FullSavePath)
-	if err != nil {
-		err = fmt.Errorf("download from %s: %w", att.FullSavePath, err)
-		return err
-	}
-
-	logger.DebugContext(ctx, "successfully downloaded attachment", slog.Int("size", len(data)), slog.String("contentType", contentType))
-	span.AddEvent(fmt.Sprintf("successfully downloaded attachment, size=%d", len(data)))
-
-	checksum := calculateChecksum(data)
-
-	logger.DebugContext(ctx, "uploading attachment to MinIO", slog.String("bucket", bucket), slog.String("filename", targetName), slog.Int("size", len(data)))
-	span.AddEvent(fmt.Sprintf("uploading attachment %s to bucket %s", targetName, bucket))
-
-	if err := w.storage.Upload(ctx, bucket, targetName, bytes.NewReader(data), int64(len(data)), contentType); err != nil {
-		err = fmt.Errorf("upload for %s: %w", targetName, err)
-		return err
-	}
-
-	logger.InfoContext(ctx, "successfully archived attachment", slog.String("name", targetName), slog.Int("size", len(data)))
-	span.AddEvent(fmt.Sprintf("successfully archived attachment %s", targetName))
-
-	logger.DebugContext(ctx, "recording attachment metadata in database", slog.String("filename", targetName), slog.String("checksum", checksum))
-	span.AddEvent(fmt.Sprintf("recording attachment metadata for %s", targetName))
-
-	if err := w.stateStore.RecordAttachment(ctx, ann.ID2, att, checksum, targetName); err != nil {
-		err = fmt.Errorf("record attachment for %s: %w", targetName, err)
-		return err
-	}
-
-	return nil
-}
-
-func (w Worker) downloadFile(ctx context.Context, url string) ([]byte, string, error) {
-	ctx, span := w.tracer.Start(ctx, "worker.downloadFile")
+	ctx, span := w.tracer.Start(
+		ctx,
+		"worker.processAttachment",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("idx_filename", att.OriginalFilename),
+			attribute.String("idx_attachment_url", att.FullSavePath),
+			attribute.String("announcement_title", ann.AnnouncementTitle),
+			attribute.String("bucket", bucket),
+			attribute.String("filename", filename),
+		),
+	)
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.downloadFile"))
+	logger := w.logger.With(
+		slog.String("tag", "worker.processAttachment"),
+		slog.String("idx_filename", att.OriginalFilename),
+		slog.String("idx_attachment_url", att.FullSavePath),
+		slog.String("bucket", bucket),
+		slog.String("filename", filename),
+	)
 
-	logger.DebugContext(ctx, "downloading file from URL", slog.String("url", url))
-	span.AddEvent(fmt.Sprintf("downloading file from %s", url))
+	logger.DebugContext(ctx, "creating bucket")
+	span.AddEvent("creating bucket")
+	if err := w.storage.CreateBucket(ctx, bucket); err != nil {
+		err = fmt.Errorf("creating bucket %s: %w", bucket, err)
+		return err
+	}
+	logger.DebugContext(ctx, "created bucket")
+	span.AddEvent("created bucket")
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	logger.DebugContext(ctx, "downloading attachment")
+	span.AddEvent("downloading attachment")
+	data, contentType, err := w.idxClient.DownloadFile(ctx, att.FullSavePath)
 	if err != nil {
-		return nil, "", err
+		err = fmt.Errorf("downloading attachment idx_attachment_url=%s : %w", att.FullSavePath, err)
+		return err
 	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, "", err
+	checksum := calculateChecksum(data)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(
+			slog.Int("size", len(data)),
+			slog.String("contentType", contentType),
+			slog.String("checksum_sha256", checksum),
+		)
 	}
-	defer resp.Body.Close()
+	logger.DebugContext(ctx, "downloaded attachment")
+	span.AddEvent("downloaded attachment")
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("download, status: %d", resp.StatusCode)
+	logger.DebugContext(ctx, "uploading attachment")
+	span.AddEvent("uploading attachment")
+	if err := w.storage.Upload(
+		ctx,
+		bucket,
+		filename,
+		bytes.NewReader(data),
+		int64(len(data)),
+		contentType,
+	); err != nil {
+		err = fmt.Errorf("uploading attachment: %w", err)
+		return err
 	}
+	logger.DebugContext(ctx, "uploaded attachment")
+	span.AddEvent("uploaded attachment")
 
-	contentType := resp.Header.Get("Content-Type")
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	data := buf.Bytes()
+	logger.InfoContext(ctx, "archived attachment")
+	span.AddEvent("archived attachment")
 
-	logger.DebugContext(ctx, "successfully downloaded file", slog.Int("size", len(data)), slog.String("contentType", contentType))
-	span.AddEvent(fmt.Sprintf("successfully downloaded file, size=%d", len(data)))
+	logger.DebugContext(ctx, "recording attachment metadata in database")
+	span.AddEvent(fmt.Sprintf("recording attachment metadata for %s", filename))
+	if err := w.stateStore.RecordAttachment(ctx, ann.ID2, att, checksum, filename); err != nil {
+		err = fmt.Errorf("record attachment for %s: %w", filename, err)
+		return err
+	}
+	logger.DebugContext(ctx, "recorded attachment metadata in database")
+	span.AddEvent("recorded attachment metadata in database")
 
-	return data, contentType, nil
+	return nil
 }
 
 func calculateChecksum(data []byte) string {
