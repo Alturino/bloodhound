@@ -23,7 +23,10 @@ func NewMockClient(logger *slog.Logger, tracer trace.Tracer) Client {
 	}
 }
 
-func (m mockClient) FetchAnnouncements(ctx context.Context, indexFrom int) (models.AnnouncementResponse, error) {
+func (m mockClient) FetchAnnouncements(
+	ctx context.Context,
+	indexFrom int,
+) (models.AnnouncementResponse, error) {
 	ctx, span := m.tracer.Start(ctx, "MockClient.FetchAnnouncements")
 	defer span.End()
 
@@ -52,6 +55,10 @@ func (m mockClient) FetchAnnouncements(ctx context.Context, indexFrom int) (mode
 			},
 		},
 	}, nil
+}
+
+func (m mockClient) DownloadFile(ctx context.Context, url string) ([]byte, string, error) {
+	panic("not implemented") // TODO: Implement
 }
 
 func NewMockClientFromConfig(
