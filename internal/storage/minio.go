@@ -22,6 +22,8 @@ type MinIO struct {
 	tracer trace.Tracer
 }
 
+var appMinio MinIO
+
 // NewMinIO creates a new MinIO storage instance
 func NewMinIO(
 	config *config.MinIO,
@@ -42,11 +44,15 @@ func NewMinIO(
 		return nil, fmt.Errorf("NewMinIOStorage create minio client: %w", err)
 	}
 
-	return &MinIO{
+	appMinio = MinIO{
 		client: client,
 		logger: logger,
 		tracer: tracer,
-	}, nil
+	}
+
+	appMinio.CreateBucket(context.Background(), config.Bucket)
+
+	return &appMinio, nil
 }
 
 // Upload uploads a file to MinIO
@@ -70,8 +76,8 @@ func (s *MinIO) Upload(
 
 	logger := s.logger.With(slog.String("bucket", bucketName), slog.String("object", objectName))
 
-	logger.DebugContext(ctx, "uploading object to MinIO")
-	span.AddEvent("uploading object to MinIO")
+	logger.DebugContext(ctx, "uploading object")
+	span.AddEvent("uploading object")
 	_, err := s.client.PutObject(
 		ctx,
 		bucketName,
@@ -79,7 +85,8 @@ func (s *MinIO) Upload(
 		reader,
 		objectSize,
 		minio.PutObjectOptions{
-			ContentType: contentType,
+			ContentType:  contentType,
+			AutoChecksum: minio.ChecksumSHA256,
 		},
 	)
 	if err != nil {
@@ -93,8 +100,8 @@ func (s *MinIO) Upload(
 		return err
 	}
 
-	logger.InfoContext(ctx, "successfully uploaded object")
-	span.AddEvent("successfully uploaded object")
+	logger.InfoContext(ctx, "uploaded object")
+	span.AddEvent("uploaded object")
 	return nil
 }
 
@@ -113,23 +120,18 @@ func (s *MinIO) Exists(ctx context.Context, bucket, object string) (bool, error)
 
 	logger := s.logger.With(slog.String("bucket", bucket), slog.String("object", object))
 
-	logger.DebugContext(ctx, "checking if object exists in MinIO")
-	span.AddEvent("checking if object exists in MinIO")
+	logger.DebugContext(ctx, "check object")
+	span.AddEvent("check object")
 	info, err := s.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+		err = fmt.Errorf("storage.MinIOStorage.Exists check object: %w", err)
+		if minio.ToErrorResponse(err).Code == minio.NoSuchKey {
 			return false, nil
 		}
-		err = fmt.Errorf(
-			"storage.MinIOStorage.Exists object %s in bucket %s: %w",
-			object,
-			bucket,
-			err,
-		)
 		return false, err
 	}
-	logger.InfoContext(ctx, "object is exists")
-	span.AddEvent("object is exists")
+	logger.InfoContext(ctx, "object exists", slog.Int64("object_size", info.Size))
+	span.AddEvent("object exists", trace.WithAttributes(attribute.Int64("object_size", info.Size)))
 
 	return info.Size > 0, nil
 }
@@ -166,30 +168,34 @@ func (s *MinIO) Download(
 }
 
 // CreateBucket creates a bucket if it doesn't exist
-func (s *MinIO) CreateBucket(ctx context.Context, bucketName string) error {
+func (s *MinIO) CreateBucket(ctx context.Context, bucket string) error {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"storage.MinIOStorage.CreateBucket",
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(attribute.String("bucket", bucketName)),
+		trace.WithAttributes(attribute.String("bucket", bucket)),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("bucket", bucketName))
+	logger := s.logger.With(slog.String("bucket", bucket))
 
-	logger.DebugContext(ctx, "creating bucket in MinIO")
-	span.AddEvent("creating bucket in MinIO")
-
-	err := s.client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+	logger.DebugContext(ctx, "is bucket exists")
+	span.AddEvent("is bucket exists")
+	isExists, err := s.client.BucketExists(ctx, bucket)
 	if err != nil {
-		if minio.ToErrorResponse(err).Code == "BucketAlreadyExists" {
-			return ErrBucketExists
-		}
-		err = fmt.Errorf("storage.MinIOStorage.CreateBucket create bucket %s: %w", bucketName, err)
+		err = fmt.Errorf("storage.MinIOStorage.CreateBucket is bucket exists: %w", err)
 		return err
 	}
+	if !isExists {
+		logger.DebugContext(ctx, "bucket doesn't exist, creating bucket")
+		span.AddEvent("bucket doesn't exist, creating bucket")
+		if err := s.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
+			err = fmt.Errorf("storage.MinIOStorage.CreateBucket create bucket %w", err)
+			return err
+		}
+	}
+	logger.InfoContext(ctx, "bucket exists")
+	span.AddEvent("bucket exists")
 
-	logger.InfoContext(ctx, "successfully created bucket")
-	span.AddEvent("successfully created bucket")
 	return nil
 }

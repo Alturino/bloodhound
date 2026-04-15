@@ -42,23 +42,22 @@ func NewClient(
 	if tracer == nil {
 		tracer = telemetry.AppTelemetry.Tracer
 	}
-	httpclient = httpclient.
-		SetCommonHeaders(map[string]string{
-			"accept":             "application/json",
-			"accept-language":    "en,en-US;q=0.9,id;q=0.8",
-			"authorization":      "Bearer " + config.Token,
-			"dnt":                "1",
-			"origin":             "https://stockbit.com",
-			"priority":           "u=1, i",
-			"referer":            "https://stockbit.com/",
-			"sec-ch-ua":          `"Not:A-Brand";v="99", "Microsoft Edge";v="145", "Chromium";v="145"`,
-			"sec-ch-ua-mobile":   "?0",
-			"sec-ch-ua-platform": `"Linux"`,
-			"sec-fetch-dest":     "empty",
-			"sec-fetch-mode":     "cors",
-			"sec-fetch-site":     "same-site",
-			"user-agent":         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
-		}).SetBaseURL(config.BaseURL)
+	httpclient = httpclient.Clone().SetCommonHeaders(map[string]string{
+		"accept":             "application/json",
+		"accept-language":    "en,en-US;q=0.9,id;q=0.8",
+		"authorization":      "Bearer " + config.Token,
+		"dnt":                "1",
+		"origin":             "https://stockbit.com",
+		"priority":           "u=1, i",
+		"referer":            "https://stockbit.com/",
+		"sec-ch-ua":          `"Not:A-Brand";v="99", "Microsoft Edge";v="145", "Chromium";v="145"`,
+		"sec-ch-ua-mobile":   "?0",
+		"sec-ch-ua-platform": `"Linux"`,
+		"sec-fetch-dest":     "empty",
+		"sec-fetch-mode":     "cors",
+		"sec-fetch-site":     "same-site",
+		"user-agent":         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+	}).SetBaseURL(config.BaseURL)
 
 	return &client{
 		httpclient: httpclient,
@@ -73,17 +72,19 @@ func (c client) FetchMarketDetector(
 	ctx context.Context,
 	symbol, dateFrom, dateTo string,
 ) (models.StockbitMarketDetectorResponse, error) {
-	ctx, span := c.tracer.Start(ctx, "StockbitClient.FetchMarketDetector")
+	ctx, span := c.tracer.Start(ctx, "stockbit.Client.FetchMarketDetector")
 	defer span.End()
 
-	c.logger.DebugContext(ctx, "fetching stockbit market detector",
+	logger := c.logger.With(
+		slog.String("tag", "stockbit.Client.FetchMarketDetector"),
 		slog.String("symbol", symbol),
 		slog.String("from", dateFrom),
 		slog.String("to", dateTo),
 	)
 
+	logger.DebugContext(ctx, "fetching stockbit market detector")
+	span.AddEvent("fetching stockbit market detector")
 	// API Endpoint: https://exodus.stockbit.com/marketdetectors/{symbol}
-	url := "/marketdetectors/" + symbol
 	resp, err := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
@@ -94,30 +95,31 @@ func (c client) FetchMarketDetector(
 			"investor_type":    "INVESTOR_TYPE_ALL",
 			"limit":            "25",
 		}).
-		Get(url)
+		Get("/marketdetectors/" + symbol)
 	if err != nil {
-		err = fmt.Errorf("fetch stockbit market detector: %w", err)
+		err = fmt.Errorf("fetching stockbit market detector: %w", err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
-
-	if resp.StatusCode == 401 {
-		err = fmt.Errorf("stockbit token unauthorized or expired: %w", err)
-		return models.StockbitMarketDetectorResponse{}, err
-	}
-
 	if !resp.IsSuccessState() {
-		err := fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		err := fmt.Errorf("fetching stockbit market detector msg: status code: %d", resp.StatusCode)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
+	span.AddEvent("fetched stockbit market detector")
+	logger.DebugContext(ctx, "fetched stockbit market detector")
 
+	logger.DebugContext(ctx, "unmarshaling response")
+	span.AddEvent("unmarshaling response")
 	var rawResp models.StockbitMarketDetectorResponse
 	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
-		err = fmt.Errorf("unmarshal response: %w", err)
+		err = fmt.Errorf("unmarshaling response: %w", err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
+	logger.DebugContext(ctx, "unmarshaled response")
+	span.AddEvent("unmarshaled response")
 
-	c.logger.InfoContext(ctx, "fetched stockbit market detector",
-		slog.String("symbol", symbol),
+	logger.InfoContext(
+		ctx,
+		"fetched stockbit market detector",
 		slog.String("message", rawResp.Message),
 	)
 
