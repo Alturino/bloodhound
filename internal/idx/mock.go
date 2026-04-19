@@ -26,6 +26,7 @@ func NewMockClient(logger *slog.Logger, tracer trace.Tracer) Client {
 func (m mockClient) FetchAnnouncements(
 	ctx context.Context,
 	indexFrom int,
+	dateFrom time.Time,
 ) (models.AnnouncementResponse, error) {
 	ctx, span := m.tracer.Start(ctx, "MockClient.FetchAnnouncements")
 	defer span.End()

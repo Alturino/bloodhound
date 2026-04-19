@@ -44,21 +44,19 @@ func NewMinIO(
 		return nil, fmt.Errorf("NewMinIOStorage create minio client: %w", err)
 	}
 
-	appMinio = MinIO{
-		client: client,
-		logger: logger,
-		tracer: tracer,
+	appMinio = MinIO{client: client, logger: logger, tracer: tracer}
+	if err := appMinio.CreateBucket(context.Background(), config.Bucket); err != nil {
+		err = fmt.Errorf("create bucket: %w", err)
+		return nil, err
 	}
-
-	appMinio.CreateBucket(context.Background(), config.Bucket)
 
 	return &appMinio, nil
 }
 
 // Upload uploads a file to MinIO
-func (s *MinIO) Upload(
+func (s MinIO) Upload(
 	ctx context.Context,
-	bucketName, objectName string,
+	bucketName, filename string,
 	reader io.Reader,
 	objectSize int64,
 	contentType string,
@@ -69,19 +67,19 @@ func (s *MinIO) Upload(
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
 			attribute.String("bucket", bucketName),
-			attribute.String("object", objectName),
+			attribute.String("file", filename),
 		),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("bucket", bucketName), slog.String("object", objectName))
+	logger := s.logger.With(slog.String("bucket", bucketName), slog.String("object", filename))
 
-	logger.DebugContext(ctx, "uploading object")
-	span.AddEvent("uploading object")
+	logger.InfoContext(ctx, "uploading file")
+	span.AddEvent("uploading file")
 	_, err := s.client.PutObject(
 		ctx,
 		bucketName,
-		objectName,
+		filename,
 		reader,
 		objectSize,
 		minio.PutObjectOptions{
@@ -90,23 +88,18 @@ func (s *MinIO) Upload(
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf(
-			"MinIOStorage.Upload upload object %s to bucket %s: %w",
-			objectName,
-			bucketName,
-			err,
-		)
+		err = fmt.Errorf("upload file=%s bucket=%s: %w", filename, bucketName, err)
 		telemetry.RecordError(span, err)
 		return err
 	}
+	logger.InfoContext(ctx, "uploaded file")
+	span.AddEvent("uploaded file")
 
-	logger.InfoContext(ctx, "uploaded object")
-	span.AddEvent("uploaded object")
 	return nil
 }
 
 // Exists checks if an object exists in MinIO and is not empty
-func (s *MinIO) Exists(ctx context.Context, bucket, object string) (bool, error) {
+func (s MinIO) Exists(ctx context.Context, bucket, object string) (bool, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"storage.MinIOStorage.Exists",
@@ -124,7 +117,7 @@ func (s *MinIO) Exists(ctx context.Context, bucket, object string) (bool, error)
 	span.AddEvent("check object")
 	info, err := s.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("storage.MinIOStorage.Exists check object: %w", err)
+		err = fmt.Errorf("check object: %w", err)
 		if minio.ToErrorResponse(err).Code == minio.NoSuchKey {
 			return false, nil
 		}
@@ -137,7 +130,7 @@ func (s *MinIO) Exists(ctx context.Context, bucket, object string) (bool, error)
 }
 
 // Download downloads a file from the storage
-func (s *MinIO) Download(
+func (s MinIO) Download(
 	ctx context.Context,
 	bucket, object string,
 ) (io.ReadCloser, error) {
@@ -168,7 +161,7 @@ func (s *MinIO) Download(
 }
 
 // CreateBucket creates a bucket if it doesn't exist
-func (s *MinIO) CreateBucket(ctx context.Context, bucket string) error {
+func (s MinIO) CreateBucket(ctx context.Context, bucket string) error {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"storage.MinIOStorage.CreateBucket",

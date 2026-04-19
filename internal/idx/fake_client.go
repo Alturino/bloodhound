@@ -2,6 +2,7 @@ package idx
 
 import (
 	"context"
+	"time"
 
 	"github.com/alturino/bloodhound/internal/models"
 )
@@ -15,10 +16,15 @@ type FakeClient struct {
 func (f *FakeClient) FetchAnnouncements(
 	ctx context.Context,
 	indexFrom int,
+	dateFrom time.Time,
 ) (models.AnnouncementResponse, error) {
 	if f.FetchLog == nil {
 		f.FetchLog = []int{}
 	}
 	f.FetchLog = append(f.FetchLog, indexFrom)
 	return f.Responses[indexFrom], nil
+}
+
+func (f *FakeClient) DownloadFile(ctx context.Context, url string) ([]byte, string, error) {
+	panic("not implemented") // TODO: Implement
 }

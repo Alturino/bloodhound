@@ -9,8 +9,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
@@ -96,11 +94,14 @@ func initTracer(
 	var exporter sdktrace.SpanExporter
 	var err error
 
-	exporter, err = otlptracegrpc.New(ctx, otlptracegrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint))
-	if cfg.App.Environment != "production" {
-		exporter, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
-	}
-
+	exporter, err = otlptracegrpc.New(
+		ctx,
+		otlptracegrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+	// if cfg.App.Environment != "production" {
+	// 	exporter, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
+	// }
 	if err != nil {
 		return nil, err
 	}
@@ -126,11 +127,14 @@ func initMeter(
 	var exporter sdkmetric.Exporter
 	var err error
 
-	exporter, err = otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint))
-	if cfg.App.Environment != "production" {
-		exporter, err = stdoutmetric.New(stdoutmetric.WithPrettyPrint())
-	}
-
+	exporter, err = otlpmetricgrpc.New(
+		ctx,
+		otlpmetricgrpc.WithEndpoint(cfg.Telemetry.OTLPEndpoint),
+		otlpmetricgrpc.WithInsecure(),
+	)
+	// if cfg.App.Environment != "production" {
+	// 	exporter, err = stdoutmetric.New(stdoutmetric.WithPrettyPrint())
+	// }
 	if err != nil {
 		return nil, err
 	}

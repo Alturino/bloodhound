@@ -112,16 +112,11 @@ func (c client) FetchMarketDetector(
 	var rawResp models.StockbitMarketDetectorResponse
 	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
 		err = fmt.Errorf("unmarshaling response: %w", err)
+		telemetry.RecordError(span, err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
 	logger.DebugContext(ctx, "unmarshaled response")
 	span.AddEvent("unmarshaled response")
-
-	logger.InfoContext(
-		ctx,
-		"fetched stockbit market detector",
-		slog.String("message", rawResp.Message),
-	)
 
 	return rawResp, nil
 }

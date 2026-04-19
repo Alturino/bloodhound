@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/alturino/bloodhound/internal/db/.gen/postgres/public/model"
+	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 )
 
 // AnnouncementResponse is the top-level API response from IDX
@@ -64,7 +64,7 @@ func (a Announcement) ToAnnouncements() model.Announcements {
 	return model.Announcements{
 		IdxID:             a.ID2,
 		StockCode:         a.StockCode,
-		AnnouncementDate:  a.AnnouncementDate,
+		Date:              a.AnnouncementDate,
 		AnnouncementTitle: a.AnnouncementTitle,
 		CreatedAt:         a.CreatedDate,
 	}
@@ -83,9 +83,9 @@ type Attachment struct {
 
 func (a Attachment) ToAttachments(announcementID, checksum, storagePath string) model.Attachments {
 	return model.Attachments{
-		AnnouncementID:   announcementID,
-		OriginalFilename: a.OriginalFilename,
-		Checksum:         checksum,
-		StoragePath:      storagePath,
+		IdxAnnouncementID: announcementID,
+		OriginalFilename:  a.OriginalFilename,
+		Checksum:          checksum,
+		StoragePath:       storagePath,
 	}
 }

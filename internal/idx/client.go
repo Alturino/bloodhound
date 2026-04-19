@@ -2,10 +2,10 @@ package idx
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/imroc/req/v3"
 	"go.opentelemetry.io/otel/attribute"
@@ -18,7 +18,11 @@ import (
 
 // IDXClient defines the subset of IDX client methods needed by the worker
 type Client interface {
-	FetchAnnouncements(ctx context.Context, indexFrom int) (models.AnnouncementResponse, error)
+	FetchAnnouncements(
+		ctx context.Context,
+		indexFrom int,
+		dateFrom time.Time,
+	) (models.AnnouncementResponse, error)
 	DownloadFile(ctx context.Context, url string) ([]byte, string, error)
 }
 
@@ -43,17 +47,20 @@ func NewClient(
 	if tracer == nil {
 		tracer = telemetry.AppTelemetry.Tracer
 	}
-	httpclient = httpclient.Clone().SetCommonHeaders(map[string]string{
-		"Connection":         "keep-alive",
-		"Accept-Encoding":    "gzip",
-		"Host":               "idx.co.id",
-		"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
-		"Sec-Fetch-Dest":     "document",
-		"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
-		"Sec-Fetch-Mode":     "navigate",
-		"Sec-Fetch-Site":     "none",
-		"sec-ch-ua-platform": `"Linux"`,
-	}).SetBaseURL(config.BaseURL)
+	httpclient = httpclient.Clone().
+		EnableDumpAllWithoutResponseBody().
+		SetCommonHeaders(map[string]string{
+			"Connection":         "keep-alive",
+			"Accept-Encoding":    "gzip",
+			"Host":               "idx.co.id",
+			"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
+			"Sec-Fetch-Dest":     "document",
+			"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
+			"Sec-Fetch-Mode":     "navigate",
+			"Sec-Fetch-Site":     "none",
+			"sec-ch-ua-platform": `"Linux"`,
+		}).
+		SetBaseURL(config.BaseURL)
 
 	return &client{
 		httpclient: httpclient,
@@ -66,24 +73,43 @@ func NewClient(
 // FetchAnnouncements fetches announcements from IDX API
 func (c client) FetchAnnouncements(
 	ctx context.Context,
-	indexFrom int,
+	page int,
+	dateFrom time.Time,
 ) (models.AnnouncementResponse, error) {
-	ctx, span := c.tracer.Start(ctx, "HTTPClient.FetchAnnouncements")
+	ctx, span := c.tracer.Start(ctx, "idx.Client.FetchAnnouncements")
 	defer span.End()
 
+	if dateFrom.IsZero() {
+		dt, err := time.Parse("20060102", "19010101")
+		if err != nil {
+			err = fmt.Errorf("parsing default date: %w", err)
+			telemetry.RecordError(span, err)
+			return models.AnnouncementResponse{}, err
+		}
+		dateFrom = dt
+	}
+
+	now := time.Now()
 	logger := c.logger.With(
-		slog.Int("index_from", indexFrom),
+		slog.String("tag", "idx.Client.FetchAnnouncements"),
+		slog.Int("page", page),
+		slog.Time("date_from", dateFrom),
+		slog.Time("date_to", now),
 		slog.Int("page_size", c.config.PageSize),
 	)
 
-	logger.DebugContext(ctx, "fetching announcements")
+	logger.InfoContext(ctx, "fetching announcements")
 	span.AddEvent("fetching announcements")
+	var rawResp rawAnnouncementResponse
 	resp, err := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
-			"indexfrom": fmt.Sprintf("%d", indexFrom),
-			"pagesize":  fmt.Sprintf("%d", c.config.PageSize),
+			"indexFrom": fmt.Sprintf("%d", page),
+			"pageSize":  fmt.Sprintf("%d", c.config.PageSize),
+			"dateFrom":  dateFrom.Format("20060102"),
+			"dateTo":    now.Format("20060102"),
 		}).
+		SetSuccessResult(&rawResp).
 		Get("/primary/ListedCompany/GetAnnouncement")
 	if err != nil {
 		err = fmt.Errorf("fetching announcements: %w", err)
@@ -91,28 +117,14 @@ func (c client) FetchAnnouncements(
 		return models.AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
-		err := fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		err := fmt.Errorf("fetching announcements status_code=%d", resp.StatusCode)
 		telemetry.RecordError(span, err)
 		return models.AnnouncementResponse{}, err
 	}
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
 
-	logger.DebugContext(ctx, "unmarshaling response")
-	span.AddEvent("unmarshaling response")
-	var rawResp rawAnnouncementResponse
-	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
-		err = fmt.Errorf("unmarshaling response: %w", err)
-		return models.AnnouncementResponse{}, err
-	}
 	result := c.convertToModel(rawResp)
-	logger.DebugContext(ctx, "unmarshaled response")
-	span.AddEvent("unmarshaled response")
-
-	logger.InfoContext(ctx, "fetched announcements",
-		slog.Int("result_count", result.ResultCount),
-		slog.Int("replies_count", len(result.Replies)),
-	)
 
 	return result, nil
 }
@@ -121,7 +133,7 @@ func (c client) FetchAnnouncements(
 func (c client) DownloadFile(ctx context.Context, url string) ([]byte, string, error) {
 	ctx, span := c.tracer.Start(
 		ctx,
-		"HTTPClient.DownloadFile",
+		"idx.Client.DownloadFile",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attribute.String("url", url)),
 	)
@@ -129,31 +141,24 @@ func (c client) DownloadFile(ctx context.Context, url string) ([]byte, string, e
 
 	logger := c.logger.With(slog.String("url", url), slog.String("tag", "idx.Client.DownloadFile"))
 
-	logger.DebugContext(ctx, "downloading file")
 	span.AddEvent("downloading file")
-	resp, err := c.httpclient.R().
-		SetContext(ctx).
-		Get(url)
+	logger.InfoContext(ctx, "downloading file")
+	resp, err := c.httpclient.R().SetContext(ctx).Get(url)
 	if err != nil {
 		err = fmt.Errorf("downloading file: %w", err)
 		telemetry.RecordError(span, err)
 		return nil, "", err
 	}
 	if !resp.IsSuccessState() {
-		err := fmt.Errorf("unexpected status code: %d, url: %s", resp.StatusCode, url)
+		err := fmt.Errorf("unexpected status_code=%d, url=%s", resp.StatusCode, url)
+		telemetry.RecordError(span, err)
 		return nil, "", err
 	}
-	logger.DebugContext(ctx, "downloaded file")
+	logger.InfoContext(ctx, "downloaded file")
 	span.AddEvent("downloaded file")
 
 	contentType := resp.Header.Get("Content-Type")
 	data := resp.Bytes()
-
-	logger.InfoContext(ctx, "downloaded file",
-		slog.String("url", url),
-		slog.Int("size", len(data)),
-		slog.String("content_type", contentType),
-	)
 
 	return data, contentType, nil
 }

@@ -30,13 +30,8 @@ func Get(config *config.App) *slog.Logger {
 	}
 	var sinkHandler slog.Handler = slog.NewJSONHandler(logDestination, sinkHandlerOption)
 	if config.Environment != "production" {
-		config.LogLevelVar.Set(slog.LevelDebug)
 		logfile.Filename = filepath.Join(config.LogDir, "bloodhound-dev.log")
 		sinkHandler = slog.NewTextHandler(logDestination, sinkHandlerOption)
-		slog.Debug(
-			"logger has been setup for debug",
-			slog.String("log_filename", logfile.Filename),
-		)
 	}
 
 	pipe := slogmulti.Pipe(
