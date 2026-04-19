@@ -38,6 +38,12 @@ func main() {
 	}
 
 	logger := log.Get(&cfg.App)
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("panic", slog.Any("panic", r))
+			return
+		}
+	}()
 
 	tmt, err := telemetry.New(ctx, cfg)
 	if err != nil {
@@ -53,8 +59,8 @@ func main() {
 		}
 	}()
 
-	// Initialize components
 	stg, err := storage.NewMinIO(&cfg.MinIO, logger, telemetry.AppTelemetry.Tracer)
+	// Initialize components
 	if err != nil {
 		err = fmt.Errorf("initialize storage: %w", err)
 		logger.ErrorContext(ctx, err.Error())
@@ -124,10 +130,6 @@ func main() {
 			return
 		}
 		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
-		logger = log.Get(&cfg.App)
-		tmt, _ = telemetry.New(ctx, cfg)
-		httpClient = httpclient.NewClient(cfg)
-		idxClient = idx.NewClient(httpClient, &cfg.App.IDX, logger, telemetry.AppTelemetry.Tracer)
 	})
 
 	if err := w.Start(ctx); err != nil && errors.Is(err, context.Canceled) {

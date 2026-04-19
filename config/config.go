@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
@@ -137,17 +136,6 @@ func Load(configPath string) (*Config, error) {
 		v.AddConfigPath(".")
 		v.AddConfigPath("./env")
 	}
-	v.OnConfigChange(func(in fsnotify.Event) {
-		if err := v.MergeInConfig(); err != nil {
-			err = fmt.Errorf("merge config file: %w", err)
-			slog.Error(err.Error())
-		}
-
-		if err := v.Unmarshal(&cfg); err != nil {
-			err = fmt.Errorf("unmarshal config: %w", err)
-			slog.Error(err.Error())
-		}
-	})
 
 	if err := v.ReadInConfig(); err != nil {
 		err = fmt.Errorf("read config file: %w", err)
@@ -158,6 +146,7 @@ func Load(configPath string) (*Config, error) {
 		err = fmt.Errorf("unmarshal config: %w", err)
 		return &cfg, err
 	}
+	cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
 
 	return &cfg, nil
 }

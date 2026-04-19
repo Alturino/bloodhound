@@ -1,1 +1,1 @@
-[{"url": "postgresql://postgres:postgres@localhost:5432/postgres", "name": "postgres"}]
+[{"url": "postgres://postgres:postgres@localhost:5432/bloodhound?sslmode=disable", "name": "bloodhound"}]

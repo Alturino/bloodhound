@@ -5,7 +5,7 @@ app:
   log_dir: ./logs/
   idx:
     base_url: https://idx.co.id
-    page_size: 10
+    page_size: 5
     mock_mode: false
   stockbit:
     base_url: https://exodus.stockbit.com
@@ -14,9 +14,9 @@ app:
 database:
   host: localhost
   port: 5432
-  user: postgres
-  password: postgres
-  dbname: bloodhound
+  user: "postgres"
+  password: "postgres"
+  dbname: "bloodhound"
   sslmode: disable
   migration_path: file://migrations
 
@@ -33,4 +33,5 @@ scheduler:
 
 telemetry:
   enabled: true
+  otlp_endpoint: "localhost:4317"
   service_name: bloodhound
