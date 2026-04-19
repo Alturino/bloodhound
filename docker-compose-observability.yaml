@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-go/master/schema/compose-spec.json
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.139.0
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otel-collector.yaml
+    ports:
+      - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317
+      - 4318:4318
+  grafana:
+    image: grafana/grafana:11.3.0-ubuntu
+    volumes:
+      - ./observability/grafana/provisioning/datasources.yaml:/etc/grafana/provisioning/datasources/default.yaml
+      - ./observability/grafana/provisioning/dashboards.yaml:/etc/grafana/provisioning/dashboards/default.yaml
+      - ./observability/grafana/dashboards/:/var/lib/grafana/dashboards/
+    depends_on:
+      - loki
+      - prometheus
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    ports:
+      - "3000:3000"
+  loki:
+    image: grafana/loki:3.3.2
+    ports:
+      - 3100:3100
+    command: ["-config.file=/etc/loki/loki.yaml", "-config.expand-env=true"]
+    volumes:
+      - ./observability/loki.yaml:/etc/loki/loki.yaml
+    # depends_on:
+    #   - promtail
+    env_file: .env
+  fluentbit:
+    image: fluent/fluent-bit:5.0.1
+    command:
+      ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.yaml"]
+    ports:
+      - 24224:24224
+    volumes:
+      - ./observability/fluentbit/fluentbit.yaml:/fluent-bit/etc/fluent-bit.yaml
+      - ./observability/fluentbit/parsers.yaml:/fluent-bit/etc/parsers.yaml
+      - ./logs/bloodhound.log:/var/logs/bloodhound/bloodhound.log # to listen log from file
+      - ./logs/bloodhound-dev.log:/var/logs/bloodhound/bloodhound-dev.log # to listen log from file
+      - /var/run/docker.sock:/var/run/docker.sock # to listen log from docker
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - 16686:16686
+    expose:
+      - 4317
+      - 4318
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus.yaml
+      - --enable-feature=exemplar-storage
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.enable-lifecycle
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./observability/prometheus.yaml:/etc/prometheus.yaml
+    ports:
+      - 9090:9090
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    ports:
+      - 9100:9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)(\
+        $$|/)"
+  # promtail:
+  #   image: grafana/promtail:3.3.2
+  #   command: ["--config.file=/etc/promtail/promtail.yaml"]
+  #   ports:
+  #     - 9080:9080
+  #   networks:
+  #     - loki
+  #   volumes:
+  #     - ./observability/promtail.yaml:/etc/promtail/promtail.yaml
+  #     - /var/run/docker.sock:/var/run/docker.sock

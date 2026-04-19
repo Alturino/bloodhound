@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-go/master/schema/compose-spec.json
+services:
+  postgres:
+    image: postgres:18.3-trixie
+    restart: always
+    environment:
+      TZ: "Asia/Jakarta"
+      PGTZ: "Asia/Jakarta"
+    env_file:
+      - ./.env
+    ports:
+      - ${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}
+    healthcheck:
+      test:
+        ["CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - postgres_data:/var/lib/postgresql
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    env_file:
+      - .env
+    environment:
+      - DATA_SOURCE_NAME=${POSTGRES_URL}
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - 9187:9187
+  minio:
+    image: minio/minio:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "${MINIO_UI_PORT:-9000}:${MINIO_UI_PORT:-9000}"
+      - "${MINIO_CONSOLE_PORT:-9001}:${MINIO_CONSOLE_PORT:-9001}"
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:${MINIO_CONSOLE_PORT}/minio/health/live",
+        ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+  # valkey:
+  #   image: valkey/valkey:8.1-alpine
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD", "valkey-cli", "PING"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 5s
+  #   environment:
+  #     VALKEY_EXTRA_FLAGS: "--user ${VALKEY_USER} on >${VALKEY_PASSWORD} ~* +@all
+  #       allchannels --bind 0.0.0.0 --maxmemory-policy allkeys-lru
+  #       --notify-keyspace-events KEz"
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - ${VALKEY_PORT}:${VALKEY_PORT}
+  # valkey-exporter:
+  #   image: oliver006/redis_exporter:v1.69.0-alpine
+  #   restart: always
+  #   depends_on:
+  #     valkey:
+  #       condition: service_healthy
+  #   env_file:
+  #     - .env
+  #   command:
+  #     - "--redis.addr"
+  #     - "valkey://${VALKEY_HOST}:${VALKEY_PASSWORD}"
+  #     - "--redis.user"
+  #     - "${VALKEY_USER}"
+  #     - "--redis.password"
+  #     - "${VALKEY_PASSWORD}"
+  #   ports:
+  #     - 9121:9121
+
+volumes:
+  postgres_data:
+  minio_data:
