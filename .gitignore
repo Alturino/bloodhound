@@ -3,3 +3,5 @@
 minio
 postgres
 main
+Session.vim
+queries/
