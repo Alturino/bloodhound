@@ -32,10 +32,29 @@ func (f *FakeStore) RecordAnnouncement(ctx context.Context, ann models.Announcem
 	return nil
 }
 
-func (f *FakeStore) RecordAttachment(ctx context.Context, idxID string, att models.Attachment, checksum string, storagePath string) error {
+func (f *FakeStore) RecordAttachment(
+	ctx context.Context,
+	idxID string,
+	att models.Attachment,
+	checksum string,
+	storagePath string,
+) error {
 	return nil
 }
 
-func (f *FakeStore) UpsertMarketDetector(ctx context.Context, summary models.MarketDetectorSummary, transactions []models.BrokerTransaction) error {
+func (f *FakeStore) UpsertMarketDetector(
+	ctx context.Context,
+	summary models.MarketDetectorSummary,
+	transactions []models.BrokerTransaction,
+) error {
 	return nil
+}
+
+func (f *FakeStore) IsExists(ctx context.Context) (bool, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+// ShouldUpdate checks if the store need to be updated based on the latest announcement date
+func (f *FakeStore) ShouldUpdate(ctx context.Context) (bool, error) {
+	panic("not implemented") // TODO: Implement
 }

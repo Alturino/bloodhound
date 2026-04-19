@@ -13,8 +13,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/alturino/bloodhound/internal/db/.gen/postgres/public/model"
-	. "github.com/alturino/bloodhound/internal/db/.gen/postgres/public/table"
+	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
+	. "github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/table"
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
@@ -26,51 +26,6 @@ type DBStore struct {
 	tracer trace.Tracer
 }
 
-func (s *DBStore) ShouldUpdate(ctx context.Context) (bool, error) {
-	ctx, span := s.tracer.Start(
-		ctx,
-		"state.DBStore.ShouldUpdate",
-		trace.WithAttributes(attribute.String("tag", "state.DBStore.ShouldUpdate")),
-		trace.WithSpanKind(trace.SpanKindInternal),
-	)
-	defer span.End()
-
-	now := time.Now()
-	logger := s.logger.With(
-		slog.String("tag", "state.DBStore.ShouldUpdate"),
-		slog.Time("current_time", now),
-	)
-
-	logger.DebugContext(ctx, "get latest announcement")
-	span.AddEvent("get latest announcement")
-	var ann models.Announcement
-	if err := Announcements.SELECT(Announcements.AllColumns).
-		ORDER_BY(Announcements.AnnouncementDate.DESC()).
-		LIMIT(1).
-		QueryContext(ctx, s.db, &ann); err != nil {
-		if errors.Is(err, qrm.ErrNoRows) {
-			return true, nil
-		}
-		err = fmt.Errorf("state.DBStore.ShouldUpdate get latest announcement: %w", err)
-		return false, err
-	}
-	logger.InfoContext(ctx, "got latest announcements")
-	span.AddEvent("got latest announcements")
-
-	logger.DebugContext(ctx, "is latest announcement outdated")
-	span.AddEvent("is latest announcement outdated")
-	isOutdated := ann.AnnouncementDate.Before(now)
-	logger = logger.With(
-		slog.Time("latest_announcement_date", ann.AnnouncementDate),
-		slog.Duration("now_latest_diff", now.Sub(ann.AnnouncementDate)),
-		slog.Bool("isOutdated", isOutdated),
-	)
-	logger.InfoContext(ctx, "latest announcement")
-	span.AddEvent("latest announcement")
-
-	return isOutdated, nil
-}
-
 // NewDBStore creates a new PostgreSQL-backed store
 func NewDBStore(db *sql.DB, logger *slog.Logger) *DBStore {
 	if logger == nil {
@@ -79,70 +34,173 @@ func NewDBStore(db *sql.DB, logger *slog.Logger) *DBStore {
 	return &DBStore{db: db, logger: logger, tracer: telemetry.AppTelemetry.Tracer}
 }
 
+func (s DBStore) IsExists(ctx context.Context) (bool, error) {
+	ctx, span := s.tracer.Start(
+		ctx,
+		"state.DBStore.isExists",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(attribute.String("tag", "state.DBStore.IsExists")),
+	)
+	defer span.End()
+
+	logger := s.logger.With(slog.String("tag", "state.DBStore.IsExists"))
+
+	logger.DebugContext(ctx, "checking announcements")
+	span.AddEvent("checking announcements")
+	var isExists struct{ bool }
+	isEmptyStmt := SELECT(EXISTS(Announcements.SELECT(Announcements.AllColumns).LIMIT(1)))
+	if err := isEmptyStmt.QueryContext(ctx, s.db, &isExists); err != nil {
+		err = fmt.Errorf("checking announcements: %w", err)
+		telemetry.RecordError(span, err)
+		return false, err
+	}
+	logger = logger.With(slog.Bool("is_exists", isExists.bool))
+	logger.DebugContext(ctx, "checked announcements")
+	span.AddEvent("checked announcements")
+
+	return isExists.bool, nil
+}
+
+func (s DBStore) LatestAnnouncement(ctx context.Context) (model.Announcements, error) {
+	ctx, span := s.tracer.Start(
+		ctx,
+		"state.DBStore.LatestAnnouncement",
+		trace.WithAttributes(attribute.String("tag", "state.DBStore.LatestAnnouncement")),
+		trace.WithSpanKind(trace.SpanKindInternal),
+	)
+	defer span.End()
+
+	now := time.Now()
+	logger := s.logger.With(
+		slog.String("tag", "state.DBStore.LatestAnnouncement"),
+		slog.Time("current_time", now),
+	)
+
+	logger.DebugContext(ctx, "get latest announcement")
+	span.AddEvent("get latest announcement")
+	var ann model.Announcements
+	if err := Announcements.SELECT(Announcements.AllColumns).
+		ORDER_BY(Announcements.Date.DESC()).
+		LIMIT(1).
+		QueryContext(ctx, s.db, &ann); err != nil {
+		err = fmt.Errorf("get latest announcement: %w", err)
+		telemetry.RecordError(span, err)
+		return model.Announcements{}, err
+	}
+	logger.InfoContext(ctx, "got latest announcements")
+	span.AddEvent("got latest announcements")
+
+	return ann, nil
+}
+
 // IsProcessed checks if an announcement ID exists in the database by its IDX ID
-func (s *DBStore) IsProcessed(ctx context.Context, idxID string) (bool, error) {
+func (s DBStore) IsProcessed(ctx context.Context, idxID string) (bool, error) {
 	ctx, span := s.tracer.Start(ctx, "state.DBStore.IsProcessed")
 	defer span.End()
 
+	logger := s.logger.With(
+		slog.String("tag", "state.DBStore.IsProcessed"),
+		slog.String("idx_announcement_id", idxID),
+	)
+
+	logger.DebugContext(ctx, "is announcement processed")
+	span.AddEvent("is announcement processed")
 	var announcement model.Announcements
 	isExistStmt := SELECT(Announcements.AllColumns).
 		FROM(Announcements).
 		WHERE(Announcements.IdxID.EQ(String(idxID))).
 		LIMIT(1)
 	if err := isExistStmt.QueryContext(ctx, s.db, &announcement); err != nil {
+		err = fmt.Errorf("is announcement processed: %w", err)
 		if errors.Is(err, qrm.ErrNoRows) {
 			return false, nil
 		}
-		err = fmt.Errorf("DBStore.IsProcessed: %w", err)
 		telemetry.RecordError(span, err)
 		return false, err
 	}
+	logger = logger.With(slog.Bool("is_exist", true))
+	logger.InfoContext(ctx, "checked announcement")
+	span.AddEvent("checked announcement")
+
 	return true, nil
 }
 
 // RecordAnnouncement saves announcement metadata
-func (s *DBStore) RecordAnnouncement(ctx context.Context, ann models.Announcement) error {
-	ctx, span := s.tracer.Start(ctx, "state.DBStore.RecordAnnouncement")
+func (s DBStore) RecordAnnouncement(ctx context.Context, ann models.Announcement) error {
+	ctx, span := s.tracer.Start(
+		ctx,
+		"state.DBStore.RecordAnnouncement",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(),
+	)
 	defer span.End()
 
+	logger := s.logger.With(slog.String("tag", "state.DBStore.RecordAnnouncement"))
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.Any("announceent", ann))
+	}
+
+	span.AddEvent("recording announcement")
 	announcement := ann.ToAnnouncements()
-	if err := Announcements.INSERT(Announcements.AllColumns.Except(Announcements.ID, Announcements.CreatedAt)).
+	insertionColumn := Announcements.AllColumns.Except(Announcements.DefaultColumns)
+	if err := Announcements.INSERT(insertionColumn).
+		ON_CONFLICT(Announcements.IdxID).
+		DO_NOTHING().
 		MODEL(announcement).
 		RETURNING(Announcements.AllColumns).
 		QueryContext(ctx, s.db, &announcement); err != nil {
-		err = fmt.Errorf("DBStore.RecordAnnouncement insert announcement: %w", err)
+		err = fmt.Errorf("recording announcement: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
+	logger.InfoContext(ctx, "recorded announcement")
+	span.AddEvent("recorded announcement")
 
 	return nil
 }
 
 // RecordAttachment saves attachment metadata
-func (s *DBStore) RecordAttachment(
+func (s DBStore) RecordAttachment(
 	ctx context.Context,
 	idxID string,
 	att models.Attachment,
 	checksum string,
 	storagePath string,
 ) error {
-	ctx, span := s.tracer.Start(ctx, "state.DBStore.RecordAttachment")
+	ctx, span := s.tracer.Start(
+		ctx,
+		"state.DBStore.RecordAttachment",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(),
+	)
 	defer span.End()
 
+	logger := s.logger.With(
+		slog.String("tag", "state.DBStore.RecordAttachment"),
+		slog.String("idx_announcement_id", idxID),
+		slog.String("attachment_name", att.OriginalFilename),
+		slog.String("attachment_storage_path", storagePath),
+	)
+
+	logger.InfoContext(ctx, "recording attachment")
+	span.AddEvent("recording attachment")
 	attachment := att.ToAttachments(idxID, checksum, storagePath)
 	if err := Attachments.INSERT(Attachments.AllColumns.Except(Attachments.ID)).
 		MODEL(attachment).
 		RETURNING(Attachments.AllColumns).
 		QueryContext(ctx, s.db, &attachment); err != nil {
-		err = fmt.Errorf("DBStore.RecordAttachment: %w", err)
+		err = fmt.Errorf("recording attachment: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
+	logger.InfoContext(ctx, "recorded attachment")
+	span.AddEvent("recorded attachment")
+
 	return nil
 }
 
 // UpsertMarketDetector inserts or updates market detector summaries and transactions
-func (s *DBStore) UpsertMarketDetector(
+func (s DBStore) UpsertMarketDetector(
 	ctx context.Context,
 	summary models.MarketDetectorSummary,
 	transactions []models.BrokerTransaction,
@@ -150,13 +208,29 @@ func (s *DBStore) UpsertMarketDetector(
 	ctx, span := s.tracer.Start(ctx, "state.DBStore.UpsertMarketDetector")
 	defer span.End()
 
+	logger := s.logger.With(slog.String("tag", "state.DBStore.UpsertMarketDetector"))
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		err = fmt.Errorf("DBStore.UpsertMarketDetector begin tx: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			err = fmt.Errorf("rollback: %w", err)
+			if !errors.Is(err, sql.ErrTxDone) || !errors.Is(err, sql.ErrConnDone) {
+				logger.ErrorContext(ctx, err.Error())
+				telemetry.RecordError(span, err)
+				return
+			}
+			logger.DebugContext(ctx, "transaction already committed", slog.Any("error", err))
+			span.AddEvent("transaction already committed")
+			return
+		}
+		logger.InfoContext(ctx, "transaction rolled back")
+		span.AddEvent("transaction rolled back")
+	}()
 
 	var dbSummary model.MarketDetectorSummaries
 	tDate, _ := time.Parse("2006-01-02", summary.TradeDate)
@@ -227,5 +301,15 @@ func (s *DBStore) UpsertMarketDetector(
 		}
 	}
 
-	return tx.Commit()
+	logger.DebugContext(ctx, "commiting transaction")
+	span.AddEvent("commiting transaction")
+	if err := tx.Commit(); err != nil {
+		err = fmt.Errorf("commit: %w", err)
+		telemetry.RecordError(span, err)
+		return err
+	}
+	logger.InfoContext(ctx, "commited transaction")
+	span.AddEvent("commited transaction")
+
+	return nil
 }

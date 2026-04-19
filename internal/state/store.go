@@ -3,13 +3,15 @@ package state
 import (
 	"context"
 
+	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 	"github.com/alturino/bloodhound/internal/models"
 )
 
 // Store defines the interface for state persistence
 type Store interface {
-	// ShouldUpdate checks if the store contains any processed announcements
-	ShouldUpdate(ctx context.Context) (bool, error)
+	IsExists(ctx context.Context) (bool, error)
+	// LatestAnnouncement checks if the store need to be updated based on the latest announcement date
+	LatestAnnouncement(ctx context.Context) (model.Announcements, error)
 	// IsProcessed checks if an announcement has already been processed
 	IsProcessed(ctx context.Context, id string) (bool, error)
 	// RecordAnnouncement saves announcement metadata to the database
