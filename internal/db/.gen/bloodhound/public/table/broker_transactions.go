@@ -17,16 +17,16 @@ type brokerTransactionsTable struct {
 	postgres.Table
 
 	// Columns
-	TradeDate    postgres.ColumnDate
-	Frequency    postgres.ColumnInteger
-	Lots         postgres.ColumnInteger
 	ID           postgres.ColumnString
 	SummaryID    postgres.ColumnString
-	BrokerCode   postgres.ColumnString
+	Symbol       postgres.ColumnString
 	InvestorType postgres.ColumnString
 	Side         postgres.ColumnString
-	Symbol       postgres.ColumnString
+	BrokerCode   postgres.ColumnString
+	Frequency    postgres.ColumnInteger
+	Lots         postgres.ColumnInteger
 	AvgPrice     postgres.ColumnFloat
+	TradeDate    postgres.ColumnDate
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -68,18 +68,18 @@ func newBrokerTransactionsTable(schemaName, tableName, alias string) *BrokerTran
 
 func newBrokerTransactionsTableImpl(schemaName, tableName, alias string) brokerTransactionsTable {
 	var (
-		TradeDateColumn    = postgres.DateColumn("trade_date")
-		FrequencyColumn    = postgres.IntegerColumn("frequency")
-		LotsColumn         = postgres.IntegerColumn("lots")
 		IDColumn           = postgres.StringColumn("id")
 		SummaryIDColumn    = postgres.StringColumn("summary_id")
-		BrokerCodeColumn   = postgres.StringColumn("broker_code")
+		SymbolColumn       = postgres.StringColumn("symbol")
 		InvestorTypeColumn = postgres.StringColumn("investor_type")
 		SideColumn         = postgres.StringColumn("side")
-		SymbolColumn       = postgres.StringColumn("symbol")
+		BrokerCodeColumn   = postgres.StringColumn("broker_code")
+		FrequencyColumn    = postgres.IntegerColumn("frequency")
+		LotsColumn         = postgres.IntegerColumn("lots")
 		AvgPriceColumn     = postgres.FloatColumn("avg_price")
-		allColumns         = postgres.ColumnList{TradeDateColumn, FrequencyColumn, LotsColumn, IDColumn, SummaryIDColumn, BrokerCodeColumn, InvestorTypeColumn, SideColumn, SymbolColumn, AvgPriceColumn}
-		mutableColumns     = postgres.ColumnList{TradeDateColumn, FrequencyColumn, LotsColumn, SummaryIDColumn, BrokerCodeColumn, InvestorTypeColumn, SideColumn, SymbolColumn, AvgPriceColumn}
+		TradeDateColumn    = postgres.DateColumn("trade_date")
+		allColumns         = postgres.ColumnList{IDColumn, SummaryIDColumn, SymbolColumn, InvestorTypeColumn, SideColumn, BrokerCodeColumn, FrequencyColumn, LotsColumn, AvgPriceColumn, TradeDateColumn}
+		mutableColumns     = postgres.ColumnList{SummaryIDColumn, SymbolColumn, InvestorTypeColumn, SideColumn, BrokerCodeColumn, FrequencyColumn, LotsColumn, AvgPriceColumn, TradeDateColumn}
 		defaultColumns     = postgres.ColumnList{IDColumn}
 	)
 
@@ -87,16 +87,16 @@ func newBrokerTransactionsTableImpl(schemaName, tableName, alias string) brokerT
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		TradeDate:    TradeDateColumn,
-		Frequency:    FrequencyColumn,
-		Lots:         LotsColumn,
 		ID:           IDColumn,
 		SummaryID:    SummaryIDColumn,
-		BrokerCode:   BrokerCodeColumn,
+		Symbol:       SymbolColumn,
 		InvestorType: InvestorTypeColumn,
 		Side:         SideColumn,
-		Symbol:       SymbolColumn,
+		BrokerCode:   BrokerCodeColumn,
+		Frequency:    FrequencyColumn,
+		Lots:         LotsColumn,
 		AvgPrice:     AvgPriceColumn,
+		TradeDate:    TradeDateColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

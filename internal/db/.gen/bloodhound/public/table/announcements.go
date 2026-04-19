@@ -21,7 +21,7 @@ type announcementsTable struct {
 	IdxID             postgres.ColumnString
 	StockCode         postgres.ColumnString
 	AnnouncementTitle postgres.ColumnString
-	AnnouncementDate  postgres.ColumnTimestampz
+	Date              postgres.ColumnTimestampz
 	CreatedAt         postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
@@ -68,10 +68,10 @@ func newAnnouncementsTableImpl(schemaName, tableName, alias string) announcement
 		IdxIDColumn             = postgres.StringColumn("idx_id")
 		StockCodeColumn         = postgres.StringColumn("stock_code")
 		AnnouncementTitleColumn = postgres.StringColumn("announcement_title")
-		AnnouncementDateColumn  = postgres.TimestampzColumn("announcement_date")
+		DateColumn              = postgres.TimestampzColumn("date")
 		CreatedAtColumn         = postgres.TimestampzColumn("created_at")
-		allColumns              = postgres.ColumnList{IDColumn, IdxIDColumn, StockCodeColumn, AnnouncementTitleColumn, AnnouncementDateColumn, CreatedAtColumn}
-		mutableColumns          = postgres.ColumnList{IdxIDColumn, StockCodeColumn, AnnouncementTitleColumn, AnnouncementDateColumn, CreatedAtColumn}
+		allColumns              = postgres.ColumnList{IDColumn, IdxIDColumn, StockCodeColumn, AnnouncementTitleColumn, DateColumn, CreatedAtColumn}
+		mutableColumns          = postgres.ColumnList{IdxIDColumn, StockCodeColumn, AnnouncementTitleColumn, DateColumn, CreatedAtColumn}
 		defaultColumns          = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
@@ -83,7 +83,7 @@ func newAnnouncementsTableImpl(schemaName, tableName, alias string) announcement
 		IdxID:             IdxIDColumn,
 		StockCode:         StockCodeColumn,
 		AnnouncementTitle: AnnouncementTitleColumn,
-		AnnouncementDate:  AnnouncementDateColumn,
+		Date:              DateColumn,
 		CreatedAt:         CreatedAtColumn,
 
 		AllColumns:     allColumns,

@@ -17,12 +17,12 @@ type attachmentsTable struct {
 	postgres.Table
 
 	// Columns
-	ID               postgres.ColumnString
-	AnnouncementID   postgres.ColumnString
-	OriginalFilename postgres.ColumnString
-	Checksum         postgres.ColumnString
-	StoragePath      postgres.ColumnString
-	UploadedAt       postgres.ColumnTimestampz
+	ID                postgres.ColumnString
+	IdxAnnouncementID postgres.ColumnString
+	OriginalFilename  postgres.ColumnString
+	Checksum          postgres.ColumnString
+	StoragePath       postgres.ColumnString
+	UploadedAt        postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -64,27 +64,27 @@ func newAttachmentsTable(schemaName, tableName, alias string) *AttachmentsTable 
 
 func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTable {
 	var (
-		IDColumn               = postgres.StringColumn("id")
-		AnnouncementIDColumn   = postgres.StringColumn("announcement_id")
-		OriginalFilenameColumn = postgres.StringColumn("original_filename")
-		ChecksumColumn         = postgres.StringColumn("checksum")
-		StoragePathColumn      = postgres.StringColumn("storage_path")
-		UploadedAtColumn       = postgres.TimestampzColumn("uploaded_at")
-		allColumns             = postgres.ColumnList{IDColumn, AnnouncementIDColumn, OriginalFilenameColumn, ChecksumColumn, StoragePathColumn, UploadedAtColumn}
-		mutableColumns         = postgres.ColumnList{AnnouncementIDColumn, OriginalFilenameColumn, ChecksumColumn, StoragePathColumn, UploadedAtColumn}
-		defaultColumns         = postgres.ColumnList{IDColumn, UploadedAtColumn}
+		IDColumn                = postgres.StringColumn("id")
+		IdxAnnouncementIDColumn = postgres.StringColumn("idx_announcement_id")
+		OriginalFilenameColumn  = postgres.StringColumn("original_filename")
+		ChecksumColumn          = postgres.StringColumn("checksum")
+		StoragePathColumn       = postgres.StringColumn("storage_path")
+		UploadedAtColumn        = postgres.TimestampzColumn("uploaded_at")
+		allColumns              = postgres.ColumnList{IDColumn, IdxAnnouncementIDColumn, OriginalFilenameColumn, ChecksumColumn, StoragePathColumn, UploadedAtColumn}
+		mutableColumns          = postgres.ColumnList{IdxAnnouncementIDColumn, OriginalFilenameColumn, ChecksumColumn, StoragePathColumn, UploadedAtColumn}
+		defaultColumns          = postgres.ColumnList{IDColumn, UploadedAtColumn}
 	)
 
 	return attachmentsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:               IDColumn,
-		AnnouncementID:   AnnouncementIDColumn,
-		OriginalFilename: OriginalFilenameColumn,
-		Checksum:         ChecksumColumn,
-		StoragePath:      StoragePathColumn,
-		UploadedAt:       UploadedAtColumn,
+		ID:                IDColumn,
+		IdxAnnouncementID: IdxAnnouncementIDColumn,
+		OriginalFilename:  OriginalFilenameColumn,
+		Checksum:          ChecksumColumn,
+		StoragePath:       StoragePathColumn,
+		UploadedAt:        UploadedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

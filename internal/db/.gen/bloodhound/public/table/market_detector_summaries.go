@@ -17,12 +17,12 @@ type marketDetectorSummariesTable struct {
 	postgres.Table
 
 	// Columns
-	TradeDate     postgres.ColumnDate
-	CreatedAt     postgres.ColumnTimestampz
 	ID            postgres.ColumnString
 	Symbol        postgres.ColumnString
 	AccdistStatus postgres.ColumnString
 	TotalValue    postgres.ColumnFloat
+	CreatedAt     postgres.ColumnTimestampz
+	TradeDate     postgres.ColumnDate
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -64,27 +64,27 @@ func newMarketDetectorSummariesTable(schemaName, tableName, alias string) *Marke
 
 func newMarketDetectorSummariesTableImpl(schemaName, tableName, alias string) marketDetectorSummariesTable {
 	var (
-		TradeDateColumn     = postgres.DateColumn("trade_date")
-		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
 		IDColumn            = postgres.StringColumn("id")
 		SymbolColumn        = postgres.StringColumn("symbol")
 		AccdistStatusColumn = postgres.StringColumn("accdist_status")
 		TotalValueColumn    = postgres.FloatColumn("total_value")
-		allColumns          = postgres.ColumnList{TradeDateColumn, CreatedAtColumn, IDColumn, SymbolColumn, AccdistStatusColumn, TotalValueColumn}
-		mutableColumns      = postgres.ColumnList{TradeDateColumn, CreatedAtColumn, SymbolColumn, AccdistStatusColumn, TotalValueColumn}
-		defaultColumns      = postgres.ColumnList{CreatedAtColumn, IDColumn}
+		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
+		TradeDateColumn     = postgres.DateColumn("trade_date")
+		allColumns          = postgres.ColumnList{IDColumn, SymbolColumn, AccdistStatusColumn, TotalValueColumn, CreatedAtColumn, TradeDateColumn}
+		mutableColumns      = postgres.ColumnList{SymbolColumn, AccdistStatusColumn, TotalValueColumn, CreatedAtColumn, TradeDateColumn}
+		defaultColumns      = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
 	return marketDetectorSummariesTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		TradeDate:     TradeDateColumn,
-		CreatedAt:     CreatedAtColumn,
 		ID:            IDColumn,
 		Symbol:        SymbolColumn,
 		AccdistStatus: AccdistStatusColumn,
 		TotalValue:    TotalValueColumn,
+		CreatedAt:     CreatedAtColumn,
+		TradeDate:     TradeDateColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

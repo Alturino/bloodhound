@@ -10,7 +10,7 @@ CREATE TABLE market_detector_summaries (
 
 CREATE TABLE broker_transactions (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
-    summary_id UUID REFERENCES market_detector_summaries(id) ON DELETE CASCADE,
+    summary_id UUID NOT NULL REFERENCES market_detector_summaries(id) ON DELETE CASCADE,
     symbol VARCHAR(10) NOT NULL,
     investor_type VARCHAR(20) not null,
     side VARCHAR(4) CHECK (side IN ('BUY', 'SELL')) not null,
