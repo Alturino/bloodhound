@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/imroc/req/v3"
+	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
