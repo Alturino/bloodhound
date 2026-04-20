@@ -118,7 +118,7 @@ func (s DBStore) IsProcessed(ctx context.Context, idxID string) (bool, error) {
 		telemetry.RecordError(span, err)
 		return false, err
 	}
-	logger = logger.With(slog.Bool("is_exist", true))
+	logger = logger.With(slog.Bool("is_processed", true))
 	logger.InfoContext(ctx, "checked announcement")
 	span.AddEvent("checked announcement")
 
@@ -136,9 +136,6 @@ func (s DBStore) RecordAnnouncement(ctx context.Context, ann models.Announcement
 	defer span.End()
 
 	logger := s.logger.With(slog.String("tag", "state.DBStore.RecordAnnouncement"))
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(slog.Any("announceent", ann))
-	}
 
 	span.AddEvent("recording announcement")
 	announcement := ann.ToAnnouncements()
@@ -178,8 +175,6 @@ func (s DBStore) RecordAttachment(
 	logger := s.logger.With(
 		slog.String("tag", "state.DBStore.RecordAttachment"),
 		slog.String("idx_announcement_id", idxID),
-		slog.String("attachment_name", att.OriginalFilename),
-		slog.String("attachment_storage_path", storagePath),
 	)
 
 	logger.InfoContext(ctx, "recording attachment")
