@@ -137,6 +137,7 @@ func (s DBStore) RecordAnnouncement(ctx context.Context, ann models.Announcement
 
 	logger := s.logger.With(slog.String("tag", "state.DBStore.RecordAnnouncement"))
 
+	logger.DebugContext(ctx, "recording announcement")
 	span.AddEvent("recording announcement")
 	announcement := ann.ToAnnouncements()
 	insertionColumn := Announcements.AllColumns.Except(Announcements.DefaultColumns)
