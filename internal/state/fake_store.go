@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 
+	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 	"github.com/alturino/bloodhound/internal/models"
 )
 
@@ -56,5 +57,10 @@ func (f *FakeStore) IsExists(ctx context.Context) (bool, error) {
 
 // ShouldUpdate checks if the store need to be updated based on the latest announcement date
 func (f *FakeStore) ShouldUpdate(ctx context.Context) (bool, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+// LatestAnnouncement checks if the store need to be updated based on the latest announcement date
+func (f *FakeStore) LatestAnnouncement(ctx context.Context) (model.Announcements, error) {
 	panic("not implemented") // TODO: Implement
 }
