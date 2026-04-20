@@ -17,13 +17,13 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/db"
 	"github.com/alturino/bloodhound/internal/httpclient"
-	"github.com/alturino/bloodhound/internal/idx"
 	"github.com/alturino/bloodhound/internal/log"
 	"github.com/alturino/bloodhound/internal/state"
-	"github.com/alturino/bloodhound/internal/stockbit"
 	"github.com/alturino/bloodhound/internal/storage"
 	"github.com/alturino/bloodhound/internal/telemetry"
 	"github.com/alturino/bloodhound/internal/worker"
+	"github.com/alturino/bloodhound/pkg/idx"
+	"github.com/alturino/bloodhound/pkg/stockbit"
 )
 
 var ServeCmd = &cobra.Command{
@@ -114,15 +114,15 @@ func runServe(cmd *cobra.Command, args []string) error {
 		telemetry.AppTelemetry.Tracer,
 	)
 
-	w := worker.NewWorker(
-		idxClient,
-		stockbitClient,
-		stg,
-		stateStore,
-		cfg,
-		logger,
-		telemetry.AppTelemetry.Tracer,
-	)
+	workerCfg := &worker.WorkerConfig{
+		Config:     cfg,
+		Logger:     logger,
+		Tracer:     telemetry.AppTelemetry.Tracer,
+		StateStore: stateStore,
+	}
+
+	idxWorker := worker.NewWorkerIdx(workerCfg, idxClient, stg)
+	stockbitWorker := worker.NewWorkerStockbit(workerCfg, stockbitClient)
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {
@@ -141,8 +141,14 @@ func runServe(cmd *cobra.Command, args []string) error {
 		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
 	})
 
-	if err := w.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.ErrorContext(ctx, err.Error())
+	go func() {
+		if err := idxWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.ErrorContext(ctx, "idx worker error", slog.Any("error", err))
+		}
+	}()
+
+	if err := stockbitWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		logger.ErrorContext(ctx, "stockbit worker error", slog.Any("error", err))
 		return err
 	}
 	return nil

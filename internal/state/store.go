@@ -30,4 +30,6 @@ type Store interface {
 		summary models.MarketDetectorSummary,
 		transactions []models.BrokerTransaction,
 	) error
+	// GetStockCodesForMarketDetector returns stock codes that need market detector sync
+	GetStockCodesForMarketDetector(ctx context.Context) ([]string, error)
 }

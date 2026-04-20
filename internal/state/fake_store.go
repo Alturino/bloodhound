@@ -60,7 +60,10 @@ func (f *FakeStore) ShouldUpdate(ctx context.Context) (bool, error) {
 	panic("not implemented") // TODO: Implement
 }
 
-// LatestAnnouncement checks if the store need to be updated based on the latest announcement date
 func (f *FakeStore) LatestAnnouncement(ctx context.Context) (model.Announcements, error) {
-	panic("not implemented") // TODO: Implement
+	return model.Announcements{}, nil
+}
+
+func (f *FakeStore) GetStockCodesForMarketDetector(ctx context.Context) ([]string, error) {
+	return []string{}, nil
 }

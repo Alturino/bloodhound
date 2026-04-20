@@ -309,3 +309,38 @@ func (s DBStore) UpsertMarketDetector(
 
 	return nil
 }
+
+func (s DBStore) GetStockCodesForMarketDetector(ctx context.Context) ([]string, error) {
+	ctx, span := s.tracer.Start(ctx, "state.DBStore.GetStockCodesForMarketDetector")
+	defer span.End()
+
+	logger := s.logger.With(slog.String("tag", "state.DBStore.GetStockCodesForMarketDetector"))
+
+	logger.DebugContext(ctx, "fetching stock codes for market detector")
+	span.AddEvent("fetching stock codes for market detector")
+
+	var stockCodes []string
+	since := time.Now().Add(-24 * time.Hour)
+	stmt := fmt.Sprintf(
+		"SELECT stock_code FROM announcements WHERE created_at > $1 GROUP BY stock_code ORDER BY stock_code ASC",
+	)
+	rows, err := s.db.QueryContext(ctx, stmt, since)
+	if err != nil {
+		err = fmt.Errorf("get stock codes: %w", err)
+		telemetry.RecordError(span, err)
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			continue
+		}
+		stockCodes = append(stockCodes, code)
+	}
+
+	logger.DebugContext(ctx, "fetched stock codes", slog.Int("count", len(stockCodes)))
+	span.AddEvent("fetched stock codes")
+
+	return stockCodes, nil
+}
