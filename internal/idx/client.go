@@ -139,7 +139,11 @@ func (c client) DownloadFile(ctx context.Context, url string) ([]byte, string, e
 	)
 	defer span.End()
 
-	logger := c.logger.With(slog.String("url", url), slog.String("tag", "idx.Client.DownloadFile"))
+	ctx = slogcontext.Append(ctx,
+		slog.String("url", url),
+		slog.String("tag", "idx.Client.DownloadFile"),
+	)
+	logger := c.logger.With()
 
 	span.AddEvent("downloading file")
 	logger.InfoContext(ctx, "downloading file")

@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
+	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -119,7 +121,8 @@ func (w Worker) processInitial(ctx context.Context) error {
 	ctx, span := w.tracer.Start(ctx, "worker.Worker.processInitial")
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.Worker.processInitial"))
+	logger := w.logger.With()
+	ctx = slogcontext.Append(ctx, slog.String("tag", "worker.Worker.processInitial"))
 
 	resp, err := w.idxClient.FetchAnnouncements(ctx, 0, time.Time{})
 	if err != nil {
@@ -129,7 +132,7 @@ func (w Worker) processInitial(ctx context.Context) error {
 	}
 	totalItems, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
 	totalPages := (totalItems + pageSize) / pageSize
-	logger = logger.With(
+	ctx = slogcontext.Append(ctx,
 		slog.Int("total_items", totalItems),
 		slog.Int("page_size", pageSize),
 		slog.Int("total_pages", totalPages),
@@ -142,7 +145,11 @@ func (w Worker) processInitial(ctx context.Context) error {
 
 	processedCount := 0
 	for page := totalPages - 1; page >= 0; page-- {
-		logger := logger.With(slog.Int("page", page), slog.Int("processed_count", processedCount))
+		ctx := slogcontext.Append(
+			ctx,
+			slog.Int("page", page),
+			slog.Int("processed_count", processedCount),
+		)
 
 		resp, err := w.idxClient.FetchAnnouncements(ctx, page, time.Time{})
 		if err != nil {
@@ -157,10 +164,10 @@ func (w Worker) processInitial(ctx context.Context) error {
 			break
 		}
 
-		for announcement_i, reply := range resp.Replies {
-			logger := logger.With(
-				slog.Int("announcement_i", announcement_i),
-				slog.Any("announcement", reply.Announcement),
+		for _, reply := range resp.Replies {
+			ctx := slogcontext.Append(ctx,
+				slog.Int("page", page),
+				slog.Int("processed_count", processedCount),
 			)
 			if err := w.processAnnouncement(ctx, reply.Announcement); err != nil {
 				logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
@@ -181,35 +188,54 @@ func (w Worker) processIncremental(ctx context.Context) error {
 	ctx, span := w.tracer.Start(ctx, "worker.Worker.processIncremental")
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.Worker.processIncremental"))
+	logger := w.logger.With()
+	ctx = slogcontext.Append(ctx, slog.String("tag", "worker.Worker.processIncremental"))
 
-	latestAnnouncement, err := w.stateStore.LatestAnnouncement(ctx)
+	latestDB, err := w.stateStore.LatestAnnouncement(ctx)
 	if err != nil {
 		return err
 	}
 
-	latestDate := latestAnnouncement.Date
-	resp, err := w.idxClient.FetchAnnouncements(ctx, 0, latestDate)
+	resp, err := w.idxClient.FetchAnnouncements(ctx, 0, latestDB.Date)
 	if err != nil {
 		return err
 	}
+	latest := resp.Replies[0].Announcement
 	totalItems, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
 	totalPages := (totalItems + pageSize) / pageSize
-	logger = logger.With(
+	ctx = slogcontext.Append(ctx,
 		slog.Int("total_items", totalItems),
 		slog.Int("page_size", pageSize),
 		slog.Int("total_pages", totalPages),
+		slog.Time("latest_db_date", latestDB.Date),
+		slog.Time("latest_announcement", latest.Date),
 	)
 	span.SetAttributes(
 		attribute.Int("total_items", totalItems),
 		attribute.Int("page_size", pageSize),
 		attribute.Int("total_pages", totalPages),
+		attribute.String("latest_db_date", latestDB.Date.String()),
+		attribute.String("latest_announcement_date", latest.Date.String()),
 	)
 
-	for page := totalPages; page >= 0; page-- {
-		logger := logger.With(slog.Int("page", page))
+	if latest.Date.Before(latestDB.Date) || latest.Date.Equal(latestDB.Date) {
+		err := fmt.Errorf(
+			"no new announcements to process, latest_db_date=%s, latest_announcement_date=%s",
+			latestDB.Date.String(),
+			latest.Date.String(),
+		)
+		logger.InfoContext(ctx, "no new announcements to process", slog.Any("error", err))
+		return err
+	}
 
-		resp, err := w.idxClient.FetchAnnouncements(ctx, page, latestDate)
+	processedCount := 0
+	for page := totalPages; page >= 0; page-- {
+		ctx := slogcontext.Append(
+			ctx,
+			slog.Int("page", page),
+			slog.Int("processed_count", processedCount),
+		)
+		resp, err := w.idxClient.FetchAnnouncements(ctx, page, latestDB.Date)
 		if err != nil {
 			logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
 			if w.config.App.Environment != "production" {
@@ -222,10 +248,10 @@ func (w Worker) processIncremental(ctx context.Context) error {
 			break
 		}
 
-		for announcement_i, reply := range resp.Replies {
-			logger := logger.With(
-				slog.Int("announcement_i", announcement_i),
-				slog.Any("announcement", reply.Announcement),
+		for _, reply := range resp.Replies {
+			ctx := slogcontext.Append(ctx,
+				slog.Int("page", page),
+				slog.Int("processed_count", processedCount),
 			)
 			if err := w.processAnnouncement(ctx, reply.Announcement); err != nil {
 				logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
@@ -249,18 +275,17 @@ func (w Worker) processAnnouncement(ctx context.Context, ann models.Announcement
 			attribute.String("tag", "worker.Worker.processAnnouncement"),
 			attribute.String("idx_announcement_id", ann.ID2),
 			attribute.String("stock_code", ann.StockCode),
-			attribute.String("announcement_date", ann.AnnouncementDate.String()),
+			attribute.String("announcement_date", ann.Date.String()),
 		),
 	)
 	defer span.End()
 
-	_ = w.logger.With(
+	ctx = slogcontext.Append(ctx,
 		slog.String("tag", "worker.Worker.processAnnouncement"),
 		slog.String("idx_announcement_id", ann.ID2),
 		slog.String("stock_code", ann.StockCode),
-		slog.Time("announcement_date", ann.AnnouncementDate),
+		slog.Time("announcement_date", ann.Date),
 	)
-
 	if err := w.stateStore.RecordAnnouncement(ctx, ann); err != nil {
 		err = fmt.Errorf("record announcement: %w", err)
 		return err
@@ -282,8 +307,6 @@ func (w Worker) syncMarketDetector(ctx context.Context, symbol string, date time
 	defer span.End()
 
 	dateStr := date.Format("2006-01-02")
-
-	_ = w.logger.With(slog.String("tag", "worker.Worker.syncMarketDetector"))
 
 	resp, err := w.stockbitClient.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
 	if err != nil {
@@ -339,17 +362,25 @@ func (w Worker) processAttachment(
 	ann models.Announcement,
 	att models.Attachment,
 ) error {
-	datePrefix := ann.AnnouncementDate.Format("2006-01-02")
+	cleanExp := regexp.MustCompile(`[^a-zA-Z0-9\.]+`)
+	whitespaceExp := regexp.MustCompile(`\s+`)
+	datePrefix := ann.Date.Format("2006-01-02")
+	stockcode := strings.ToLower(ann.StockCode)
 	originalname := strings.ToLower(att.OriginalFilename)
-	originalname = strings.ReplaceAll(originalname, ",", " ")
-	originalname = strings.ReplaceAll(originalname, "//", " ")
-	originalname = strings.ReplaceAll(originalname, " ", "_")
+	originalname = cleanExp.ReplaceAllString(originalname, " ")
+	originalname = whitespaceExp.ReplaceAllString(originalname, " ")
+	originalname = whitespaceExp.ReplaceAllString(originalname, "_")
+	originalname = strings.Trim(originalname, "_")
+	title := strings.ToLower(ann.AnnouncementTitle)
+	title = cleanExp.ReplaceAllString(title, " ")
+	title = whitespaceExp.ReplaceAllString(title, " ")
+	title = whitespaceExp.ReplaceAllString(title, "_")
+	title = strings.Trim(title, "_")
+	title = title[:min(64, len(title))]
+	title = fmt.Sprintf("%s_%s", datePrefix, title)
 	filename := fmt.Sprintf("%s_%s", datePrefix, originalname)
-	filePath := filepath.Join(
-		strings.ToLower(ann.StockCode),
-		fmt.Sprintf("%s_%s", datePrefix, strings.ToLower(ann.AnnouncementTitle)),
-		filename,
-	)
+	filePath := filepath.Join(stockcode, title, filename)
+	filePath = filepath.Clean(filePath)
 
 	bucket := w.config.MinIO.Bucket
 	ctx, span := w.tracer.Start(
@@ -366,13 +397,16 @@ func (w Worker) processAttachment(
 	)
 	defer span.End()
 
-	logger := w.logger.With(
+	ctx = slogcontext.Append(
+		ctx,
+		slog.String("idx_filename", att.OriginalFilename),
 		slog.String("tag", "worker.Worker.processAttachment"),
 		slog.String("idx_filename", att.OriginalFilename),
 		slog.String("idx_attachment_url", att.FullSavePath),
 		slog.String("bucket", bucket),
 		slog.String("filename", filePath),
 	)
+	logger := w.logger.With()
 
 	data, contentType, err := w.idxClient.DownloadFile(ctx, att.FullSavePath)
 	if err != nil {
@@ -381,7 +415,7 @@ func (w Worker) processAttachment(
 	}
 	checksum := calculateChecksum(data)
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(
+		ctx = slogcontext.Append(ctx,
 			slog.Int("size", len(data)),
 			slog.String("content_type", contentType),
 			slog.String("checksum_sha256", checksum),
