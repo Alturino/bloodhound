@@ -49,7 +49,7 @@ func (m mockClient) FetchAnnouncements(
 					ID2:               "MOCK-001",
 					ID:                1,
 					AnnouncementTitle: "Mock Announcement for Development",
-					AnnouncementDate:  announcementDate,
+					Date:              announcementDate,
 					StockCode:         "MOCK",
 					CreatedDate:       now,
 				},

@@ -153,8 +153,8 @@ func TestCalculateChecksum(t *testing.T) {
 
 func TestNamingLogic(t *testing.T) {
 	ann := models.Announcement{
-		StockCode:        "TLKM",
-		AnnouncementDate: time.Date(2026, 3, 16, 17, 0, 0, 0, time.UTC),
+		StockCode: "TLKM",
+		Date:      time.Date(2026, 3, 16, 17, 0, 0, 0, time.UTC),
 	}
 	originalFilename := "Financial_Report.PDF"
 	data := []byte("some content")
@@ -162,7 +162,7 @@ func TestNamingLogic(t *testing.T) {
 	shortChecksum := checksum[:8]
 
 	// Simulated naming logic from worker.go
-	datePrefix := ann.AnnouncementDate.Format("2006-01-02")
+	datePrefix := ann.Date.Format("2006-01-02")
 	stockCode := "TLKM"                               // already trimmed and uppercase in test prep
 	originalName := strings.ToLower(originalFilename) // lowercased
 

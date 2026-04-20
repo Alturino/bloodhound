@@ -55,7 +55,7 @@ type Announcement struct {
 	IsSPEI              bool         `json:"is_spei"`           // EfekEmiten_SPEI
 	IsDIRE              bool         `json:"is_dire"`           // EfekEmiten_DIRE
 	IsDINFRA            bool         `json:"is_dinfra"`         // EfekEmiten_DINFRA
-	AnnouncementDate    time.Time    `json:"announcement_date"` // TglPengumuman
+	Date                time.Time    `json:"announcement_date"` // TglPengumuman
 	CreatedDate         time.Time    `json:"created_date"`
 	Attachments         []Attachment `json:"attachments"`
 }
@@ -64,7 +64,7 @@ func (a Announcement) ToAnnouncements() model.Announcements {
 	return model.Announcements{
 		IdxID:             a.ID2,
 		StockCode:         a.StockCode,
-		Date:              a.AnnouncementDate,
+		Date:              a.Date,
 		AnnouncementTitle: a.AnnouncementTitle,
 		CreatedAt:         a.CreatedDate,
 	}
