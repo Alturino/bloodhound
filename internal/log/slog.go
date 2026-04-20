@@ -9,6 +9,7 @@ import (
 
 	"github.com/natefinch/lumberjack"
 	slogmulti "github.com/samber/slog-multi"
+	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
@@ -34,6 +35,7 @@ func Get(config *config.App) *slog.Logger {
 		sinkHandler = slog.NewTextHandler(logDestination, sinkHandlerOption)
 	}
 
+	slogctxHandler := slogcontext.NewHandler(sinkHandler, &slogcontext.HandlerOptions{})
 	pipe := slogmulti.Pipe(
 		slogmulti.NewHandleInlineMiddleware(
 			func(ctx context.Context, record slog.Record, next func(context.Context, slog.Record) error) error {
@@ -47,7 +49,7 @@ func Get(config *config.App) *slog.Logger {
 				return next(ctx, record)
 			},
 		),
-	).Handler(sinkHandler).
+	).Handler(slogctxHandler).
 		WithAttrs([]slog.Attr{slog.String("app", "bloodhound")})
 
 	// otelSlog := otelslog.NewHandler(common.APPLICATION_NAME, otelslog.WithSource(true)).
