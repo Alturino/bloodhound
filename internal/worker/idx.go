@@ -220,7 +220,7 @@ func (w WorkerIdx) processAnnouncement(ctx context.Context, ann models.Announcem
 			attribute.String("tag", "worker.WorkerIdx.processAnnouncement"),
 			attribute.String("idx_announcement_id", ann.ID2),
 			attribute.String("stock_code", ann.StockCode),
-			attribute.String("announcement_date", ann.AnnouncementDate.String()),
+			attribute.String("announcement_date", ann.Date.String()),
 		),
 	)
 	defer span.End()
@@ -229,7 +229,7 @@ func (w WorkerIdx) processAnnouncement(ctx context.Context, ann models.Announcem
 		slog.String("tag", "worker.WorkerIdx.processAnnouncement"),
 		slog.String("idx_announcement_id", ann.ID2),
 		slog.String("stock_code", ann.StockCode),
-		slog.Time("announcement_date", ann.AnnouncementDate),
+		slog.Time("announcement_date", ann.Date),
 	)
 
 	if err := w.idxStore.RecordAnnouncement(ctx, ann); err != nil {
@@ -253,7 +253,7 @@ func (w WorkerIdx) processAttachment(
 	ann models.Announcement,
 	att models.Attachment,
 ) error {
-	datePrefix := ann.AnnouncementDate.Format("2006-01-02")
+	datePrefix := ann.Date.Format("2006-01-02")
 	originalname := strings.ToLower(att.OriginalFilename)
 	originalname = strings.ReplaceAll(originalname, ",", " ")
 	originalname = strings.ReplaceAll(originalname, "//", " ")

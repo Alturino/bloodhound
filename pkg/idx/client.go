@@ -190,7 +190,7 @@ func (c client) convertToModel(raw rawAnnouncementResponse) models.AnnouncementR
 				FinalID:             r.Pengumuman.FinalId,
 				OldFinalID:          r.Pengumuman.OldFinalId,
 				AnnouncementNumber:  r.Pengumuman.NoPengumuman,
-				AnnouncementDate:    r.Pengumuman.TglPengumuman.Time(),
+				Date:             r.Pengumuman.TglPengumuman.Time(),
 				AnnouncementTitle:   r.Pengumuman.JudulPengumuman,
 				AnnouncementType:    r.Pengumuman.JenisPengumuman,
 				StockCode:           strings.TrimSpace(r.Pengumuman.Kode_Emiten),
