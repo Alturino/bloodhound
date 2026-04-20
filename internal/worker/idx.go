@@ -23,12 +23,12 @@ import (
 )
 
 type WorkerIdx struct {
-	config     *config.Config
-	logger     *slog.Logger
-	tracer     trace.Tracer
-	idxClient  idx.Client
-	storage   storage.Storage
-	stateStore state.Store
+	config    *config.Config
+	logger   *slog.Logger
+	tracer   trace.Tracer
+	idxClient idx.Client
+	storage  storage.Storage
+	idxStore state.IdxStore
 }
 
 func (w WorkerIdx) Start(ctx context.Context) error {
@@ -70,7 +70,7 @@ func (w WorkerIdx) Process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "worker.WorkerIdx.Process"))
 
-	isExists, err := w.stateStore.IsExists(ctx)
+	isExists, err := w.idxStore.IsExists(ctx)
 	if err != nil {
 		err = fmt.Errorf("is announcements exists: %w", err)
 		return err
@@ -154,7 +154,7 @@ func (w WorkerIdx) processIncremental(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "worker.WorkerIdx.processIncremental"))
 
-	latestAnnouncement, err := w.stateStore.LatestAnnouncement(ctx)
+	latestAnnouncement, err := w.idxStore.LatestAnnouncement(ctx)
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (w WorkerIdx) processAnnouncement(ctx context.Context, ann models.Announcem
 		slog.Time("announcement_date", ann.AnnouncementDate),
 	)
 
-	if err := w.stateStore.RecordAnnouncement(ctx, ann); err != nil {
+	if err := w.idxStore.RecordAnnouncement(ctx, ann); err != nil {
 		err = fmt.Errorf("record announcement: %w", err)
 		return err
 	}
@@ -315,7 +315,7 @@ func (w WorkerIdx) processAttachment(
 		return err
 	}
 
-	if err := w.stateStore.RecordAttachment(ctx, ann.ID2, att, checksum, filePath); err != nil {
+	if err := w.idxStore.RecordAttachment(ctx, ann.ID2, att, checksum, filePath); err != nil {
 		return err
 	}
 

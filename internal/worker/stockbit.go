@@ -16,10 +16,10 @@ import (
 
 type WorkerStockbit struct {
 	config         *config.Config
-	logger        *slog.Logger
-	tracer        trace.Tracer
+	logger       *slog.Logger
+	tracer       trace.Tracer
 	stockbitClient stockbit.Client
-	stateStore    state.Store
+	stockbitStore state.StockbitStore
 }
 
 func (w WorkerStockbit) Start(ctx context.Context) error {
@@ -62,7 +62,7 @@ func (w WorkerStockbit) Process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "worker.WorkerStockbit.Process"))
 
-	stockCodes, err := w.stateStore.GetStockCodesForMarketDetector(ctx)
+	stockCodes, err := w.stockbitStore.GetStockCodesForMarketDetector(ctx)
 	if err != nil {
 		err = fmt.Errorf("get stock codes: %w", err)
 		return err
@@ -136,7 +136,7 @@ func (w WorkerStockbit) syncMarketDetector(ctx context.Context, symbol string) e
 		})
 	}
 
-	if err := w.stateStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
+	if err := w.stockbitStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
 		err = fmt.Errorf("upsert: %w", err)
 		return err
 	}

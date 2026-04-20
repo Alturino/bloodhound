@@ -11,20 +11,21 @@ import (
 )
 
 type WorkerConfig struct {
-	Config     *config.Config
-	Logger     *slog.Logger
-	Tracer     trace.Tracer
-	StateStore state.Store
+	Config        *config.Config
+	Logger        *slog.Logger
+	Tracer        trace.Tracer
+	IdxStore      state.IdxStore
+	StockbitStore state.StockbitStore
 }
 
 func NewWorkerIdx(cfg *WorkerConfig, idxClient idx.Client, storage storage.Storage) *WorkerIdx {
 	return &WorkerIdx{
-		config:     cfg.Config,
-		logger:     cfg.Logger,
-		tracer:     cfg.Tracer,
-		idxClient:  idxClient,
+		config:    cfg.Config,
+		logger:    cfg.Logger,
+		tracer:    cfg.Tracer,
+		idxClient: idxClient,
 		storage:   storage,
-		stateStore: cfg.StateStore,
+		idxStore:  cfg.IdxStore,
 	}
 }
 
@@ -33,7 +34,7 @@ func NewWorkerStockbit(cfg *WorkerConfig, stockbitClient stockbit.Client) *Worke
 		config:         cfg.Config,
 		logger:         cfg.Logger,
 		tracer:         cfg.Tracer,
-		stockbitClient: stockbitClient,
-		stateStore:     cfg.StateStore,
+		stockbitClient:  stockbitClient,
+		stockbitStore:   cfg.StockbitStore,
 	}
 }

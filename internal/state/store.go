@@ -7,29 +7,17 @@ import (
 	"github.com/alturino/bloodhound/internal/models"
 )
 
-// Store defines the interface for state persistence
-type Store interface {
+// IdxStore - IDX announcement state persistence
+type IdxStore interface {
 	IsExists(ctx context.Context) (bool, error)
-	// LatestAnnouncement checks if the store need to be updated based on the latest announcement date
 	LatestAnnouncement(ctx context.Context) (model.Announcements, error)
-	// IsProcessed checks if an announcement has already been processed
 	IsProcessed(ctx context.Context, id string) (bool, error)
-	// RecordAnnouncement saves announcement metadata to the database
 	RecordAnnouncement(ctx context.Context, ann models.Announcement) error
-	// RecordAttachment saves attachment metadata to the database
-	RecordAttachment(
-		ctx context.Context,
-		annID string,
-		att models.Attachment,
-		checksum string,
-		storagePath string,
-	) error
-	// UpsertMarketDetector inserts or updates market detector summaries and transactions
-	UpsertMarketDetector(
-		ctx context.Context,
-		summary models.MarketDetectorSummary,
-		transactions []models.BrokerTransaction,
-	) error
-	// GetStockCodesForMarketDetector returns stock codes that need market detector sync
+	RecordAttachment(ctx context.Context, annID string, att models.Attachment, checksum string, storagePath string) error
+}
+
+// StockbitStore - Stockbit market detector state persistence
+type StockbitStore interface {
+	UpsertMarketDetector(ctx context.Context, summary models.MarketDetectorSummary, transactions []models.BrokerTransaction) error
 	GetStockCodesForMarketDetector(ctx context.Context) ([]string, error)
 }

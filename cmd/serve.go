@@ -90,7 +90,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	stateStore := state.NewDBStore(database, logger)
+	idxStore := state.NewIdxStore(database, logger)
+	stockbitStore := state.NewStockbitStore(database, logger)
 
 	httpClient := httpclient.NewClient(cfg)
 	idxClient := idx.NewClient(
@@ -115,10 +116,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 	)
 
 	workerCfg := &worker.WorkerConfig{
-		Config:     cfg,
-		Logger:     logger,
-		Tracer:     telemetry.AppTelemetry.Tracer,
-		StateStore: stateStore,
+		Config:        cfg,
+		Logger:        logger,
+		Tracer:        telemetry.AppTelemetry.Tracer,
+		IdxStore:      idxStore,
+		StockbitStore: stockbitStore,
 	}
 
 	idxWorker := worker.NewWorkerIdx(workerCfg, idxClient, stg)

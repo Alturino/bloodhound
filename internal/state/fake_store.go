@@ -67,3 +67,6 @@ func (f *FakeStore) LatestAnnouncement(ctx context.Context) (model.Announcements
 func (f *FakeStore) GetStockCodesForMarketDetector(ctx context.Context) ([]string, error) {
 	return []string{}, nil
 }
+
+var _ IdxStore = (*FakeStore)(nil)
+var _ StockbitStore = (*FakeStore)(nil)
