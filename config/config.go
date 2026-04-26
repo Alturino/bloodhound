@@ -17,76 +17,21 @@ func init() {
 
 // Config holds all application configuration
 type Config struct {
-	Scheduler Scheduler `mapstructure:"scheduler"`
-	Telemetry Telemetry `mapstructure:"telemetry"`
-	MinIO     MinIO     `mapstructure:"minio"`
-	Database  Database  `mapstructure:"database"`
-	App       App       `mapstructure:"app"`
+	Scheduler Scheduler `mapstructure:"scheduler" json:"scheduler"`
+	Telemetry Telemetry `mapstructure:"telemetry" json:"telemetry"`
+	MinIO     MinIO     `mapstructure:"minio"     json:"min_io"`
+	Database  Database  `mapstructure:"database"  json:"database"`
+	App       App       `mapstructure:"app"       json:"app"`
 }
 
 type App struct {
-	LogLevel    slog.Level `mapstructure:"log_level"` // debug, info, warn, error
-	LogLevelVar *slog.LevelVar
-	Name        string   `mapstructure:"name"`
-	Environment string   `mapstructure:"environment"` // development, production
-	LogDir      string   `mapstructure:"log_dir"`
-	IDX         IDX      `mapstructure:"idx"`
-	Stockbit    Stockbit `mapstructure:"stockbit"`
-}
-
-type Stockbit struct {
-	Token   string `mapstructure:"token"`
-	BaseURL string `mapstructure:"base_url"`
-}
-
-type Database struct {
-	MaxConnections int    `mapstructure:"max_connections" json:"max_connections"`
-	MinConnections int    `mapstructure:"min_connections" json:"min_connections"`
-	Port           int    `mapstructure:"port"`
-	Host           string `mapstructure:"host"`
-	MigrationPath  string `mapstructure:"migration_path"  json:"migration_path"`
-	User           string `mapstructure:"user"`
-	Password       string `mapstructure:"password"`
-	DBName         string `mapstructure:"dbname"`
-	SSLMode        string `mapstructure:"sslmode"`
-}
-
-func (d Database) DSN() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		d.User,
-		d.Password,
-		d.Host,
-		d.Port,
-		d.DBName,
-		d.SSLMode,
-	)
-}
-
-type MinIO struct {
-	UseSSL    bool   `mapstructure:"use_ssl"`
-	Endpoint  string `mapstructure:"endpoint"`
-	AccessKey string `mapstructure:"access_key"`
-	SecretKey string `mapstructure:"secret_key"`
-	Bucket    string `mapstructure:"bucket"`
-}
-
-type IDX struct {
-	PageSize int    `mapstructure:"page_size"`
-	BaseURL  string `mapstructure:"base_url"`
-	Token    string `mapstructure:"token"`
-	MockMode bool   `mapstructure:"mock_mode"`
-}
-
-type Scheduler struct {
-	Interval time.Duration `mapstructure:"interval"`
-	CronExpr string        `mapstructure:"cron_expr"` // e.g., "*/15 * * * *"
-}
-
-type Telemetry struct {
-	Enabled      bool   `mapstructure:"enabled"`
-	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
-	ServiceName  string `mapstructure:"service_name"`
+	LogLevel    slog.Level     `mapstructure:"log_level"   json:"log_level"` // debug, info, warn, error
+	LogLevelVar *slog.LevelVar `mapstructure:"-"           json:"-"`
+	Name        string         `mapstructure:"name"        json:"name"`
+	Environment string         `mapstructure:"environment" json:"environment"` // development, production
+	LogDir      string         `mapstructure:"log_dir"     json:"log_dir"`
+	IDX         IDX            `mapstructure:"idx"         json:"idx"`
+	Stockbit    Stockbit       `mapstructure:"stockbit"    json:"stockbit"`
 }
 
 // Load reads configuration from file and environment variables
