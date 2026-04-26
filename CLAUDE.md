@@ -1,4 +1,5 @@
 # Approach
+
 - Think before acting. Read existing files before writing code.
 - Be concise in output but thorough in reasoning.
 - Prefer editing over rewriting whole files.
@@ -7,4 +8,4 @@
 - No sycophantic openers or closing fluff.
 - Keep solutions simple and direct.
 - User instructions always override this file.
-- always refer to ./docs/styleguide.md and ./docs/best_practices.md for golang coding style.
+- always refer to ./docs/styleguide/best_practices.md and ./docs/styleguide/guide.md for golang coding style.
