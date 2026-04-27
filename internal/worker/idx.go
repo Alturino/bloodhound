@@ -1,17 +1,14 @@
 package worker
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
-	"strings"
 	"time"
 
+	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -22,16 +19,17 @@ import (
 	"github.com/alturino/bloodhound/pkg/idx"
 )
 
-type WorkerIdx struct {
-	config    *config.Config
-	logger   *slog.Logger
-	tracer   trace.Tracer
-	idxClient idx.Client
-	storage  storage.Storage
-	idxStore state.IdxStore
+type IDX struct {
+	config           *config.Config
+	logger           *slog.Logger
+	announcementPool AnnouncementPool
+	tracer           trace.Tracer
+	client           idx.Client
+	storage          storage.Storage
+	store            state.IdxStore
 }
 
-func (w WorkerIdx) Start(ctx context.Context) error {
+func (w IDX) Start(ctx context.Context) error {
 	interval := w.config.Scheduler.Interval
 
 	logger := w.logger.With(
@@ -60,7 +58,7 @@ func (w WorkerIdx) Start(ctx context.Context) error {
 	}
 }
 
-func (w WorkerIdx) Process(ctx context.Context) error {
+func (w IDX) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
 		"worker.WorkerIdx.Process",
@@ -70,7 +68,7 @@ func (w WorkerIdx) Process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "worker.WorkerIdx.Process"))
 
-	isExists, err := w.idxStore.IsExists(ctx)
+	isExists, err := w.store.IsExists(ctx)
 	if err != nil {
 		err = fmt.Errorf("is announcements exists: %w", err)
 		return err
@@ -87,240 +85,156 @@ func (w WorkerIdx) Process(ctx context.Context) error {
 	return w.processIncremental(ctx)
 }
 
-func (w WorkerIdx) processInitial(ctx context.Context) error {
-	ctx, span := w.tracer.Start(ctx, "worker.WorkerIdx.processInitial")
+func (w IDX) processInitial(ctx context.Context) error {
+	return w.processAnnouncements(ctx, time.Time{}, "processInitial")
+}
+
+func (w IDX) processIncremental(ctx context.Context) error {
+	latestAnnouncement, err := w.store.LatestAnnouncement(ctx)
+	if err != nil {
+		return err
+	}
+	return w.processAnnouncements(ctx, latestAnnouncement.Date, "processIncremental")
+}
+
+func (w IDX) processAnnouncements(ctx context.Context, since time.Time, tag string) error {
+	ctx, span := w.tracer.Start(ctx, "worker.WorkerIdx."+tag)
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.WorkerIdx.processInitial"))
+	ctx = slogcontext.With(ctx, slog.String("tag", "worker.WorkerIdx."+tag))
+	logger := w.logger
 
-	resp, err := w.idxClient.FetchAnnouncements(ctx, 0, time.Time{})
+	resp, err := w.client.FetchAnnouncements(ctx, 0, since)
 	if err != nil {
 		err = fmt.Errorf("get total items and pages: %w", err)
-		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+		w.logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		return err
 	}
 	totalItems, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
 	totalPages := (totalItems + pageSize) / pageSize
-	logger = logger.With(
+
+	workerCount := w.config.App.IDX.WorkerPool.AnnouncementWorkers
+	ctx = slogcontext.With(ctx,
 		slog.Int("total_items", totalItems),
 		slog.Int("page_size", pageSize),
 		slog.Int("total_pages", totalPages),
+		slog.Int("worker_count", workerCount),
 	)
 	span.SetAttributes(
 		attribute.Int("total_items", totalItems),
 		attribute.Int("page_size", pageSize),
 		attribute.Int("total_pages", totalPages),
+		attribute.Int("worker_count", workerCount),
 	)
 
-	processedCount := 0
 	for page := totalPages - 1; page >= 0; page-- {
-		logger := logger.With(slog.Int("page", page), slog.Int("processed_count", processedCount))
+		ctx := slogcontext.With(ctx, slog.Int("page", page))
 
-		resp, err := w.idxClient.FetchAnnouncements(ctx, page, time.Time{})
+		resp, err := w.client.FetchAnnouncements(ctx, page, time.Time{})
 		if err != nil {
-			logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
+			w.logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
 			if w.config.App.Environment != "production" {
 				return err
 			}
 			continue
 		}
 		if resp.ResultCount == 0 || len(resp.Replies) == 0 {
-			logger.InfoContext(ctx, "page empty, stopping")
+			w.logger.InfoContext(ctx, "page empty, stopping")
 			break
 		}
 
-		for announcement_i, reply := range resp.Replies {
-			logger := logger.With(
-				slog.Int("announcement_i", announcement_i),
-				slog.Any("announcement", reply.Announcement),
-			)
-			if err := w.processAnnouncement(ctx, reply.Announcement); err != nil {
-				logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
-				if w.config.App.Environment != "production" {
-					return err
-				}
-				continue
-			}
-			processedCount++
+		announcements := make([]models.Announcement, len(resp.Replies))
+		for i, reply := range resp.Replies {
+			announcements[i] = reply.Announcement
 		}
-	}
 
-	return nil
-}
-
-func (w WorkerIdx) processIncremental(ctx context.Context) error {
-	ctx, span := w.tracer.Start(ctx, "worker.WorkerIdx.processIncremental")
-	defer span.End()
-
-	logger := w.logger.With(slog.String("tag", "worker.WorkerIdx.processIncremental"))
-
-	latestAnnouncement, err := w.idxStore.LatestAnnouncement(ctx)
-	if err != nil {
-		return err
-	}
-
-	latestDate := latestAnnouncement.Date
-	resp, err := w.idxClient.FetchAnnouncements(ctx, 0, latestDate)
-	if err != nil {
-		return err
-	}
-	totalItems, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
-	totalPages := (totalItems + pageSize) / pageSize
-	logger = logger.With(
-		slog.Int("total_items", totalItems),
-		slog.Int("page_size", pageSize),
-		slog.Int("total_pages", totalPages),
-	)
-	span.SetAttributes(
-		attribute.Int("total_items", totalItems),
-		attribute.Int("page_size", pageSize),
-		attribute.Int("total_pages", totalPages),
-	)
-
-	for page := totalPages; page >= 0; page-- {
-		logger := logger.With(slog.Int("page", page))
-
-		resp, err := w.idxClient.FetchAnnouncements(ctx, page, latestDate)
+		results, err := w.announcementPool.ProcessPage(ctx, page, announcements)
 		if err != nil {
-			logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
-			if w.config.App.Environment != "production" {
-				return err
-			}
-			continue
+			logger.ErrorContext(ctx, "process page", slog.Any("error", err))
 		}
-		if resp.ResultCount == 0 || len(resp.Replies) == 0 {
-			logger.InfoContext(ctx, "page empty, stopping")
-			break
+		if logger.Enabled(ctx, slog.LevelDebug) {
+			logger.DebugContext(ctx, "processed", slog.Any("processed_page", results))
 		}
 
-		for announcement_i, reply := range resp.Replies {
-			logger := logger.With(
-				slog.Int("announcement_i", announcement_i),
-				slog.Any("announcement", reply.Announcement),
-			)
-			if err := w.processAnnouncement(ctx, reply.Announcement); err != nil {
-				logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
-				if w.config.App.Environment != "production" {
-					return err
-				}
-				continue
-			}
-		}
+		w.logger.InfoContext(ctx, "processing completed", slog.Int("page", page))
 	}
 
 	return nil
 }
 
-func (w WorkerIdx) processAnnouncement(ctx context.Context, ann models.Announcement) error {
-	ctx, span := w.tracer.Start(
-		ctx,
-		"worker.WorkerIdx.processAnnouncement",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(
-			attribute.String("tag", "worker.WorkerIdx.processAnnouncement"),
-			attribute.String("idx_announcement_id", ann.ID2),
-			attribute.String("stock_code", ann.StockCode),
-			attribute.String("announcement_date", ann.Date.String()),
-		),
-	)
-	defer span.End()
-
-	_ = w.logger.With(
-		slog.String("tag", "worker.WorkerIdx.processAnnouncement"),
-		slog.String("idx_announcement_id", ann.ID2),
-		slog.String("stock_code", ann.StockCode),
-		slog.Time("announcement_date", ann.Date),
-	)
-
-	if err := w.idxStore.RecordAnnouncement(ctx, ann); err != nil {
-		err = fmt.Errorf("record announcement: %w", err)
-		return err
-	}
-
-	var err error
-	for _, att := range ann.Attachments {
-		if processErr := w.processAttachment(ctx, ann, att); processErr != nil {
-			processErr = fmt.Errorf("process attachment %s: %w", att.OriginalFilename, processErr)
-			err = errors.Join(err, processErr)
-		}
-	}
-
-	return err
-}
-
-func (w WorkerIdx) processAttachment(
-	ctx context.Context,
-	ann models.Announcement,
-	att models.Attachment,
-) error {
-	datePrefix := ann.Date.Format("2006-01-02")
-	originalname := strings.ToLower(att.OriginalFilename)
-	originalname = strings.ReplaceAll(originalname, ",", " ")
-	originalname = strings.ReplaceAll(originalname, "//", " ")
-	originalname = strings.ReplaceAll(originalname, " ", "_")
-	filename := fmt.Sprintf("%s_%s", datePrefix, originalname)
-	filePath := filepath.Join(
-		strings.ToLower(ann.StockCode),
-		fmt.Sprintf("%s_%s", datePrefix, strings.ToLower(ann.AnnouncementTitle)),
-		filename,
-	)
-
-	bucket := w.config.MinIO.Bucket
-	ctx, span := w.tracer.Start(
-		ctx,
-		"worker.WorkerIdx.processAttachment",
-		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(
-			attribute.String("idx_filename", att.OriginalFilename),
-			attribute.String("idx_attachment_url", att.FullSavePath),
-			attribute.String("announcement_title", ann.AnnouncementTitle),
-			attribute.String("bucket", bucket),
-			attribute.String("filename", filePath),
-		),
-	)
-	defer span.End()
-
-	logger := w.logger.With(
-		slog.String("tag", "worker.WorkerIdx.processAttachment"),
-		slog.String("idx_filename", att.OriginalFilename),
-		slog.String("idx_attachment_url", att.FullSavePath),
-		slog.String("bucket", bucket),
-		slog.String("filename", filePath),
-	)
-
-	data, contentType, err := w.idxClient.DownloadFile(ctx, att.FullSavePath)
-	if err != nil {
-		err = fmt.Errorf("downloading attachment idx_attachment_url=%s : %w", att.FullSavePath, err)
-		return err
-	}
-	checksum := calculateChecksum(data)
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(
-			slog.Int("size", len(data)),
-			slog.String("content_type", contentType),
-			slog.String("checksum_sha256", checksum),
-		)
-	}
-
-	reader := bytes.NewReader(data)
-	if err := w.storage.Upload(
-		ctx,
-		bucket,
-		filePath,
-		reader,
-		int64(len(data)),
-		contentType,
-	); err != nil {
-		err = fmt.Errorf("uploading attachment: %w", err)
-		return err
-	}
-
-	if err := w.idxStore.RecordAttachment(ctx, ann.ID2, att, checksum, filePath); err != nil {
-		return err
-	}
-
-	return nil
-}
+// func (w IDX) ProcessAttachment(
+// 	ctx context.Context,
+// 	ann models.Announcement,
+// 	att models.Attachment,
+// ) error {
+// 	datePrefix := ann.Date.Format("2006-01-02")
+// 	originalname := strings.ToLower(att.OriginalFilename)
+// 	originalname = strings.ReplaceAll(originalname, ",", " ")
+// 	originalname = strings.ReplaceAll(originalname, "//", " ")
+// 	originalname = strings.ReplaceAll(originalname, " ", "_")
+// 	filename := fmt.Sprintf("%s_%s", datePrefix, originalname)
+// 	filePath := filepath.Join(
+// 		strings.ToLower(ann.StockCode),
+// 		fmt.Sprintf("%s_%s", datePrefix, strings.ToLower(ann.AnnouncementTitle)),
+// 		filename,
+// 	)
+//
+// 	bucket := w.config.MinIO.Bucket
+// 	ctx, span := w.tracer.Start(
+// 		ctx,
+// 		"worker.WorkerIdx.processAttachment",
+// 		trace.WithSpanKind(trace.SpanKindInternal),
+// 		trace.WithAttributes(
+// 			attribute.String("idx_filename", att.OriginalFilename),
+// 			attribute.String("idx_attachment_url", att.FullSavePath),
+// 			attribute.String("announcement_title", ann.AnnouncementTitle),
+// 			attribute.String("bucket", bucket),
+// 			attribute.String("filename", filePath),
+// 		),
+// 	)
+// 	defer span.End()
+//
+// 	ctx = slogcontext.With(ctx,
+// 		slog.String("tag", "worker.WorkerIdx.processAttachment"),
+// 		slog.String("idx_filename", att.OriginalFilename),
+// 		slog.String("idx_attachment_url", att.FullSavePath),
+// 		slog.String("bucket", bucket),
+// 		slog.String("filename", filePath),
+// 	)
+//
+// 	data, contentType, err := w.client.DownloadFile(ctx, att.FullSavePath)
+// 	if err != nil {
+// 		err = fmt.Errorf("downloading attachment idx_attachment_url=%s : %w", att.FullSavePath, err)
+// 		return err
+// 	}
+// 	checksum := calculateChecksum(data)
+// 	if w.logger.Enabled(ctx, slog.LevelDebug) {
+// 		ctx = slogcontext.With(ctx,
+// 			slog.Int("size", len(data)),
+// 			slog.String("content_type", contentType),
+// 			slog.String("checksum_sha256", checksum),
+// 		)
+// 	}
+//
+// 	reader := bytes.NewReader(data)
+// 	if err := w.storage.Upload(
+// 		ctx,
+// 		bucket,
+// 		filePath,
+// 		reader,
+// 		int64(len(data)),
+// 		contentType,
+// 	); err != nil {
+// 		err = fmt.Errorf("uploading attachment: %w", err)
+// 		return err
+// 	}
+//
+// 	if err := w.store.RecordAttachment(ctx, ann.ID2, att, checksum, filePath); err != nil {
+// 		return err
+// 	}
+//
+// 	return nil
+// }
 
 func calculateChecksum(data []byte) string {
 	hash := sha256.Sum256(data)

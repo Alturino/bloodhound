@@ -22,7 +22,7 @@ type MinIO struct {
 	tracer trace.Tracer
 }
 
-var appMinio MinIO
+
 
 // NewMinIO creates a new MinIO storage instance
 func NewMinIO(
@@ -44,43 +44,43 @@ func NewMinIO(
 		return nil, fmt.Errorf("NewMinIOStorage create minio client: %w", err)
 	}
 
-	appMinio = MinIO{client: client, logger: logger, tracer: tracer}
-	if err := appMinio.CreateBucket(context.Background(), config.Bucket); err != nil {
+	minio := &MinIO{client: client, logger: logger, tracer: tracer}
+	if err := minio.CreateBucket(context.Background(), config.Bucket); err != nil {
 		err = fmt.Errorf("create bucket: %w", err)
 		return nil, err
 	}
 
-	return &appMinio, nil
+	return minio, nil
 }
 
 // Upload uploads a file to MinIO
 func (s MinIO) Upload(
 	ctx context.Context,
-	bucketName, filename string,
-	reader io.Reader,
+	bucket, filename string,
+	contentReader io.Reader,
 	objectSize int64,
 	contentType string,
-) error {
+) (string, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"storage.MinIOStorage.Upload",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
-			attribute.String("bucket", bucketName),
+			attribute.String("bucket", bucket),
 			attribute.String("file", filename),
 		),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("bucket", bucketName), slog.String("object", filename))
+	logger := s.logger.With(slog.String("bucket", bucket), slog.String("object", filename))
 
 	logger.InfoContext(ctx, "uploading file")
 	span.AddEvent("uploading file")
-	_, err := s.client.PutObject(
+	info, err := s.client.PutObject(
 		ctx,
-		bucketName,
+		bucket,
 		filename,
-		reader,
+		contentReader,
 		objectSize,
 		minio.PutObjectOptions{
 			ContentType:  contentType,
@@ -88,14 +88,14 @@ func (s MinIO) Upload(
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf("upload file=%s bucket=%s: %w", filename, bucketName, err)
+		err = fmt.Errorf("upload file=%s bucket=%s: %w", filename, bucket, err)
 		telemetry.RecordError(span, err)
-		return err
+		return "", err
 	}
 	logger.InfoContext(ctx, "uploaded file")
 	span.AddEvent("uploaded file")
 
-	return nil
+	return info.ChecksumSHA256, nil
 }
 
 // Exists checks if an object exists in MinIO and is not empty
