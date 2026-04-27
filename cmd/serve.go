@@ -115,16 +115,53 @@ func runServe(cmd *cobra.Command, args []string) error {
 		telemetry.AppTelemetry.Tracer,
 	)
 
-	workerCfg := &worker.WorkerConfig{
+	idxconfig := &worker.IDXConfig{
+		Config: cfg,
+		Logger: logger.With(slog.String("tag", "idx.Worker")),
+		Tracer: telemetry.AppTelemetry.Tracer,
+		Store:  idxStore,
+	}
+
+	attachmentProcessor := worker.NewAttachmentProcessor(
+		&cfg.MinIO,
+		logger.With(slog.String("tag", "attachment.Processor")),
+		telemetry.AppTelemetry.Tracer,
+		idxClient,
+		stg,
+		idxStore,
+	)
+	attachmentPool := worker.NewAttachmentPool(
+		ctx,
+		cfg.App.IDX.WorkerPool.AttachmentWorkers,
+		logger.With(slog.String("tag", "attachment.Pool")),
+		telemetry.AppTelemetry.Tracer,
+		attachmentProcessor,
+	)
+
+	announcementProcessor := worker.NewAnnouncementProcessor(
+		logger,
+		telemetry.AppTelemetry.Tracer,
+		idxClient,
+		idxStore,
+		attachmentPool,
+	)
+	announcementPool := worker.NewAnnouncementPool(
+		ctx,
+		cfg.App.IDX.WorkerPool,
+		logger,
+		telemetry.AppTelemetry.Tracer,
+		announcementProcessor,
+	)
+
+	idxWorker := worker.NewWorkerIdx(idxconfig, idxClient, stg, announcementPool)
+
+	stockbitconfig := &worker.StockbitConfig{
 		Config:        cfg,
 		Logger:        logger,
 		Tracer:        telemetry.AppTelemetry.Tracer,
-		IdxStore:      idxStore,
 		StockbitStore: stockbitStore,
 	}
-
-	idxWorker := worker.NewWorkerIdx(workerCfg, idxClient, stg)
-	stockbitWorker := worker.NewWorkerStockbit(workerCfg, stockbitClient)
+	stockbitWorker := worker.NewWorkerStockbit(stockbitconfig, stockbitClient)
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {

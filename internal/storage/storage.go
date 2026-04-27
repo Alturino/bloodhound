@@ -13,11 +13,11 @@ type Storage interface {
 	// Upload uploads a file to the storage
 	Upload(
 		ctx context.Context,
-		bucketName, filename string,
-		reader io.Reader,
+		bucket, filename string,
+		contentReader io.Reader,
 		objectSize int64,
 		contentType string,
-	) error
+	) (string, error)
 	// Exists checks if a file exists in the storage
 	Exists(ctx context.Context, bucketName, objectName string) (bool, error)
 	// Download downloads a file from the storage

@@ -14,15 +14,15 @@ import (
 	"github.com/alturino/bloodhound/pkg/stockbit"
 )
 
-type WorkerStockbit struct {
-	config         *config.Config
-	logger       *slog.Logger
-	tracer       trace.Tracer
-	stockbitClient stockbit.Client
+type Stockbit struct {
+	config        *config.Config
+	logger        *slog.Logger
+	tracer        trace.Tracer
+	client        stockbit.Client
 	stockbitStore state.StockbitStore
 }
 
-func (w WorkerStockbit) Start(ctx context.Context) error {
+func (w Stockbit) Start(ctx context.Context) error {
 	interval := w.config.Scheduler.Interval
 
 	logger := w.logger.With(
@@ -42,7 +42,11 @@ func (w WorkerStockbit) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.InfoContext(ctx, "stopping background Stockbit worker", slog.Any("error", ctx.Err()))
+			logger.InfoContext(
+				ctx,
+				"stopping background Stockbit worker",
+				slog.Any("error", ctx.Err()),
+			)
 			return ctx.Err()
 		case <-ticker:
 			if err := w.Process(ctx); err != nil {
@@ -52,7 +56,7 @@ func (w WorkerStockbit) Start(ctx context.Context) error {
 	}
 }
 
-func (w WorkerStockbit) Process(ctx context.Context) error {
+func (w Stockbit) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
 		"worker.WorkerStockbit.Process",
@@ -87,7 +91,7 @@ func (w WorkerStockbit) Process(ctx context.Context) error {
 	return nil
 }
 
-func (w WorkerStockbit) syncMarketDetector(ctx context.Context, symbol string) error {
+func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 	ctx, span := w.tracer.Start(ctx, "worker.WorkerStockbit.syncMarketDetector")
 	defer span.End()
 
@@ -95,7 +99,7 @@ func (w WorkerStockbit) syncMarketDetector(ctx context.Context, symbol string) e
 
 	_ = w.logger.With(slog.String("tag", "worker.WorkerStockbit.syncMarketDetector"))
 
-	resp, err := w.stockbitClient.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
+	resp, err := w.client.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
 	if err != nil {
 		return err
 	}
@@ -114,11 +118,11 @@ func (w WorkerStockbit) syncMarketDetector(ctx context.Context, symbol string) e
 			Symbol:       symbol,
 			TradeDate:    dateStr,
 			BrokerCode:   b.BrokerCode,
-			Side:        "BUY",
-			Lots:        lots,
-			Frequency:   b.Freq,
+			Side:         "BUY",
+			Lots:         lots,
+			Frequency:    b.Freq,
 			InvestorType: b.InvestorType,
-			AvgPrice:    b.BuyAvgPrice,
+			AvgPrice:     b.BuyAvgPrice,
 		})
 	}
 
@@ -128,11 +132,11 @@ func (w WorkerStockbit) syncMarketDetector(ctx context.Context, symbol string) e
 			Symbol:       symbol,
 			TradeDate:    dateStr,
 			BrokerCode:   b.BrokerCode,
-			Side:        "SELL",
-			Lots:        lots,
-			Frequency:   b.Freq,
+			Side:         "SELL",
+			Lots:         lots,
+			Frequency:    b.Freq,
 			InvestorType: b.InvestorType,
-			AvgPrice:    b.SellAvgPrice,
+			AvgPrice:     b.SellAvgPrice,
 		})
 	}
 
