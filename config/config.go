@@ -49,19 +49,21 @@ func Load(configPath string) (*Config, error) {
 
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 5432)
-	v.SetDefault("database.user", "postgres")
-	v.SetDefault("database.password", "postgres")
+	v.SetDefault("database.user", "")
+	v.SetDefault("database.password", "")
 	v.SetDefault("database.dbname", "idx_fetcher")
-	v.SetDefault("database.sslmode", "disable")
+	v.SetDefault("database.sslmode", "require")
 
 	v.SetDefault("minio.endpoint", "localhost:9000")
-	v.SetDefault("minio.access_key", "minioadmin")
-	v.SetDefault("minio.secret_key", "minioadmin")
+	v.SetDefault("minio.access_key", "")
+	v.SetDefault("minio.secret_key", "")
 	v.SetDefault("minio.bucket", "idx-announcements")
-	v.SetDefault("minio.use_ssl", false)
+	v.SetDefault("minio.use_ssl", true)
 
 	v.SetDefault("app.idx.base_url", "https://idx.co.id")
 	v.SetDefault("app.idx.page_size", 10)
+	v.SetDefault("app.idx.worker_pool.announcement_workers", 4)
+	v.SetDefault("app.idx.worker_pool.attachment_workers", 4)
 
 	v.SetDefault("app.stockbit.base_url", "https://exodus.stockbit.com")
 	v.SetDefault("app.stockbit.token", "")

@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+)
 
 type Database struct {
 	MaxConnections int    `mapstructure:"max_connections" json:"max_connections"`
@@ -17,8 +20,8 @@ type Database struct {
 func (d Database) DSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		d.User,
-		d.Password,
+		url.QueryEscape(d.User),
+		url.QueryEscape(d.Password),
 		d.Host,
 		d.Port,
 		d.DBName,
