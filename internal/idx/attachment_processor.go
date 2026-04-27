@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/state"
 	"github.com/alturino/bloodhound/internal/storage"
-	"github.com/alturino/bloodhound/pkg/idx"
 )
 
 type AttachmentProcessor interface {
@@ -26,7 +25,7 @@ func NewAttachmentProcessor(
 	configMinio *config.MinIO,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	client idx.Client,
+	client Client,
 	storage storage.Storage,
 	store state.IdxStore,
 ) AttachmentProcessor {
@@ -44,7 +43,7 @@ type attachment struct {
 	configMinio *config.MinIO
 	logger      *slog.Logger
 	tracer      trace.Tracer
-	client      idx.Client
+	client      Client
 	storage     storage.Storage
 	store       state.IdxStore
 }

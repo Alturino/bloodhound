@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"context"
@@ -114,6 +114,8 @@ func (p *announcementPool) ProcessPage(
 	)
 	logger := p.logger.With()
 
+	completed := 0
+
 	for i, ann := range announcements {
 		ctx := slogcontext.Append(ctx, slog.Int("page_item", i))
 		go func(ctx context.Context) {
@@ -153,7 +155,8 @@ loop:
 				continue
 			}
 			logger.InfoContext(ctx, "announcement processed successfully")
-			if len(results[result.Page]) >= len(announcements) {
+			completed++
+			if completed >= len(announcements) {
 				logger.InfoContext(ctx, "announcement page processed successfully")
 				break loop
 			}

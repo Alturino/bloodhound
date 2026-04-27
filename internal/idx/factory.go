@@ -1,14 +1,12 @@
-package worker
+package idx
 
 import (
 	"github.com/alturino/bloodhound/internal/storage"
-	"github.com/alturino/bloodhound/pkg/idx"
-	"github.com/alturino/bloodhound/pkg/stockbit"
 )
 
 func NewWorkerIdx(
 	config *IDXConfig,
-	client idx.Client,
+	client Client,
 	storage storage.Storage,
 	announcementPool AnnouncementPool,
 ) *IDX {
@@ -23,12 +21,4 @@ func NewWorkerIdx(
 	}
 }
 
-func NewWorkerStockbit(cfg *StockbitConfig, stockbitClient stockbit.Client) *Stockbit {
-	return &Stockbit{
-		config:        cfg.Config,
-		logger:        cfg.Logger,
-		tracer:        cfg.Tracer,
-		client:        stockbitClient,
-		stockbitStore: cfg.StockbitStore,
-	}
-}
+

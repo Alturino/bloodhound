@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"regexp"

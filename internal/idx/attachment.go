@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"context"
@@ -23,12 +23,12 @@ type AttachmentTask struct {
 }
 
 type AttachmentResult struct {
+	Index           int
+	WorkerID        int
+	TotalAttachment int
 	Filename        string
 	AnnouncementID  string
-	Index           int
 	Err             error
-	TotalAttachment int
-	WorkerID        int
 }
 
 // HandleAttachmentsArgs holds announcement for attachment processing
@@ -129,18 +129,22 @@ func (p attachmentPool) worker(ctx context.Context, id int) {
 			)
 			if err := p.processor.ProcessAttachment(ctx, task); err != nil {
 				p.resultChan <- AttachmentResult{
-					Filename:        task.Attachment.OriginalFilename,
-					TotalAttachment: 0,
-					Err:             err,
+					Index:           task.Index,
 					WorkerID:        id,
+					TotalAttachment: task.TotalAttachment,
+					Filename:        task.Attachment.OriginalFilename,
+					AnnouncementID:  task.AnnouncementID,
+					Err:             err,
 				}
 				continue
 			}
 			p.resultChan <- AttachmentResult{
-				Filename:        task.Attachment.OriginalFilename,
-				TotalAttachment: 0,
-				Err:             nil,
+				Index:           task.Index,
 				WorkerID:        id,
+				TotalAttachment: task.TotalAttachment,
+				Filename:        task.Attachment.OriginalFilename,
+				AnnouncementID:  task.AnnouncementID,
+				Err:             nil,
 			}
 		}
 	}
@@ -160,6 +164,8 @@ func (p attachmentPool) Handle(
 
 	ctx = slogcontext.With(ctx, slog.String("tag", "AttachmentPool.Handle"))
 	logger := p.logger.With()
+
+	completed := 0
 
 	for i, attachment := range arg.Attachments {
 		ctx := slogcontext.Append(
@@ -215,7 +221,8 @@ loop:
 				continue
 			}
 			logger.InfoContext(ctx, "announcement processed successfully")
-			if len(results[result.AnnouncementID]) >= len(arg.Attachments) {
+			completed++
+			if completed >= len(arg.Attachments) {
 				logger.InfoContext(ctx, "announcement page processed successfully")
 				break loop
 			}

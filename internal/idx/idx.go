@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/state"
 	"github.com/alturino/bloodhound/internal/storage"
-	"github.com/alturino/bloodhound/pkg/idx"
 )
 
 type IDX struct {
@@ -24,7 +23,7 @@ type IDX struct {
 	logger           *slog.Logger
 	announcementPool AnnouncementPool
 	tracer           trace.Tracer
-	client           idx.Client
+	client           Client
 	storage          storage.Storage
 	store            state.IdxStore
 }
@@ -44,13 +43,15 @@ func (w IDX) Start(ctx context.Context) error {
 	}
 
 	logger.InfoContext(ctx, "started background IDX worker")
-	ticker := time.Tick(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			logger.InfoContext(ctx, "stopping background IDX worker", slog.Any("error", ctx.Err()))
 			return ctx.Err()
-		case <-ticker:
+		case <-ticker.C:
 			if err := w.Process(ctx); err != nil {
 				return err
 			}
@@ -159,82 +160,8 @@ func (w IDX) processAnnouncements(ctx context.Context, since time.Time, tag stri
 		w.logger.InfoContext(ctx, "processing completed", slog.Int("page", page))
 	}
 
-	return nil
+return nil
 }
-
-// func (w IDX) ProcessAttachment(
-// 	ctx context.Context,
-// 	ann models.Announcement,
-// 	att models.Attachment,
-// ) error {
-// 	datePrefix := ann.Date.Format("2006-01-02")
-// 	originalname := strings.ToLower(att.OriginalFilename)
-// 	originalname = strings.ReplaceAll(originalname, ",", " ")
-// 	originalname = strings.ReplaceAll(originalname, "//", " ")
-// 	originalname = strings.ReplaceAll(originalname, " ", "_")
-// 	filename := fmt.Sprintf("%s_%s", datePrefix, originalname)
-// 	filePath := filepath.Join(
-// 		strings.ToLower(ann.StockCode),
-// 		fmt.Sprintf("%s_%s", datePrefix, strings.ToLower(ann.AnnouncementTitle)),
-// 		filename,
-// 	)
-//
-// 	bucket := w.config.MinIO.Bucket
-// 	ctx, span := w.tracer.Start(
-// 		ctx,
-// 		"worker.WorkerIdx.processAttachment",
-// 		trace.WithSpanKind(trace.SpanKindInternal),
-// 		trace.WithAttributes(
-// 			attribute.String("idx_filename", att.OriginalFilename),
-// 			attribute.String("idx_attachment_url", att.FullSavePath),
-// 			attribute.String("announcement_title", ann.AnnouncementTitle),
-// 			attribute.String("bucket", bucket),
-// 			attribute.String("filename", filePath),
-// 		),
-// 	)
-// 	defer span.End()
-//
-// 	ctx = slogcontext.With(ctx,
-// 		slog.String("tag", "worker.WorkerIdx.processAttachment"),
-// 		slog.String("idx_filename", att.OriginalFilename),
-// 		slog.String("idx_attachment_url", att.FullSavePath),
-// 		slog.String("bucket", bucket),
-// 		slog.String("filename", filePath),
-// 	)
-//
-// 	data, contentType, err := w.client.DownloadFile(ctx, att.FullSavePath)
-// 	if err != nil {
-// 		err = fmt.Errorf("downloading attachment idx_attachment_url=%s : %w", att.FullSavePath, err)
-// 		return err
-// 	}
-// 	checksum := calculateChecksum(data)
-// 	if w.logger.Enabled(ctx, slog.LevelDebug) {
-// 		ctx = slogcontext.With(ctx,
-// 			slog.Int("size", len(data)),
-// 			slog.String("content_type", contentType),
-// 			slog.String("checksum_sha256", checksum),
-// 		)
-// 	}
-//
-// 	reader := bytes.NewReader(data)
-// 	if err := w.storage.Upload(
-// 		ctx,
-// 		bucket,
-// 		filePath,
-// 		reader,
-// 		int64(len(data)),
-// 		contentType,
-// 	); err != nil {
-// 		err = fmt.Errorf("uploading attachment: %w", err)
-// 		return err
-// 	}
-//
-// 	if err := w.store.RecordAttachment(ctx, ann.ID2, att, checksum, filePath); err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
 
 func calculateChecksum(data []byte) string {
 	hash := sha256.Sum256(data)

@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"log/slog"
@@ -13,13 +13,6 @@ type IDXConfig struct {
 	Config         *config.Config
 	Logger         *slog.Logger
 	Tracer         trace.Tracer
-	Store         state.IdxStore
+	Store          state.IdxStore
 	AttachmentPool *AttachmentPool
-}
-
-type StockbitConfig struct {
-	Config        *config.Config
-	Logger        *slog.Logger
-	Tracer        trace.Tracer
-	StockbitStore state.StockbitStore
 }

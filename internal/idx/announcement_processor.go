@@ -1,4 +1,4 @@
-package worker
+package idx
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/state"
-	"github.com/alturino/bloodhound/pkg/idx"
 )
 
 type AnnouncementProcessor interface {
@@ -22,7 +21,7 @@ type AnnouncementProcessor interface {
 type announcement struct {
 	logger         *slog.Logger
 	tracer         trace.Tracer
-	client         idx.Client
+	client         Client
 	store          state.IdxStore
 	attachmentPool AttachmentPool
 }
@@ -30,7 +29,7 @@ type announcement struct {
 func NewAnnouncementProcessor(
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	client idx.Client,
+	client Client,
 	store state.IdxStore,
 	attachmentPool AttachmentPool,
 ) AnnouncementProcessor {
