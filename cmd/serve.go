@@ -17,13 +17,12 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/db"
 	"github.com/alturino/bloodhound/internal/httpclient"
+	"github.com/alturino/bloodhound/internal/idx"
 	"github.com/alturino/bloodhound/internal/log"
 	"github.com/alturino/bloodhound/internal/state"
+	"github.com/alturino/bloodhound/internal/stockbit"
 	"github.com/alturino/bloodhound/internal/storage"
 	"github.com/alturino/bloodhound/internal/telemetry"
-	"github.com/alturino/bloodhound/internal/worker"
-	"github.com/alturino/bloodhound/pkg/idx"
-	"github.com/alturino/bloodhound/pkg/stockbit"
 )
 
 var ServeCmd = &cobra.Command{
@@ -115,14 +114,14 @@ func runServe(cmd *cobra.Command, args []string) error {
 		telemetry.AppTelemetry.Tracer,
 	)
 
-	idxconfig := &worker.IDXConfig{
+	idxconfig := &idx.IDXConfig{
 		Config: cfg,
 		Logger: logger.With(slog.String("tag", "idx.Worker")),
 		Tracer: telemetry.AppTelemetry.Tracer,
 		Store:  idxStore,
 	}
 
-	attachmentProcessor := worker.NewAttachmentProcessor(
+	attachmentProcessor := idx.NewAttachmentProcessor(
 		&cfg.MinIO,
 		logger.With(slog.String("tag", "attachment.Processor")),
 		telemetry.AppTelemetry.Tracer,
@@ -130,7 +129,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 		stg,
 		idxStore,
 	)
-	attachmentPool := worker.NewAttachmentPool(
+	attachmentPool := idx.NewAttachmentPool(
 		ctx,
 		cfg.App.IDX.WorkerPool.AttachmentWorkers,
 		logger.With(slog.String("tag", "attachment.Pool")),
@@ -138,14 +137,14 @@ func runServe(cmd *cobra.Command, args []string) error {
 		attachmentProcessor,
 	)
 
-	announcementProcessor := worker.NewAnnouncementProcessor(
+	announcementProcessor := idx.NewAnnouncementProcessor(
 		logger,
 		telemetry.AppTelemetry.Tracer,
 		idxClient,
 		idxStore,
 		attachmentPool,
 	)
-	announcementPool := worker.NewAnnouncementPool(
+	announcementPool := idx.NewAnnouncementPool(
 		ctx,
 		cfg.App.IDX.WorkerPool,
 		logger,
@@ -153,15 +152,15 @@ func runServe(cmd *cobra.Command, args []string) error {
 		announcementProcessor,
 	)
 
-	idxWorker := worker.NewWorkerIdx(idxconfig, idxClient, stg, announcementPool)
+	idxWorker := idx.NewWorkerIdx(idxconfig, idxClient, stg, announcementPool)
 
-	stockbitconfig := &worker.StockbitConfig{
+	stockbitconfig := &stockbit.Config{
 		Config:        cfg,
 		Logger:        logger,
 		Tracer:        telemetry.AppTelemetry.Tracer,
 		StockbitStore: stockbitStore,
 	}
-	stockbitWorker := worker.NewWorkerStockbit(stockbitconfig, stockbitClient)
+	stockbitWorker := stockbit.NewWorkerStockbit(stockbitconfig, stockbitClient)
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {
