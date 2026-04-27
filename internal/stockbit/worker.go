@@ -1,4 +1,4 @@
-package worker
+package stockbit
 
 import (
 	"context"
@@ -11,14 +11,13 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/state"
-	"github.com/alturino/bloodhound/pkg/stockbit"
 )
 
 type Stockbit struct {
 	config        *config.Config
 	logger        *slog.Logger
 	tracer        trace.Tracer
-	client        stockbit.Client
+	client        Client
 	stockbitStore state.StockbitStore
 }
 
@@ -38,7 +37,9 @@ func (w Stockbit) Start(ctx context.Context) error {
 		return err
 	}
 
-	ticker := time.Tick(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -48,7 +49,7 @@ func (w Stockbit) Start(ctx context.Context) error {
 				slog.Any("error", ctx.Err()),
 			)
 			return ctx.Err()
-		case <-ticker:
+		case <-ticker.C:
 			if err := w.Process(ctx); err != nil {
 				return err
 			}
