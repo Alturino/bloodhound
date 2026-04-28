@@ -12,34 +12,6 @@ import (
 	"github.com/alturino/bloodhound/internal/models"
 )
 
-// AnnouncementTask represents a single announcement processing task
-type AnnouncementTask struct {
-	Page         int
-	Index        int
-	Announcement models.Announcement
-}
-
-type AnnouncementResult struct {
-	Page           int
-	Index          int
-	AnnouncementID string
-	Err            error
-}
-
-// AnnouncementPool processes announcements in parallel using worker pool pattern
-type AnnouncementPool interface {
-	// Submit adds a task to the worker pool
-	Submit(ctx context.Context, task AnnouncementTask)
-	// ProcessPage processes all announcements for a given page
-	ProcessPage(
-		ctx context.Context,
-		page int,
-		announcements []models.Announcement,
-	) ([]AnnouncementResult, error)
-	// Shutdown stops the worker pool and releases resources
-	Shutdown()
-}
-
 type announcementPool struct {
 	workerCount int
 	taskChan    chan AnnouncementTask

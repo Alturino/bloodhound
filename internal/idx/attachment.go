@@ -4,32 +4,12 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"time"
 
 	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/internal/models"
 )
-
-type AttachmentTask struct {
-	TotalAttachment   int               `json:"total_attachment"`
-	Index             int               `json:"index"`
-	AnnouncementID    string            `json:"id2"`
-	AnnouncementTitle string            `json:"announcement_title"` // JudulPengumuman
-	StockCode         string            `json:"stock_code"`         // Kode_Emiten
-	Date              time.Time         `json:"announcement_date"`  // TglPengumuman
-	Attachment        models.Attachment `json:"attachment"`
-}
-
-type AttachmentResult struct {
-	Index           int
-	WorkerID        int
-	TotalAttachment int
-	Filename        string
-	AnnouncementID  string
-	Err             error
-}
 
 // HandleAttachmentsArgs holds announcement for attachment processing
 type HandleAttachmentsArgs struct {
@@ -38,12 +18,9 @@ type HandleAttachmentsArgs struct {
 
 // AttachmentPool processes attachments in parallel using worker pool pattern
 type AttachmentPool interface {
-	// Submit adds a task to the worker pool
-	Submit(ctx context.Context, task AttachmentTask)
+	Pool[AttachmentTask]
 	// Handle processes all attachments for a given announcement
 	Handle(ctx context.Context, args HandleAttachmentsArgs) ([]AttachmentResult, error)
-	// Shutdown stops the worker pool and releases resources
-	Shutdown()
 }
 
 type attachmentPool struct {
