@@ -100,7 +100,7 @@ func (s DBStore) IsProcessed(ctx context.Context, idxID string) (bool, error) {
 
 	logger := s.logger.With(
 		slog.String("tag", "state.DBStore.IsProcessed"),
-		slog.String("idx_announcement_id", idxID),
+		slog.String("announcement_id", idxID),
 	)
 
 	logger.DebugContext(ctx, "is announcement processed")
@@ -113,8 +113,10 @@ func (s DBStore) IsProcessed(ctx context.Context, idxID string) (bool, error) {
 	if err := isExistStmt.QueryContext(ctx, s.db, &announcement); err != nil {
 		err = fmt.Errorf("is announcement processed: %w", err)
 		if errors.Is(err, qrm.ErrNoRows) {
+			logger.WarnContext(ctx, "announcement is not processed", slog.Any("error", err))
 			return false, nil
 		}
+		logger.ErrorContext(ctx, "checking announcement", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return false, err
 	}
@@ -149,6 +151,7 @@ func (s DBStore) RecordAnnouncement(ctx context.Context, ann models.Announcement
 		QueryContext(ctx, s.db, &announcement); err != nil {
 		err = fmt.Errorf("recording announcement: %w", err)
 		telemetry.RecordError(span, err)
+		logger.ErrorContext(ctx, "recording announcement", slog.Any("error", err))
 		return err
 	}
 	logger.InfoContext(ctx, "recorded announcement")
@@ -175,7 +178,7 @@ func (s DBStore) RecordAttachment(
 
 	logger := s.logger.With(
 		slog.String("tag", "state.DBStore.RecordAttachment"),
-		slog.String("idx_announcement_id", idxID),
+		slog.String("announcement_id", idxID),
 	)
 
 	logger.InfoContext(ctx, "recording attachment")
@@ -186,6 +189,7 @@ func (s DBStore) RecordAttachment(
 		RETURNING(Attachments.AllColumns).
 		QueryContext(ctx, s.db, &attachment); err != nil {
 		err = fmt.Errorf("recording attachment: %w", err)
+		logger.ErrorContext(ctx, "recording attachment", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return err
 	}

@@ -18,7 +18,7 @@ import (
 )
 
 type AttachmentProcessor interface {
-	ProcessAttachment(ctx context.Context, task AttachmentTask) error
+	Process(ctx context.Context, task AttachmentTask) error
 }
 
 func NewAttachmentProcessor(
@@ -48,7 +48,7 @@ type attachment struct {
 	store       state.IdxStore
 }
 
-func (a attachment) ProcessAttachment(ctx context.Context, task AttachmentTask) error {
+func (a attachment) Process(ctx context.Context, task AttachmentTask) error {
 	datePrefix := task.Date.Format("2006-01-02")
 	originalname := strings.ToLower(task.Attachment.OriginalFilename)
 	originalname = strings.ReplaceAll(originalname, ",", " ")
@@ -70,38 +70,29 @@ func (a attachment) ProcessAttachment(ctx context.Context, task AttachmentTask) 
 	bucket := a.configMinio.Bucket
 	ctx, span := a.tracer.Start(
 		ctx,
-		"worker.WorkerIdx.processAttachment",
+		"idx.WorkerIdx.processAttachment",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(
 			attribute.String("idx_filename", task.Attachment.OriginalFilename),
-			attribute.String("idx_attachment_url", task.Attachment.FullSavePath),
-			attribute.String("announcement_title", task.AnnouncementTitle),
 			attribute.String("bucket", bucket),
 			attribute.String("filename", filePath),
 		),
 	)
 	defer span.End()
 
-	ctx = slogcontext.With(ctx,
-		slog.String("tag", "worker.WorkerIdx.processAttachment"),
+	ctx = slogcontext.Append(ctx,
 		slog.String("idx_filename", task.Attachment.OriginalFilename),
-		slog.String("idx_attachment_url", task.Attachment.FullSavePath),
+		slog.String("url", task.Attachment.FullSavePath),
 		slog.String("bucket", bucket),
 		slog.String("filename", filePath),
 	)
 
 	data, contentType, err := a.client.DownloadFile(ctx, task.Attachment.FullSavePath)
 	if err != nil {
-		err = fmt.Errorf(
-			"downloading attachment idx_attachment_url=%s : %w",
-			task.Attachment.FullSavePath,
-			err,
-		)
 		return err
 	}
 	if a.logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogcontext.With(
-			ctx,
+		ctx = slogcontext.Append(ctx,
 			slog.Int("size", len(data)),
 			slog.String("content_type", contentType),
 		)

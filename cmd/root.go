@@ -7,7 +7,7 @@ import (
 
 var (
 	cfgFile string
-	mock   bool
+	mock    bool
 )
 
 var RootCmd = &cobra.Command{

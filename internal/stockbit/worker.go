@@ -25,7 +25,7 @@ func (w Stockbit) Start(ctx context.Context) error {
 	interval := w.config.Scheduler.Interval
 
 	logger := w.logger.With(
-		slog.String("tag", "worker.WorkerStockbit.Start"),
+		slog.String("tag", "stockbit.WorkerStockbit.Start"),
 		slog.Duration("interval", interval),
 	)
 
@@ -60,12 +60,12 @@ func (w Stockbit) Start(ctx context.Context) error {
 func (w Stockbit) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
-		"worker.WorkerStockbit.Process",
+		"stockbit.WorkerStockbit.Process",
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.WorkerStockbit.Process"))
+	logger := w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.Process"))
 
 	stockCodes, err := w.stockbitStore.GetStockCodesForMarketDetector(ctx)
 	if err != nil {
@@ -93,12 +93,12 @@ func (w Stockbit) Process(ctx context.Context) error {
 }
 
 func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
-	ctx, span := w.tracer.Start(ctx, "worker.WorkerStockbit.syncMarketDetector")
+	ctx, span := w.tracer.Start(ctx, "stockbit.WorkerStockbit.syncMarketDetector")
 	defer span.End()
 
 	dateStr := time.Now().Format("2006-01-02")
 
-	_ = w.logger.With(slog.String("tag", "worker.WorkerStockbit.syncMarketDetector"))
+	_ = w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.syncMarketDetector"))
 
 	resp, err := w.client.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
 	if err != nil {
