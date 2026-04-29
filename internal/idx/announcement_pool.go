@@ -9,10 +9,6 @@ import (
 // AnnouncementPool processes announcements in parallel using worker pool pattern
 type AnnouncementPool interface {
 	Pool[AnnouncementTask]
-	// ProcessPage processes all announcements for a given page
-	ProcessPage(
-		ctx context.Context,
-		page int,
-		announcements []models.Announcement,
-	) ([]AnnouncementResult, error)
+	// Process processes all announcements for a given page
+	Process(ctx context.Context, page int, announcements []models.Announcement)
 }
