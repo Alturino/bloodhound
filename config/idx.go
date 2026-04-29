@@ -9,6 +9,7 @@ type IDX struct {
 }
 
 type WorkerPoolConfig struct {
+	PageSize            int `mapstructure:"page_size"            json:"page_size"`
 	AnnouncementWorkers int `mapstructure:"announcement_workers" json:"announcement_workers"`
 	AttachmentWorkers   int `mapstructure:"attachment_workers"   json:"attachment_workers"`
 }
