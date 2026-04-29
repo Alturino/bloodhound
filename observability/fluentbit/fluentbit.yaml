@@ -22,15 +22,15 @@ pipeline:
       path: /var/logs/bloodhound/bloodhound.log
       tag: app.bloodhound
       parser: json
-      buffer_chunk_size: 8M
-      buffer_max_size: 16M
+      buffer_chunk_size: 100M
+      buffer_max_size: 100M
       db: bloodhound
     - name: tail
       path: /var/logs/bloodhound/bloodhound-dev.log
       tag: app.bloodhound
-      parser: logfmt
-      buffer_chunk_size: 8M
-      buffer_max_size: 16M
+      parser: json
+      buffer_chunk_size: 100M
+      buffer_max_size: 100M
       db: bloodhound-dev
     - name: forward
       listen: 0.0.0.0
@@ -48,7 +48,7 @@ pipeline:
   filters:
     - name: parser
       key_name: log
-      match: forward.*
+      match: forward.*,app.bloodhound
       parser: docker
       reserve_data: on
   outputs:

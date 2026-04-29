@@ -21,8 +21,8 @@ func NewClient(config *config.Config) *req.Client {
 		// SetCommonRetryHook(middleware.GetCookie(ctx)).
 		// SetOutputDirectory(common.BloodhoundDir).
 		// SetCookieJar(jar)
-	if config.App.Environment != "production" {
-		client = client.DevMode().EnableDumpAllWithoutResponseBody().EnableDumpAllAsync()
-	}
+	// if config.App.Environment != "production" {
+	// 	client = client.DevMode().EnableDumpAllWithoutResponseBody().EnableDumpAllAsync()
+	// }
 	return client
 }
