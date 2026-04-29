@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/imroc/req/v3"
+	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -20,7 +21,7 @@ import (
 type Client interface {
 	FetchAnnouncements(
 		ctx context.Context,
-		indexFrom int,
+		page int,
 		dateFrom time.Time,
 	) (models.AnnouncementResponse, error)
 	DownloadFile(ctx context.Context, url string) ([]byte, string, error)
@@ -48,7 +49,7 @@ func NewClient(
 		tracer = telemetry.AppTelemetry.Tracer
 	}
 	httpclient = httpclient.Clone().
-		EnableDumpAllWithoutResponseBody().
+		// EnableDumpAllWithoutResponseBody().
 		SetCommonHeaders(map[string]string{
 			"Connection":         "keep-alive",
 			"Accept-Encoding":    "gzip",
@@ -71,7 +72,7 @@ func NewClient(
 }
 
 // FetchAnnouncements fetches announcements from IDX API
-func (c client) FetchAnnouncements(
+func (c *client) FetchAnnouncements(
 	ctx context.Context,
 	page int,
 	dateFrom time.Time,
@@ -90,15 +91,16 @@ func (c client) FetchAnnouncements(
 	}
 
 	now := time.Now()
-	logger := c.logger.With(
-		slog.String("tag", "idx.Client.FetchAnnouncements"),
+	ctx = slogcontext.Append(
+		ctx,
 		slog.Int("page", page),
 		slog.Time("date_from", dateFrom),
 		slog.Time("date_to", now),
 		slog.Int("page_size", c.config.PageSize),
 	)
+	logger := c.logger.With(slog.String("tag", "idx.Client.FetchAnnouncements"))
 
-	logger.InfoContext(ctx, "fetching announcements")
+	logger.DebugContext(ctx, "fetching announcements")
 	span.AddEvent("fetching announcements")
 	var rawResp rawAnnouncementResponse
 	resp, err := c.httpclient.R().
@@ -114,23 +116,25 @@ func (c client) FetchAnnouncements(
 	if err != nil {
 		err = fmt.Errorf("fetching announcements: %w", err)
 		telemetry.RecordError(span, err)
+		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		return models.AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
 		err := fmt.Errorf("fetching announcements status_code=%d", resp.StatusCode)
 		telemetry.RecordError(span, err)
+		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		return models.AnnouncementResponse{}, err
 	}
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
 
-	result := c.convertToModel(rawResp)
+	result := convertToModel(rawResp)
 
 	return result, nil
 }
 
 // DownloadFile downloads a file from given URL
-func (c client) DownloadFile(ctx context.Context, url string) ([]byte, string, error) {
+func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, error) {
 	ctx, span := c.tracer.Start(
 		ctx,
 		"idx.Client.DownloadFile",
@@ -147,11 +151,13 @@ func (c client) DownloadFile(ctx context.Context, url string) ([]byte, string, e
 	if err != nil {
 		err = fmt.Errorf("downloading file: %w", err)
 		telemetry.RecordError(span, err)
+		logger.ErrorContext(ctx, "downloading file", slog.Any("error", err))
 		return nil, "", err
 	}
 	if !resp.IsSuccessState() {
 		err := fmt.Errorf("unexpected status_code=%d, url=%s", resp.StatusCode, url)
 		telemetry.RecordError(span, err)
+		logger.ErrorContext(ctx, "downloading file", slog.Any("error", err))
 		return nil, "", err
 	}
 	logger.InfoContext(ctx, "downloaded file")
@@ -163,8 +169,7 @@ func (c client) DownloadFile(ctx context.Context, url string) ([]byte, string, e
 	return data, contentType, nil
 }
 
-// convertToModel converts raw API response to our model
-func (c client) convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
+func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
 	result := models.AnnouncementResponse{
 		ResultCount: raw.ResultCount,
 		SearchParams: models.SearchParams{
@@ -179,53 +184,48 @@ func (c client) convertToModel(raw rawAnnouncementResponse) models.AnnouncementR
 			IndexFrom:  raw.SearchParams.IndexFrom,
 			PageSize:   raw.SearchParams.PageSize,
 		},
-		Replies: make([]models.Reply, 0, len(raw.Replies)),
+		Announcements: make([]models.Announcement, 0, len(raw.Replies)),
 	}
 
 	for _, r := range raw.Replies {
-		reply := models.Reply{
-			Announcement: models.Announcement{
-				ID2:                 r.Pengumuman.Id2,
-				ID:                  r.Pengumuman.ID,
-				FinalID:             r.Pengumuman.FinalId,
-				OldFinalID:          r.Pengumuman.OldFinalId,
-				AnnouncementNumber:  r.Pengumuman.NoPengumuman,
-				Date:             r.Pengumuman.TglPengumuman.Time(),
-				AnnouncementTitle:   r.Pengumuman.JudulPengumuman,
-				AnnouncementType:    r.Pengumuman.JenisPengumuman,
-				StockCode:           strings.TrimSpace(r.Pengumuman.Kode_Emiten),
-				CreatedDate:         r.Pengumuman.CreatedDate.Time(),
-				FormID:              r.Pengumuman.Form_Id,
-				AnnouncementSubject: r.Pengumuman.PerihalPengumuman,
-				JMSXGroupID:         r.Pengumuman.JMSXGroupID,
-				Division:            r.Pengumuman.Divisi,
-				DivisionCode:        r.Pengumuman.KodeDivisi,
-				StockTypeDetail:     r.Pengumuman.JenisEmiten,
-				IsStock:             r.Pengumuman.EfekEmiten_Saham,
-				IsBond:              r.Pengumuman.EfekEmiten_Obligasi,
-				IsEBA:               r.Pengumuman.EfekEmiten_EBA,
-				IsETF:               r.Pengumuman.EfekEmiten_ETF,
-				IsSPEI:              r.Pengumuman.EfekEmiten_SPEI,
-				Attachments:         make([]models.Attachment, 0, len(r.Attachments)),
-			},
+		announcement := models.Announcement{
+			ID2:                 r.Pengumuman.Id2,
+			ID:                  r.Pengumuman.ID,
+			FinalID:             r.Pengumuman.FinalId,
+			OldFinalID:          r.Pengumuman.OldFinalId,
+			AnnouncementNumber:  r.Pengumuman.NoPengumuman,
+			Date:                r.Pengumuman.TglPengumuman.Time(),
+			AnnouncementTitle:   r.Pengumuman.JudulPengumuman,
+			AnnouncementType:    r.Pengumuman.JenisPengumuman,
+			StockCode:           strings.TrimSpace(r.Pengumuman.Kode_Emiten),
+			CreatedDate:         r.Pengumuman.CreatedDate.Time(),
+			FormID:              r.Pengumuman.Form_Id,
+			AnnouncementSubject: r.Pengumuman.PerihalPengumuman,
+			JMSXGroupID:         r.Pengumuman.JMSXGroupID,
+			Division:            r.Pengumuman.Divisi,
+			DivisionCode:        r.Pengumuman.KodeDivisi,
+			StockTypeDetail:     r.Pengumuman.JenisEmiten,
+			IsStock:             r.Pengumuman.EfekEmiten_Saham,
+			IsBond:              r.Pengumuman.EfekEmiten_Obligasi,
+			IsEBA:               r.Pengumuman.EfekEmiten_EBA,
+			IsETF:               r.Pengumuman.EfekEmiten_ETF,
+			IsSPEI:              r.Pengumuman.EfekEmiten_SPEI,
+			Attachments:         make([]models.Attachment, 0, len(r.Attachments)),
 		}
 
-		for _, a := range r.Attachments {
-			reply.Announcement.Attachments = append(
-				reply.Announcement.Attachments,
-				models.Attachment{
-					ID:               a.ID,
-					PDFFilename:      a.PDFFilename,
-					FullSavePath:     a.FullSavePath,
-					JMSXGroupID:      a.JMSXGroupID,
-					CorrelationID:    a.CorrelationID,
-					IsAttachment:     a.IsAttachment,
-					OriginalFilename: a.OriginalFilename,
-				},
-			)
+		for _, attachment := range r.Attachments {
+			attachment := models.Attachment{
+				ID:               attachment.ID,
+				PDFFilename:      attachment.PDFFilename,
+				FullSavePath:     attachment.FullSavePath,
+				JMSXGroupID:      attachment.JMSXGroupID,
+				CorrelationID:    attachment.CorrelationID,
+				IsAttachment:     attachment.IsAttachment,
+				OriginalFilename: attachment.OriginalFilename,
+			}
+			announcement.Attachments = append(announcement.Attachments, attachment)
 		}
-
-		result.Replies = append(result.Replies, reply)
+		result.Announcements = append(result.Announcements, announcement)
 	}
 
 	return result
