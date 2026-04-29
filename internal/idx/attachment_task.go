@@ -8,7 +8,7 @@ import (
 
 type AttachmentTask struct {
 	TotalAttachment   int               `json:"total_attachment"`
-	Index             int               `json:"index"`
+	AttachmentItem    int               `json:"attachment_item"`
 	AnnouncementID    string            `json:"id2"`
 	AnnouncementTitle string            `json:"announcement_title"` // JudulPengumuman
 	StockCode         string            `json:"stock_code"`         // Kode_Emiten

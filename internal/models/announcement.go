@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
@@ -8,9 +9,9 @@ import (
 
 // AnnouncementResponse is the top-level API response from IDX
 type AnnouncementResponse struct {
-	ResultCount  int          `json:"result_count"`
-	SearchParams SearchParams `json:"search_params"`
-	Replies      []Reply      `json:"replies"`
+	ResultCount   int            `json:"result_count"`
+	SearchParams  SearchParams   `json:"search_params"`
+	Announcements []Announcement `json:"replies"`
 }
 
 // SearchParams contains the search parameters used in the API request
@@ -25,11 +26,6 @@ type SearchParams struct {
 	SortColumn string `json:"sort_column"`
 	IndexFrom  int    `json:"index_from"`
 	PageSize   int    `json:"page_size"`
-}
-
-// Reply contains an announcement with its attachments
-type Reply struct {
-	Announcement Announcement `json:"announcement"` // pengumuman
 }
 
 // Announcement contains announcement details
@@ -70,15 +66,39 @@ func (a Announcement) ToAnnouncements() model.Announcements {
 	}
 }
 
+func (a Announcement) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("id2", a.ID2),
+		slog.String("announcement_title", a.AnnouncementTitle),
+		slog.String("stock_code", a.StockCode),
+		slog.Bool("is_stock", a.IsStock),
+		slog.Time("announcement_date", a.Date),
+		slog.Time("created_date", a.CreatedDate),
+		slog.Any("attachments", a.Attachments),
+	)
+}
+
 // Attachment contains PDF attachment details
 type Attachment struct {
+	IsAttachment     bool   `json:"is_attachment"`
 	ID               int    `json:"id"`
 	PDFFilename      string `json:"pdf_filename"`   // PDFFilename
 	FullSavePath     string `json:"full_save_path"` // FullSavePath - URL to download
 	JMSXGroupID      string `json:"jmsx_group_id"`
 	CorrelationID    string `json:"correlation_id"`
-	IsAttachment     bool   `json:"is_attachment"`
 	OriginalFilename string `json:"original_filename"` // OriginalFilename
+}
+
+func (a Attachment) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Bool("is_attachment", a.IsAttachment),
+		slog.Int("id", a.ID),
+		slog.String("pdf_filename", a.PDFFilename),
+		slog.String("full_save_path", a.FullSavePath),
+		slog.String("jmsx_group_id", a.JMSXGroupID),
+		slog.String("correlation_id", a.CorrelationID),
+		slog.String("original_filename", a.OriginalFilename),
+	)
 }
 
 func (a Attachment) ToAttachments(announcementID, checksum, storagePath string) model.Attachments {
