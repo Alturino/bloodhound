@@ -2,20 +2,17 @@ package idx
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log/slog"
 
 	slogcontext "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/state"
 )
 
 type AnnouncementProcessor interface {
-	ProcessAnnouncement(ctx context.Context, ann models.Announcement) error
+	Process(ctx context.Context, args *AnnouncementTask) error
 }
 
 type announcement struct {
@@ -23,7 +20,7 @@ type announcement struct {
 	tracer         trace.Tracer
 	client         Client
 	store          state.IdxStore
-	attachmentPool AttachmentPool
+	attachmentPool Attachment
 }
 
 func NewAnnouncementProcessor(
@@ -31,7 +28,7 @@ func NewAnnouncementProcessor(
 	tracer trace.Tracer,
 	client Client,
 	store state.IdxStore,
-	attachmentPool AttachmentPool,
+	attachmentPool Attachment,
 ) AnnouncementProcessor {
 	return announcement{
 		logger:         logger,
@@ -42,42 +39,34 @@ func NewAnnouncementProcessor(
 	}
 }
 
-func (a announcement) ProcessAnnouncement(ctx context.Context, ann models.Announcement) error {
+func (a announcement) Process(ctx context.Context, args *AnnouncementTask) error {
 	ctx, span := a.tracer.Start(
 		ctx,
-		"worker.AnnouncementProcessor.processAnnouncement",
+		"idx.AnnouncementProcessor.processAnnouncement",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(
-			attribute.String("tag", "worker.WorkerIdx.processAnnouncement"),
-			attribute.String("idx_announcement_id", ann.ID2),
-			attribute.String("stock_code", ann.StockCode),
-			attribute.String("announcement_date", ann.Date.String()),
+			attribute.String("tag", "idx.announcement.Process"),
+			attribute.String("announcement_id", args.Announcement.ID2),
+			attribute.String("announcement_id", args.Announcement.AnnouncementTitle),
+			attribute.String("announcement_date", args.Announcement.Date.String()),
+			attribute.String("stock_code", args.Announcement.StockCode),
 		),
 	)
 	defer span.End()
 
-	ctx = slogcontext.With(ctx,
-		slog.String("tag", "worker.WorkerIdx.processAnnouncement"),
-		slog.String("idx_announcement_id", ann.ID2),
-		slog.String("stock_code", ann.StockCode),
-		slog.Time("announcement_date", ann.Date),
+	ctx = slogcontext.Append(ctx,
+		slog.String("tag", "idx.announcement.Process"),
+		slog.String("announcement_id", args.Announcement.ID2),
+		slog.String("announcement_title", args.Announcement.AnnouncementTitle),
+		slog.Time("announcement_date", args.Announcement.Date),
+		slog.String("stock_code", args.Announcement.StockCode),
 	)
 
-	if err := a.store.RecordAnnouncement(ctx, ann); err != nil {
-		err = fmt.Errorf("record announcement: %w", err)
+	if err := a.store.RecordAnnouncement(ctx, args.Announcement); err != nil {
 		return err
 	}
 
-	attachmentResult, err := a.attachmentPool.Handle(ctx, HandleAttachmentsArgs{
-		Announcement: ann,
-	})
-	if err != nil {
-		return err
-	}
+	a.attachmentPool.Handle(ctx, args)
 
-	for _, attachment := range attachmentResult {
-		err = errors.Join(err, attachment.Err)
-	}
-
-	return err
+	return nil
 }

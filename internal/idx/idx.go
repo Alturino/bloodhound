@@ -2,8 +2,6 @@ package idx
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"time"
@@ -13,26 +11,45 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/state"
 	"github.com/alturino/bloodhound/internal/storage"
 )
 
 type IDX struct {
-	config           *config.Config
-	logger           *slog.Logger
-	announcementPool AnnouncementPool
-	tracer           trace.Tracer
-	client           Client
-	storage          storage.Storage
-	store            state.IdxStore
+	config  *config.Config
+	logger  *slog.Logger
+	ap      AnnouncementPool
+	tracer  trace.Tracer
+	client  Client
+	storage storage.Storage
+	store   state.IdxStore
+}
+
+func NewWorkerIdx(
+	config *config.Config,
+	logger *slog.Logger,
+	tracer trace.Tracer,
+	store state.IdxStore,
+	client Client,
+	storage storage.Storage,
+	announcementPool AnnouncementPool,
+) *IDX {
+	return &IDX{
+		config:  config,
+		logger:  logger,
+		tracer:  tracer,
+		client:  client,
+		storage: storage,
+		store:   store,
+		ap:      announcementPool,
+	}
 }
 
 func (w IDX) Start(ctx context.Context) error {
 	interval := w.config.Scheduler.Interval
 
 	logger := w.logger.With(
-		slog.String("tag", "worker.WorkerIdx.Start"),
+		slog.String("tag", "idx.WorkerIdx.Start"),
 		slog.Duration("interval", interval),
 	)
 
@@ -62,12 +79,12 @@ func (w IDX) Start(ctx context.Context) error {
 func (w IDX) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
-		"worker.WorkerIdx.Process",
+		"idx.WorkerIdx.Process",
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "worker.WorkerIdx.Process"))
+	logger := w.logger.With(slog.String("tag", "idx.WorkerIdx.Process"))
 
 	isExists, err := w.store.IsExists(ctx)
 	if err != nil {
@@ -99,23 +116,23 @@ func (w IDX) processIncremental(ctx context.Context) error {
 }
 
 func (w IDX) processAnnouncements(ctx context.Context, since time.Time, tag string) error {
-	ctx, span := w.tracer.Start(ctx, "worker.WorkerIdx."+tag)
+	ctx, span := w.tracer.Start(ctx, "idx.WorkerIdx."+tag)
 	defer span.End()
 
-	ctx = slogcontext.With(ctx, slog.String("tag", "worker.WorkerIdx."+tag))
-	logger := w.logger
+	ctx = slogcontext.Append(ctx, slog.String("tag", "idx.WorkerIdx."+tag))
+	logger := w.logger.With()
 
 	resp, err := w.client.FetchAnnouncements(ctx, 0, since)
 	if err != nil {
 		err = fmt.Errorf("get total items and pages: %w", err)
-		w.logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		return err
 	}
 	totalItems, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
-	totalPages := (totalItems + pageSize) / pageSize
+	totalPages := totalItems / pageSize
 
 	workerCount := w.config.App.IDX.WorkerPool.AnnouncementWorkers
-	ctx = slogcontext.With(ctx,
+	ctx = slogcontext.Append(ctx,
 		slog.Int("total_items", totalItems),
 		slog.Int("page_size", pageSize),
 		slog.Int("total_pages", totalPages),
@@ -128,42 +145,34 @@ func (w IDX) processAnnouncements(ctx context.Context, since time.Time, tag stri
 		attribute.Int("worker_count", workerCount),
 	)
 
-	for page := totalPages - 1; page >= 0; page-- {
-		ctx := slogcontext.With(ctx, slog.Int("page", page))
+	for page, processedPage := totalPages-1, 0; page >= 0; page, processedPage = page-1, processedPage+1 {
+		ctx := slogcontext.Append(
+			ctx,
+			slog.Int("page", page),
+			slog.Int("processed_page", processedPage),
+		)
 
 		resp, err := w.client.FetchAnnouncements(ctx, page, time.Time{})
 		if err != nil {
-			w.logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
-			if w.config.App.Environment != "production" {
-				return err
-			}
 			continue
 		}
-		if resp.ResultCount == 0 || len(resp.Replies) == 0 {
-			w.logger.InfoContext(ctx, "page empty, stopping")
+		if resp.ResultCount == 0 || len(resp.Announcements) == 0 {
+			logger.InfoContext(ctx, "page empty, stopping")
 			break
 		}
 
-		announcements := make([]models.Announcement, len(resp.Replies))
-		for i, reply := range resp.Replies {
-			announcements[i] = reply.Announcement
-		}
-
-		results, err := w.announcementPool.ProcessPage(ctx, page, announcements)
-		if err != nil {
-			logger.ErrorContext(ctx, "process page", slog.Any("error", err))
-		}
 		if logger.Enabled(ctx, slog.LevelDebug) {
-			logger.DebugContext(ctx, "processed", slog.Any("processed_page", results))
+			ctx = slogcontext.Append(
+				ctx,
+				slog.Int("announcements_count", len(resp.Announcements)),
+				slog.Any("announcements", resp.Announcements),
+			)
 		}
+		logger.DebugContext(ctx, "fetched announcements")
 
-		w.logger.InfoContext(ctx, "processing completed", slog.Int("page", page))
+		w.ap.Process(ctx, page, resp.Announcements)
+		logger.InfoContext(ctx, "processed page")
 	}
 
-return nil
-}
-
-func calculateChecksum(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
+	return nil
 }
