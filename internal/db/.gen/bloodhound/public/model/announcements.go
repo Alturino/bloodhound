@@ -13,10 +13,10 @@ import (
 )
 
 type Announcements struct {
-	ID                uuid.UUID `sql:"primary_key" json:"id"`
-	IdxID             string    `json:"idx_id"`
-	StockCode         string    `json:"stock_code"`
-	AnnouncementTitle string    `json:"announcement_title"`
-	Date              time.Time `json:"date"`
-	CreatedAt         time.Time `json:"created_at"`
+	ID        uuid.UUID `sql:"primary_key"`
+	IdxID     string
+	StockCode string
+	Title     string
+	Date      time.Time
+	CreatedAt time.Time
 }

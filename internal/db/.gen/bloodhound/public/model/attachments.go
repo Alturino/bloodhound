@@ -13,10 +13,15 @@ import (
 )
 
 type Attachments struct {
-	ID                uuid.UUID `sql:"primary_key" json:"id"`
-	IdxAnnouncementID string    `json:"idx_announcement_id"`
-	OriginalFilename  string    `json:"original_filename"`
-	Checksum          string    `json:"checksum"`
-	StoragePath       string    `json:"storage_path"`
-	UploadedAt        time.Time `json:"uploaded_at"`
+	ID                uuid.UUID `sql:"primary_key"`
+	IdxAnnouncementID string
+	IdxURL            string
+	Error             string
+	OriginalFilename  string
+	Filename          string
+	Checksum          string
+	StoragePath       string
+	IsDownloaded      bool
+	IsProcessing      bool
+	UploadedAt        time.Time
 }

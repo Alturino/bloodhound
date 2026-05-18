@@ -19,7 +19,7 @@ func init() {
 type Config struct {
 	Scheduler Scheduler `mapstructure:"scheduler" json:"scheduler"`
 	Telemetry Telemetry `mapstructure:"telemetry" json:"telemetry"`
-	MinIO     MinIO     `mapstructure:"minio"     json:"min_io"`
+	Storage   Storage   `mapstructure:"storage"   json:"storage"`
 	Database  Database  `mapstructure:"database"  json:"database"`
 	App       App       `mapstructure:"app"       json:"app"`
 }

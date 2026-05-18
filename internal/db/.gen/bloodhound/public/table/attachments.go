@@ -19,9 +19,14 @@ type attachmentsTable struct {
 	// Columns
 	ID                postgres.ColumnString
 	IdxAnnouncementID postgres.ColumnString
+	IdxURL            postgres.ColumnString
+	Error             postgres.ColumnString
 	OriginalFilename  postgres.ColumnString
+	Filename          postgres.ColumnString
 	Checksum          postgres.ColumnString
 	StoragePath       postgres.ColumnString
+	IsDownloaded      postgres.ColumnBool
+	IsProcessing      postgres.ColumnBool
 	UploadedAt        postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
@@ -66,13 +71,18 @@ func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTab
 	var (
 		IDColumn                = postgres.StringColumn("id")
 		IdxAnnouncementIDColumn = postgres.StringColumn("idx_announcement_id")
+		IdxURLColumn            = postgres.StringColumn("idx_url")
+		ErrorColumn             = postgres.StringColumn("error")
 		OriginalFilenameColumn  = postgres.StringColumn("original_filename")
+		FilenameColumn          = postgres.StringColumn("filename")
 		ChecksumColumn          = postgres.StringColumn("checksum")
 		StoragePathColumn       = postgres.StringColumn("storage_path")
+		IsDownloadedColumn      = postgres.BoolColumn("is_downloaded")
+		IsProcessingColumn      = postgres.BoolColumn("is_processing")
 		UploadedAtColumn        = postgres.TimestampzColumn("uploaded_at")
-		allColumns              = postgres.ColumnList{IDColumn, IdxAnnouncementIDColumn, OriginalFilenameColumn, ChecksumColumn, StoragePathColumn, UploadedAtColumn}
-		mutableColumns          = postgres.ColumnList{IdxAnnouncementIDColumn, OriginalFilenameColumn, ChecksumColumn, StoragePathColumn, UploadedAtColumn}
-		defaultColumns          = postgres.ColumnList{IDColumn, UploadedAtColumn}
+		allColumns              = postgres.ColumnList{IDColumn, IdxAnnouncementIDColumn, IdxURLColumn, ErrorColumn, OriginalFilenameColumn, FilenameColumn, ChecksumColumn, StoragePathColumn, IsDownloadedColumn, IsProcessingColumn, UploadedAtColumn}
+		mutableColumns          = postgres.ColumnList{IdxAnnouncementIDColumn, IdxURLColumn, ErrorColumn, OriginalFilenameColumn, FilenameColumn, ChecksumColumn, StoragePathColumn, IsDownloadedColumn, IsProcessingColumn, UploadedAtColumn}
+		defaultColumns          = postgres.ColumnList{IDColumn, IsProcessingColumn, UploadedAtColumn}
 	)
 
 	return attachmentsTable{
@@ -81,9 +91,14 @@ func newAttachmentsTableImpl(schemaName, tableName, alias string) attachmentsTab
 		//Columns
 		ID:                IDColumn,
 		IdxAnnouncementID: IdxAnnouncementIDColumn,
+		IdxURL:            IdxURLColumn,
+		Error:             ErrorColumn,
 		OriginalFilename:  OriginalFilenameColumn,
+		Filename:          FilenameColumn,
 		Checksum:          ChecksumColumn,
 		StoragePath:       StoragePathColumn,
+		IsDownloaded:      IsDownloadedColumn,
+		IsProcessing:      IsProcessingColumn,
 		UploadedAt:        UploadedAtColumn,
 
 		AllColumns:     allColumns,

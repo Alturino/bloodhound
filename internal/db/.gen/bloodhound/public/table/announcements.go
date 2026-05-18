@@ -17,12 +17,12 @@ type announcementsTable struct {
 	postgres.Table
 
 	// Columns
-	ID                postgres.ColumnString
-	IdxID             postgres.ColumnString
-	StockCode         postgres.ColumnString
-	AnnouncementTitle postgres.ColumnString
-	Date              postgres.ColumnTimestampz
-	CreatedAt         postgres.ColumnTimestampz
+	ID        postgres.ColumnString
+	IdxID     postgres.ColumnString
+	StockCode postgres.ColumnString
+	Title     postgres.ColumnString
+	Date      postgres.ColumnTimestampz
+	CreatedAt postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -64,27 +64,27 @@ func newAnnouncementsTable(schemaName, tableName, alias string) *AnnouncementsTa
 
 func newAnnouncementsTableImpl(schemaName, tableName, alias string) announcementsTable {
 	var (
-		IDColumn                = postgres.StringColumn("id")
-		IdxIDColumn             = postgres.StringColumn("idx_id")
-		StockCodeColumn         = postgres.StringColumn("stock_code")
-		AnnouncementTitleColumn = postgres.StringColumn("announcement_title")
-		DateColumn              = postgres.TimestampzColumn("date")
-		CreatedAtColumn         = postgres.TimestampzColumn("created_at")
-		allColumns              = postgres.ColumnList{IDColumn, IdxIDColumn, StockCodeColumn, AnnouncementTitleColumn, DateColumn, CreatedAtColumn}
-		mutableColumns          = postgres.ColumnList{IdxIDColumn, StockCodeColumn, AnnouncementTitleColumn, DateColumn, CreatedAtColumn}
-		defaultColumns          = postgres.ColumnList{IDColumn, CreatedAtColumn}
+		IDColumn        = postgres.StringColumn("id")
+		IdxIDColumn     = postgres.StringColumn("idx_id")
+		StockCodeColumn = postgres.StringColumn("stock_code")
+		TitleColumn     = postgres.StringColumn("title")
+		DateColumn      = postgres.TimestampzColumn("date")
+		CreatedAtColumn = postgres.TimestampzColumn("created_at")
+		allColumns      = postgres.ColumnList{IDColumn, IdxIDColumn, StockCodeColumn, TitleColumn, DateColumn, CreatedAtColumn}
+		mutableColumns  = postgres.ColumnList{IdxIDColumn, StockCodeColumn, TitleColumn, DateColumn, CreatedAtColumn}
+		defaultColumns  = postgres.ColumnList{IDColumn, CreatedAtColumn}
 	)
 
 	return announcementsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:                IDColumn,
-		IdxID:             IdxIDColumn,
-		StockCode:         StockCodeColumn,
-		AnnouncementTitle: AnnouncementTitleColumn,
-		Date:              DateColumn,
-		CreatedAt:         CreatedAtColumn,
+		ID:        IDColumn,
+		IdxID:     IdxIDColumn,
+		StockCode: StockCodeColumn,
+		Title:     TitleColumn,
+		Date:      DateColumn,
+		CreatedAt: CreatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

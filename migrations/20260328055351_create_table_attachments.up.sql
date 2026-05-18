@@ -2,8 +2,17 @@
 CREATE TABLE IF NOT EXISTS attachments (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     idx_announcement_id TEXT NOT NULL REFERENCES announcements(idx_id) ON DELETE CASCADE,
+    idx_url TEXT NOT NULL,
+    error TEXT NOT NULL,
     original_filename TEXT NOT NULL,
-    checksum TEXT NOT NULL, -- SHA256 first 8 chars
-    storage_path TEXT NOT NULL, -- S3 key
-    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP -- timestamptz when it's uploaded to s3
+    filename TEXT NOT NULL,
+    checksum TEXT NOT NULL,
+    storage_path TEXT NOT NULL,
+    is_downloaded BOOLEAN NOT NULL,
+    is_processing BOOLEAN NOT NULL DEFAULT false,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_attachments_unprocessed
+ON attachments(is_downloaded, is_processing, error)
+WHERE is_downloaded = false AND is_processing = false AND error = '';

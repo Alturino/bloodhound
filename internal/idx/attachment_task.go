@@ -7,11 +7,10 @@ import (
 )
 
 type AttachmentTask struct {
-	TotalAttachment   int               `json:"total_attachment"`
-	AttachmentItem    int               `json:"attachment_item"`
-	AnnouncementID    string            `json:"id2"`
-	AnnouncementTitle string            `json:"announcement_title"` // JudulPengumuman
-	StockCode         string            `json:"stock_code"`         // Kode_Emiten
-	Date              time.Time         `json:"announcement_date"`  // TglPengumuman
+	TtachmentItem     int               `json:"attachment_item"`
+	AnnouncementID    string            `json:"announcement_id"`
+	AnnouncementTitle string            `json:"announcement_title"`
+	StockCode         string            `json:"stock_code"`
+	Date              time.Time         `json:"announcement_date"`
 	Attachment        models.Attachment `json:"attachment"`
 }

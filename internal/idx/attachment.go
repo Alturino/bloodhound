@@ -3,24 +3,32 @@ package idx
 import (
 	"context"
 	"log/slog"
-	"sync"
+	"time"
 
-	slogcontext "github.com/veqryn/slog-context"
+	slogctx "github.com/veqryn/slog-context"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
+	"github.com/alturino/bloodhound/internal/models"
+	"github.com/alturino/bloodhound/internal/store"
 )
 
-// Attachment processes attachments in parallel using worker pool pattern
-type Attachment interface {
-	Handle(ctx context.Context, args *AnnouncementTask)
+type AttachmentPool interface {
+	Shutdown()
 }
 
 type attachmentPool struct {
-	config    *config.WorkerPoolConfig
-	logger    *slog.Logger
-	tracer    trace.Tracer
-	processor AttachmentProcessor
+	config      *config.WorkerPoolConfig
+	logger      *slog.Logger
+	taskChan    chan model.Attachments
+	workerCount int
+	ctx         context.Context
+	cancel      context.CancelFunc
+	tracer      trace.Tracer
+	worker      AttachmentWorker
+	store       store.IDXStore
 }
 
 func NewAttachmentPool(
@@ -28,73 +36,169 @@ func NewAttachmentPool(
 	config *config.WorkerPoolConfig,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	processor AttachmentProcessor,
-) Attachment {
-	return &attachmentPool{
-		config:    config,
-		processor: processor,
-		logger:    logger,
-		tracer:    tracer,
+	worker AttachmentWorker,
+	store store.IDXStore,
+) AttachmentPool {
+	workerCount := config.AttachmentWorkers
+	ctx, cancel := context.WithCancel(ctx)
+
+	pool := &attachmentPool{
+		config:      config,
+		worker:      worker,
+		logger:      logger,
+		tracer:      tracer,
+		store:       store,
+		taskChan:    make(chan model.Attachments, workerCount*2),
+		ctx:         ctx,
+		cancel:      cancel,
+		workerCount: config.AttachmentWorkers,
 	}
+
+	pool.Start()
+	return pool
 }
 
-func (p attachmentPool) Handle(
-	ctx context.Context,
-	arg *AnnouncementTask,
-) {
-	ctx, span := p.tracer.Start(
-		ctx,
-		"AttachmentPool.Handle",
-		trace.WithSpanKind(trace.SpanKindConsumer),
-		trace.WithAttributes(),
+func (p *attachmentPool) Start() {
+	for i := 1; i <= p.workerCount; i++ {
+		go p.workerLoop(i)
+	}
+	go p.poller()
+}
+
+func (p *attachmentPool) poller() {
+	interval := time.Minute
+	logger := p.logger.With(
+		slog.String("tag", "attachmentPool.poller"),
+		slog.Duration("interval", interval),
 	)
-	defer span.End()
 
-	logger := p.logger.With(slog.String("tag", "AttachmentPool.Handle"))
-
-	var wg sync.WaitGroup
-	logger.DebugContext(ctx, "processing announcements")
-	for i, attachment := range arg.Announcement.Attachments {
-		ctx := slogcontext.Append(
-			ctx,
-			slog.Int("attachment_item", i+1),
-			slog.String("filename", attachment.OriginalFilename),
-		)
-		logger := logger.With()
-		if logger.Enabled(ctx, slog.LevelDebug) {
-			logger = logger.With(slog.Any("attachment", attachment))
+	ticker := time.Tick(interval)
+	for {
+		select {
+		case <-p.ctx.Done():
+			logger.InfoContext(p.ctx, "context done, stopping poller")
+			return
+		case <-ticker:
+			logger.DebugContext(p.ctx, "polling for unprocessed attachments")
+			p.pollAndSubmit()
 		}
-		wg.Go(func() {
-			task := AttachmentTask{
-				AnnouncementID:    arg.Announcement.ID2,
-				AnnouncementTitle: arg.Announcement.AnnouncementTitle,
-				StockCode:         arg.Announcement.StockCode,
-				TotalAttachment:   len(arg.Announcement.Attachments),
-				AttachmentItem:    i + 1,
-				Attachment:        attachment,
-				Date:              arg.Announcement.Date,
-			}
-			p.handle(arg.Ctx, task)
-			logger.InfoContext(ctx, "processed attachment")
-		})
 	}
-	logger.DebugContext(ctx, "waiting for attachment processing to complete")
-	wg.Wait()
-	logger.DebugContext(ctx, "processed announcements")
 }
 
-func (p *attachmentPool) handle(ctx context.Context, task AttachmentTask) {
+func (p *attachmentPool) pollAndSubmit() {
 	ctx, span := p.tracer.Start(
-		ctx,
-		"attachmentPool.handle",
-		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(),
+		p.ctx,
+		"attachmentPool.pollAndSubmit",
+		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
-	logger := p.logger.With()
-	if err := p.processor.Process(ctx, task); err != nil {
-		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+	logger := p.logger.With(slog.String("tag", "attachmentPool.pollAndSubmit"))
+
+	attachments, err := p.store.UnprocessedAttachments(ctx)
+	if err != nil {
+		logger.ErrorContext(ctx, "get unprocessed attachments", slog.Any("error", err))
 		return
 	}
+
+	if len(attachments) == 0 {
+		logger.InfoContext(ctx, "no unprocessed attachments")
+		return
+	}
+
+	ids := make([]string, len(attachments))
+	for i, att := range attachments {
+		ids[i] = att.ID.String()
+	}
+
+	if err := p.store.ClaimAttachments(ctx, ids...); err != nil {
+		logger.ErrorContext(ctx, "claim attachments", slog.Any("error", err))
+		return
+	}
+
+	for _, att := range attachments {
+		select {
+		case <-p.ctx.Done():
+			logger.InfoContext(ctx, "context done, stopping")
+			return
+		case p.taskChan <- att:
+			logger.InfoContext(ctx, "submitted attachment", slog.Any("attachment", att))
+			continue
+		}
+	}
+
+	logger.InfoContext(ctx, "submitted attachments", slog.Int("count", len(attachments)))
+}
+
+func (p *attachmentPool) workerLoop(id int) {
+	ctx := slogctx.Append(p.ctx, slog.Int("worker_id", id))
+	logger := p.logger.With(slog.String("tag", "attachmentPool.workerLoop"))
+	for {
+		select {
+		case <-p.ctx.Done():
+			logger.WarnContext(ctx, "context done, stopping worker")
+			return
+		case attachment, ok := <-p.taskChan:
+			ctx := slogctx.Append(ctx, slog.String("attachment_id", attachment.ID.String()))
+			if !ok {
+				logger.WarnContext(ctx, "task channel closed")
+				return
+			}
+			p.processAttachment(ctx, attachment)
+		}
+	}
+}
+
+func (p *attachmentPool) processAttachment(ctx context.Context, attachment model.Attachments) {
+	ctx, span := p.tracer.Start(
+		ctx,
+		"attachmentPool.processAttachment",
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(
+			attribute.String("attachment_id", attachment.ID.String()),
+			attribute.String("idx_url", attachment.IdxURL),
+		),
+	)
+	defer span.End()
+
+	logger := p.logger.With(slog.String("tag", "attachmentPool.processAttachment"))
+
+	task := AttachmentTask{
+		AnnouncementID: attachment.IdxAnnouncementID,
+		Attachment: models.Attachment{
+			PDFFilename:      attachment.Filename,
+			FullSavePath:     attachment.IdxURL,
+			OriginalFilename: attachment.OriginalFilename,
+		},
+	}
+
+	result, err := p.worker.Work(ctx, task)
+	if err != nil {
+		attachment.IsDownloaded = false
+		attachment.IsProcessing = false
+		attachment.Error = err.Error()
+		if err := p.store.UpdateAttachmentResult(ctx, attachment); err != nil {
+			logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
+			return
+		}
+		return
+	}
+
+	attachment.IsDownloaded = result.IsDownloaded
+	attachment.IsProcessing = false
+	attachment.Checksum = result.ChecksumSHA256
+	attachment.StoragePath = result.StoragePath
+	attachment.Error = ""
+	if err := p.store.UpdateAttachmentResult(ctx, attachment); err != nil {
+		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
+		return
+	}
+
+	logger.InfoContext(ctx, "attachment processed successfully")
+}
+
+func (p *attachmentPool) Shutdown() {
+	p.cancel()
+	close(p.taskChan)
+	p.logger.Info("shutdown attachment pool")
 }

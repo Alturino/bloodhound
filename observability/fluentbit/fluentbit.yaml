@@ -29,8 +29,8 @@ pipeline:
       path: /var/logs/bloodhound/bloodhound-dev.log
       tag: app.bloodhound
       parser: json
-      buffer_chunk_size: 100M
-      buffer_max_size: 100M
+      buffer_chunk_size: 8M
+      buffer_max_size: 16M
       db: bloodhound-dev
     - name: forward
       listen: 0.0.0.0

@@ -13,10 +13,10 @@ import (
 )
 
 type MarketDetectorSummaries struct {
-	ID            uuid.UUID `sql:"primary_key" json:"id"`
-	Symbol        string    `json:"symbol"`
-	AccdistStatus string    `json:"accdist_status"`
-	TotalValue    float64   `json:"total_value"`
-	CreatedAt     time.Time `json:"created_at"`
-	TradeDate     time.Time `json:"trade_date"`
+	ID            uuid.UUID `sql:"primary_key"`
+	Symbol        string
+	AccdistStatus string
+	TotalValue    float64
+	CreatedAt     time.Time
+	TradeDate     time.Time
 }
