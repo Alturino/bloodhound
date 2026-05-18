@@ -24,7 +24,7 @@ type rawAnnouncementResponse struct {
 			Id2                 string   `json:"Id2"`
 			JudulPengumuman     string   `json:"JudulPengumuman"`
 			JenisPengumuman     string   `json:"JenisPengumuman"`
-			Kode_Emiten         string   `json:"Kode_Emiten"`
+			KodeEmiten          string   `json:"Kode_Emiten"`
 			Form_Id             string   `json:"Form_Id"`
 			PerihalPengumuman   string   `json:"PerihalPengumuman"`
 			JMSXGroupID         string   `json:"JMSXGroupID"`

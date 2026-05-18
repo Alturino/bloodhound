@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/imroc/req/v3"
-	slogcontext "github.com/veqryn/slog-context"
+	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -43,13 +44,12 @@ func NewClient(
 	tracer trace.Tracer,
 ) Client {
 	if logger == nil {
-		logger = slog.Default().With(slog.String("tag", "stockbit.Client"))
+		logger = slog.Default().With(slog.String("tag", "idx.Client"))
 	}
 	if tracer == nil {
 		tracer = telemetry.AppTelemetry.Tracer
 	}
-	httpclient = httpclient.Clone().
-		// EnableDumpAllWithoutResponseBody().
+	idxhttpclient := httpclient.Clone().
 		SetCommonHeaders(map[string]string{
 			"Connection":         "keep-alive",
 			"Accept-Encoding":    "gzip",
@@ -64,7 +64,7 @@ func NewClient(
 		SetBaseURL(config.BaseURL)
 
 	return &client{
-		httpclient: httpclient,
+		httpclient: idxhttpclient,
 		config:     config,
 		logger:     logger,
 		tracer:     tracer,
@@ -77,28 +77,31 @@ func (c *client) FetchAnnouncements(
 	page int,
 	dateFrom time.Time,
 ) (models.AnnouncementResponse, error) {
-	ctx, span := c.tracer.Start(ctx, "idx.Client.FetchAnnouncements")
+	now := time.Now()
+	ctx, span := c.tracer.Start(
+		ctx,
+		"idx.client.FetchAnnouncements",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.String("date_from", dateFrom.String()),
+			attribute.String("date_to", now.String()),
+		),
+	)
 	defer span.End()
+
+	ctx = slogctx.Append(ctx, slog.Time("date_from", dateFrom), slog.Time("date_to", now))
+	logger := c.logger.With(slog.String("tag", "idx.client.FetchAnnouncements"))
 
 	if dateFrom.IsZero() {
 		dt, err := time.Parse("20060102", "19010101")
 		if err != nil {
 			err = fmt.Errorf("parsing default date: %w", err)
 			telemetry.RecordError(span, err)
+			logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 			return models.AnnouncementResponse{}, err
 		}
 		dateFrom = dt
 	}
-
-	now := time.Now()
-	ctx = slogcontext.Append(
-		ctx,
-		slog.Int("page", page),
-		slog.Time("date_from", dateFrom),
-		slog.Time("date_to", now),
-		slog.Int("page_size", c.config.PageSize),
-	)
-	logger := c.logger.With(slog.String("tag", "idx.Client.FetchAnnouncements"))
 
 	logger.DebugContext(ctx, "fetching announcements")
 	span.AddEvent("fetching announcements")
@@ -112,23 +115,30 @@ func (c *client) FetchAnnouncements(
 			"dateTo":    now.Format("20060102"),
 		}).
 		SetSuccessResult(&rawResp).
+		EnableDumpWithoutResponseBody().
 		Get("/primary/ListedCompany/GetAnnouncement")
 	if err != nil {
-		err = fmt.Errorf("fetching announcements: %w", err)
+		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		return models.AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
-		err := fmt.Errorf("fetching announcements status_code=%d", resp.StatusCode)
+		err = fmt.Errorf("unexpected status_code=%d", resp.StatusCode)
+		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		return models.AnnouncementResponse{}, err
 	}
+	result := convertToModel(rawResp)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(
+			slog.Any("fetched_announcements", result),
+			slog.String("http_dump", resp.Dump()),
+		)
+	}
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
-
-	result := convertToModel(rawResp)
 
 	return result, nil
 }
@@ -137,17 +147,20 @@ func (c *client) FetchAnnouncements(
 func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, error) {
 	ctx, span := c.tracer.Start(
 		ctx,
-		"idx.Client.DownloadFile",
+		"idx.client.DownloadFile",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attribute.String("url", url)),
 	)
 	defer span.End()
 
-	logger := c.logger.With(slog.String("url", url), slog.String("tag", "idx.Client.DownloadFile"))
+	logger := c.logger.With(slog.String("tag", "idx.client.DownloadFile"))
 
 	span.AddEvent("downloading file")
 	logger.InfoContext(ctx, "downloading file")
-	resp, err := c.httpclient.R().SetContext(ctx).Get(url)
+	resp, err := c.httpclient.R().
+		EnableDumpWithoutResponseBody().
+		SetContext(ctx).
+		Get(url)
 	if err != nil {
 		err = fmt.Errorf("downloading file: %w", err)
 		telemetry.RecordError(span, err)
@@ -159,6 +172,9 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "downloading file", slog.Any("error", err))
 		return nil, "", err
+	}
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String("http_dump", resp.Dump()))
 	}
 	logger.InfoContext(ctx, "downloaded file")
 	span.AddEvent("downloaded file")
@@ -188,43 +204,32 @@ func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
 	}
 
 	for _, r := range raw.Replies {
+		stockcode := r.Pengumuman.KodeEmiten
+		stockcode = strings.ReplaceAll(stockcode, " ", "")
+		stockcode = strings.ReplaceAll(stockcode, "//", "")
 		announcement := models.Announcement{
-			ID2:                 r.Pengumuman.Id2,
-			ID:                  r.Pengumuman.ID,
-			FinalID:             r.Pengumuman.FinalId,
-			OldFinalID:          r.Pengumuman.OldFinalId,
-			AnnouncementNumber:  r.Pengumuman.NoPengumuman,
-			Date:                r.Pengumuman.TglPengumuman.Time(),
-			AnnouncementTitle:   r.Pengumuman.JudulPengumuman,
-			AnnouncementType:    r.Pengumuman.JenisPengumuman,
-			StockCode:           strings.TrimSpace(r.Pengumuman.Kode_Emiten),
-			CreatedDate:         r.Pengumuman.CreatedDate.Time(),
-			FormID:              r.Pengumuman.Form_Id,
-			AnnouncementSubject: r.Pengumuman.PerihalPengumuman,
-			JMSXGroupID:         r.Pengumuman.JMSXGroupID,
-			Division:            r.Pengumuman.Divisi,
-			DivisionCode:        r.Pengumuman.KodeDivisi,
-			StockTypeDetail:     r.Pengumuman.JenisEmiten,
-			IsStock:             r.Pengumuman.EfekEmiten_Saham,
-			IsBond:              r.Pengumuman.EfekEmiten_Obligasi,
-			IsEBA:               r.Pengumuman.EfekEmiten_EBA,
-			IsETF:               r.Pengumuman.EfekEmiten_ETF,
-			IsSPEI:              r.Pengumuman.EfekEmiten_SPEI,
-			Attachments:         make([]models.Attachment, 0, len(r.Attachments)),
+			ID:                r.Pengumuman.Id2,
+			Date:              r.Pengumuman.TglPengumuman.Time(),
+			AnnouncementTitle: r.Pengumuman.JudulPengumuman,
+			AnnouncementType:  r.Pengumuman.JenisPengumuman,
+			StockCode:         stockcode,
+			CreatedDate:       r.Pengumuman.CreatedDate.Time(),
+			IsStock:           r.Pengumuman.EfekEmiten_Saham,
+			Attachments:       make([]models.Attachment, len(r.Attachments)),
 		}
 
-		for _, attachment := range r.Attachments {
-			attachment := models.Attachment{
-				ID:               attachment.ID,
-				PDFFilename:      attachment.PDFFilename,
-				FullSavePath:     attachment.FullSavePath,
-				JMSXGroupID:      attachment.JMSXGroupID,
-				CorrelationID:    attachment.CorrelationID,
-				IsAttachment:     attachment.IsAttachment,
-				OriginalFilename: attachment.OriginalFilename,
-			}
-			announcement.Attachments = append(announcement.Attachments, attachment)
+		var wg sync.WaitGroup
+		for i, attachment := range r.Attachments {
+			wg.Go(func() {
+				announcement.Attachments[i] = models.Attachment{
+					PDFFilename:      attachment.PDFFilename,
+					FullSavePath:     attachment.FullSavePath,
+					OriginalFilename: attachment.OriginalFilename,
+				}
+			})
 		}
+		wg.Wait()
+
 		result.Announcements = append(result.Announcements, announcement)
 	}
 
