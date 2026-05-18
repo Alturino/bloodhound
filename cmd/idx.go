@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,39 +10,45 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
-	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/blobstorage"
 	"github.com/alturino/bloodhound/internal/db"
 	"github.com/alturino/bloodhound/internal/httpclient"
 	"github.com/alturino/bloodhound/internal/idx"
 	"github.com/alturino/bloodhound/internal/log"
-	"github.com/alturino/bloodhound/internal/state"
-	"github.com/alturino/bloodhound/internal/storage"
+	"github.com/alturino/bloodhound/internal/store"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-var ServeCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Run the worker service",
-	RunE:  runServe,
+var IDXWorker = &cobra.Command{
+	Use:     "idx run",
+	Short:   "Run the worker service",
+	RunE:    idxWorker,
+	Aliases: []string{"ir"},
 }
 
-func runServe(cmd *cobra.Command, args []string) error {
+func idxWorker(cmd *cobra.Command, args []string) error {
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
-		http.ListenAndServe("localhost:6060", nil)
+		if err := http.ListenAndServe(":9999", nil); err != nil {
+			slog.ErrorContext(ctx, err.Error())
+			return
+		}
 	}()
 
 	configPath := viper.GetString("config")
 	if configPath == "" {
 		configPath = "bloodhound.yaml"
 	}
+	ctx = slogctx.Append(ctx, slog.String("config_path", configPath))
 
+	slog.InfoContext(ctx, "load config")
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		err = fmt.Errorf("load config: %w", err)
@@ -74,7 +78,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	stg, err := storage.NewMinIO(&cfg.MinIO, logger, telemetry.AppTelemetry.Tracer)
+	logger.InfoContext(ctx, "initialize blobstorage")
+	stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	if err != nil {
 		err = fmt.Errorf("initialize storage: %w", err)
 		logger.ErrorContext(ctx, err.Error())
@@ -94,34 +99,19 @@ func runServe(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	idxStore := state.NewIdxStore(database, logger)
-	// stockbitStore := state.NewStockbitStore(database, logger)
+	idxStore := store.NewIDXStore(database, logger, telemetry.AppTelemetry.Tracer)
 
-	httpClient := httpclient.NewClient(cfg)
+	httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
 	idxClient := idx.NewClient(
 		httpClient,
 		&cfg.App.IDX,
 		logger.With(slog.String("tag", "idx.Client")),
 		telemetry.AppTelemetry.Tracer,
 	)
-	// if cfg.App.IDX.MockMode {
-	// 	logger.Info("using mock IDX client")
-	// 	idxClient = idx.NewMockClient(
-	// 		logger.With(slog.String("tag", "idx.MockClient")),
-	// 		telemetry.AppTelemetry.Tracer,
-	// 	)
-	// }
 
-	// stockbitClient := stockbit.NewClient(
-	// 	httpClient,
-	// 	&cfg.App.Stockbit,
-	// 	logger.With(slog.String("tag", "stockbit.Client")),
-	// 	telemetry.AppTelemetry.Tracer,
-	// )
-
-	attachmentProcessor := idx.NewAttachmentProcessor(
-		&cfg.MinIO,
-		logger.With(slog.String("tag", "attachment.Processor")),
+	attachmentWorker := idx.NewAttachmentWorker(
+		&cfg.Storage.MinIO,
+		logger.With(slog.String("tag", "idx.Processor")),
 		telemetry.AppTelemetry.Tracer,
 		idxClient,
 		stg,
@@ -132,41 +122,21 @@ func runServe(cmd *cobra.Command, args []string) error {
 		&cfg.App.IDX.WorkerPool,
 		logger.With(slog.String("tag", "attachment.Pool")),
 		telemetry.AppTelemetry.Tracer,
-		attachmentProcessor,
-	)
-
-	announcementProcessor := idx.NewAnnouncementProcessor(
-		logger,
-		telemetry.AppTelemetry.Tracer,
-		idxClient,
+		attachmentWorker,
 		idxStore,
-		attachmentPool,
 	)
-	announcementPool := idx.NewAnnouncementPool(
-		ctx,
-		cfg.App.IDX.WorkerPool,
-		logger,
-		telemetry.AppTelemetry.Tracer,
-		announcementProcessor,
-	)
+	defer attachmentPool.Shutdown()
 
 	idxWorker := idx.NewWorkerIdx(
+		ctx,
 		cfg,
 		logger.With(slog.String("tag", "idx.Worker")),
 		telemetry.AppTelemetry.Tracer,
 		idxStore,
 		idxClient,
+		database,
 		stg,
-		announcementPool,
 	)
-
-	// stockbitconfig := &stockbit.Config{
-	// 	Config:        cfg,
-	// 	Logger:        logger,
-	// 	Tracer:        telemetry.AppTelemetry.Tracer,
-	// 	StockbitStore: stockbitStore,
-	// }
-	// stockbitWorker := stockbit.NewWorkerStockbit(stockbitconfig, stockbitClient)
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {
@@ -185,14 +155,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
 	})
 
-	if err := idxWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
-		return err
-	}
+	go func() {
+		idxWorker.Start()
+	}()
+	<-ctx.Done()
+	logger.InfoContext(ctx, "received context done, stopping")
 
-	// if err := stockbitWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-	// 	logger.ErrorContext(ctx, "stockbit worker error", slog.Any("error", err))
-	// 	return err
-	// }
 	return nil
 }

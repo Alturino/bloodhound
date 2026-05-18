@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -11,9 +13,10 @@ var (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "bloodhound",
-	Short: "Bloodhound worker service",
-	Long:  `IDX announcement fetcher and Stockbit integration worker`,
+	Use:     "bloodhound",
+	Aliases: []string{"bd"},
+	Short:   "Bloodhound worker service",
+	Long:    `IDX announcement fetcher and Stockbit integration worker`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if mock {
 			viper.Set("app.idx.mock_mode", true)
@@ -23,9 +26,13 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(ServeCmd)
+	RootCmd.AddCommand(IDXWorker, StocbitWorker)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "bloodhound.yaml", "config file path")
 	RootCmd.PersistentFlags().BoolVar(&mock, "mock", false, "enable IDX mock mode")
-	viper.BindPFlag("config", RootCmd.PersistentFlags().Lookup("config"))
-	viper.BindPFlag("mock", RootCmd.PersistentFlags().Lookup("mock"))
+	if err := viper.BindPFlag("config", RootCmd.PersistentFlags().Lookup("config")); err != nil {
+		log.Fatal(err)
+	}
+	if err := viper.BindPFlag("mock", RootCmd.PersistentFlags().Lookup("mock")); err != nil {
+		log.Fatal(err)
+	}
 }
