@@ -10,7 +10,7 @@ import (
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/models"
-	"github.com/alturino/bloodhound/internal/state"
+	"github.com/alturino/bloodhound/internal/store"
 )
 
 type Stockbit struct {
@@ -18,7 +18,7 @@ type Stockbit struct {
 	logger        *slog.Logger
 	tracer        trace.Tracer
 	client        Client
-	stockbitStore state.StockbitStore
+	stockbitStore store.StockbitStore
 }
 
 func (w Stockbit) Start(ctx context.Context) error {
@@ -43,11 +43,7 @@ func (w Stockbit) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.InfoContext(
-				ctx,
-				"stopping background Stockbit worker",
-				slog.Any("error", ctx.Err()),
-			)
+			logger.InfoContext(ctx, "received context done, stopping", slog.Any("error", ctx.Err()))
 			return ctx.Err()
 		case <-ticker.C:
 			if err := w.Process(ctx); err != nil {
@@ -67,7 +63,7 @@ func (w Stockbit) Process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.Process"))
 
-	stockCodes, err := w.stockbitStore.GetStockCodesForMarketDetector(ctx)
+	stockCodes, err := w.stockbitStore.StockCodes(ctx)
 	if err != nil {
 		err = fmt.Errorf("get stock codes: %w", err)
 		return err

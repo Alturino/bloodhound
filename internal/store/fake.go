@@ -1,4 +1,4 @@
-package state
+package store
 
 import (
 	"context"
@@ -17,8 +17,12 @@ func (f *FakeStore) HasSavedAnnouncements(ctx context.Context) (bool, error) {
 	return len(f.Processed) > 0, nil
 }
 
-func (f *FakeStore) IsProcessed(ctx context.Context, id string) (bool, error) {
-	return f.Processed[id], nil
+func (f *FakeStore) IsProcessed(ctx context.Context, idxIDs ...string) (map[string]bool, error) {
+	result := make(map[string]bool, len(idxIDs))
+	for _, id := range idxIDs {
+		result[id] = f.Processed[id]
+	}
+	return result, nil
 }
 
 func (f *FakeStore) RecordAnnouncement(ctx context.Context, ann models.Announcement) error {
@@ -29,16 +33,14 @@ func (f *FakeStore) RecordAnnouncement(ctx context.Context, ann models.Announcem
 		f.Processed = make(map[string]bool)
 	}
 	f.SavedAnnouncements = append(f.SavedAnnouncements, ann)
-	f.Processed[ann.ID2] = true
+	f.Processed[ann.ID] = true
 	return nil
 }
 
 func (f *FakeStore) RecordAttachment(
 	ctx context.Context,
-	idxID string,
+	idxID, checksum, storagePath string,
 	att models.Attachment,
-	checksum string,
-	storagePath string,
 ) error {
 	return nil
 }
@@ -67,6 +69,3 @@ func (f *FakeStore) LatestAnnouncement(ctx context.Context) (model.Announcements
 func (f *FakeStore) GetStockCodesForMarketDetector(ctx context.Context) ([]string, error) {
 	return []string{}, nil
 }
-
-var _ IdxStore = (*FakeStore)(nil)
-var _ StockbitStore = (*FakeStore)(nil)
