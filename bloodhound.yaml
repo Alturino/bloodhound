@@ -5,7 +5,7 @@ app:
   log_dir: ./logs/
   idx:
     base_url: https://idx.co.id
-    page_size: 5
+    page_size: 1000
     mock_mode: false
   stockbit:
     base_url: https://exodus.stockbit.com
@@ -20,15 +20,19 @@ database:
   sslmode: disable
   migration_path: file://migrations
 
-minio:
-  endpoint: localhost:9000
-  access_key: minioadmin
-  secret_key: minioadmin
-  bucket: bloodhound
-  use_ssl: false
+storage:
+  local:
+    enabled: true
+    bloodhound_dir: ~/.bloodhound/download
+  minio:
+    endpoint: localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    bucket: bloodhound
+    use_ssl: false
 
 scheduler:
-  interval: 15m
+  interval: 5s
   cron_expr: "*/15 * * * *"
 
 telemetry:

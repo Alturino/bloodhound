@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -107,13 +108,18 @@ func initTracer(
 	}
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(
+			exporter,
+			sdktrace.WithMaxExportBatchSize(1024*1024),
+			sdktrace.WithMaxQueueSize(10000),
+		),
 		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
+		jaeger.Jaeger{},
 	))
 
 	return tp, nil

@@ -46,8 +46,7 @@ services:
     volumes:
       - ./observability/fluentbit/fluentbit.yaml:/fluent-bit/etc/fluent-bit.yaml
       - ./observability/fluentbit/parsers.yaml:/fluent-bit/etc/parsers.yaml
-      - ./logs/bloodhound.log:/var/logs/bloodhound/bloodhound.log # to listen log from file
-      - ./logs/bloodhound-dev.log:/var/logs/bloodhound/bloodhound-dev.log # to listen log from file
+      - ./logs/:/var/logs/bloodhound/
       - /var/run/docker.sock:/var/run/docker.sock # to listen log from docker
   jaeger:
     image: jaegertracing/all-in-one:1.62.0

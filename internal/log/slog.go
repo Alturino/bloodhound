@@ -9,7 +9,7 @@ import (
 
 	"github.com/natefinch/lumberjack"
 	slogmulti "github.com/samber/slog-multi"
-	slogcontext "github.com/veqryn/slog-context"
+	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
@@ -32,10 +32,10 @@ func Get(config *config.App) *slog.Logger {
 	var sinkHandler slog.Handler = slog.NewJSONHandler(logDestination, sinkHandlerOption)
 	if config.Environment != "production" {
 		logfile.Filename = filepath.Join(config.LogDir, "bloodhound-dev.log")
-		sinkHandler = slog.NewTextHandler(logDestination, sinkHandlerOption)
+		// sinkHandler = slog.NewTextHandler(logDestination, sinkHandlerOption)
 	}
 
-	slogctxHandler := slogcontext.NewHandler(sinkHandler, &slogcontext.HandlerOptions{})
+	slogctxHandler := slogctx.NewHandler(sinkHandler, &slogctx.HandlerOptions{})
 	pipe := slogmulti.Pipe(
 		slogmulti.NewHandleInlineMiddleware(
 			func(ctx context.Context, record slog.Record, next func(context.Context, slog.Record) error) error {
