@@ -20,13 +20,17 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-// IDXStore - IDX announcement state persistence
-type IDXStore interface {
+// AnnouncementStore - IDX announcement state persistence
+type AnnouncementStore interface {
 	Announcement(ctx context.Context, id ...string) ([]model.Announcements, error)
 	InsertAnnouncement(ctx context.Context, tx qrm.DB, ann ...model.Announcements) error
 	LatestAnnouncement(ctx context.Context) (model.Announcements, error)
 	IsExists(ctx context.Context) (bool, error)
 	IsProcessed(ctx context.Context, idxIDs ...string) (map[string]bool, error)
+}
+
+// AttachmentStore - IDX attachment state persistence
+type AttachmentStore interface {
 	InsertAttachment(ctx context.Context, tx qrm.DB, attachments ...model.Attachments) error
 	Attachment(ctx context.Context, id ...string) (model.Attachments, error)
 	UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error)
@@ -34,39 +38,58 @@ type IDXStore interface {
 	UpdateAttachmentResult(ctx context.Context, attachment model.Attachments) error
 }
 
+// AttachmentTask represents a task for processing attachments
 type AttachmentTask struct {
-	AnnouncementID string
-	Checksum       string
-	Path           string
-	Err            string
-	Attachment     models.Attachment
+	AnnouncementID    string
+	AnnouncementTitle string
+	StockCode         string
+	Date              time.Time
+	Checksum          string
+	Path              string
+	Err               string
+	Attachment        models.Attachment
 }
 
-// NewIDXStore creates a new PostgreSQL-backed store
-func NewIDXStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) IDXStore {
+// NewAnnouncementStore creates a new PostgreSQL-backed announcement store
+func NewAnnouncementStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) AnnouncementStore {
 	if logger == nil {
-		logger = slog.Default().With(slog.String("tag", "state.IDXStore"))
+		logger = slog.Default().With(slog.String("tag", "state.AnnouncementStore"))
 	}
-	return &idxStore{db: db, logger: logger, tracer: tracer}
+	return &announcementStore{db: db, logger: logger, tracer: tracer}
 }
 
-// idxStore implements the Store interface using PostgreSQL and go-jet
-type idxStore struct {
+// NewAttachmentStore creates a new PostgreSQL-backed attachment store
+func NewAttachmentStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) AttachmentStore {
+	if logger == nil {
+		logger = slog.Default().With(slog.String("tag", "state.AttachmentStore"))
+	}
+	return &attachmentStore{db: db, logger: logger, tracer: tracer}
+}
+
+// announcementStore implements the AnnouncementStore interface using PostgreSQL and go-jet
+type announcementStore struct {
 	db     *sql.DB
 	logger *slog.Logger
 	tracer trace.Tracer
 }
 
-func (s *idxStore) IsExists(ctx context.Context) (bool, error) {
+// attachmentStore implements the AttachmentStore interface using PostgreSQL and go-jet
+type attachmentStore struct {
+	db     *sql.DB
+	logger *slog.Logger
+	tracer trace.Tracer
+}
+
+func (s *announcementStore) IsExists(ctx context.Context) (bool, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.isExists",
+		"store.announcementStore.isExists",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(attribute.String("tag", "store.idxStore.IsExists")),
+		trace.WithAttributes(attribute.String("tag", "store.announcementStore.IsExists")),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("tag", "store.idxStore.IsExists"))
+	logger := s.logger.With(slog.String("tag", "store.announcementStore.IsExists"))
 
 	logger.DebugContext(ctx, "preparing statement")
 	span.AddEvent("preparing statement")
@@ -92,18 +115,18 @@ func (s *idxStore) IsExists(ctx context.Context) (bool, error) {
 	return isExists.bool, nil
 }
 
-func (s *idxStore) LatestAnnouncement(ctx context.Context) (model.Announcements, error) {
+func (s *announcementStore) LatestAnnouncement(ctx context.Context) (model.Announcements, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.LatestAnnouncement",
-		trace.WithAttributes(attribute.String("tag", "store.idxStore.LatestAnnouncement")),
+		"store.announcementStore.LatestAnnouncement",
+		trace.WithAttributes(attribute.String("tag", "store.announcementStore.LatestAnnouncement")),
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
 	now := time.Now()
 	logger := s.logger.With(
-		slog.String("tag", "store.idxStore.LatestAnnouncement"),
+		slog.String("tag", "store.announcementStore.LatestAnnouncement"),
 		slog.Time("current_time", now),
 	)
 
@@ -133,17 +156,17 @@ func (s *idxStore) LatestAnnouncement(ctx context.Context) (model.Announcements,
 }
 
 // IsProcessed checks if announcement IDs exist in the database by their IDX ID
-func (s *idxStore) IsProcessed(ctx context.Context, idxIDs ...string) (map[string]bool, error) {
+func (s *announcementStore) IsProcessed(ctx context.Context, idxIDs ...string) (map[string]bool, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.IsProcessed",
+		"store.announcementStore.IsProcessed",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.idxStore.IsProcessed"),
+		slog.String("tag", "store.announcementStore.IsProcessed"),
 		slog.Int("count", len(idxIDs)),
 	)
 
@@ -197,7 +220,7 @@ func (s *idxStore) IsProcessed(ctx context.Context, idxIDs ...string) (map[strin
 }
 
 // InsertAnnouncement saves announcement metadata
-func (s *idxStore) InsertAnnouncement(
+func (s *announcementStore) InsertAnnouncement(
 	ctx context.Context,
 	tx qrm.DB,
 	ann ...model.Announcements,
@@ -207,14 +230,14 @@ func (s *idxStore) InsertAnnouncement(
 	}
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.InsertAnnouncement",
+		"store.announcementStore.InsertAnnouncement",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.idxStore.InsertAnnouncement"),
+		slog.String("tag", "store.announcementStore.InsertAnnouncement"),
 		slog.Int("count", len(ann)),
 	)
 
@@ -255,8 +278,48 @@ func (s *idxStore) InsertAnnouncement(
 	return nil
 }
 
-// RecordAttachment saves attachment metadata
-func (s *idxStore) InsertAttachment(
+func (s *announcementStore) Announcement(ctx context.Context, id ...string) ([]model.Announcements, error) {
+	ctx, span := s.tracer.Start(ctx, "store.announcementStore.Announcement")
+	defer span.End()
+
+	logger := s.logger.With(slog.String("tag", "store.announcementStore.Announcement"))
+
+	if len(id) == 0 {
+		logger.DebugContext(ctx, "id empty returning")
+		span.AddEvent("id empty returning")
+		return []model.Announcements{}, nil
+	}
+
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
+	stmt := Announcements.SELECT(Announcements.AllColumns).
+		WHERE(Announcements.ID.EQ(ANY(StringArray(id...))))
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
+	}
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
+
+	logger.DebugContext(ctx, "getting announcement")
+	span.AddEvent("getting announcement")
+	var announcements []model.Announcements
+	if err := stmt.QueryContext(ctx, s.db, &announcements); err != nil {
+		err = fmt.Errorf("getting announcement: %w", err)
+		logger.ErrorContext(ctx, "getting announcement", slog.Any("error", err))
+		telemetry.RecordError(span, err)
+		return announcements, err
+	}
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		ctx = slogctx.Append(ctx, slog.Any("db_announcements", announcements))
+	}
+	logger.InfoContext(ctx, "got announcement")
+	span.AddEvent("got announcement")
+
+	return announcements, nil
+}
+
+// InsertAttachment saves attachment metadata
+func (s *attachmentStore) InsertAttachment(
 	ctx context.Context,
 	tx qrm.DB,
 	attachments ...model.Attachments,
@@ -266,14 +329,14 @@ func (s *idxStore) InsertAttachment(
 	}
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.InsertAttachment",
+		"store.attachmentStore.InsertAttachment",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.idxStore.InsertAttachment"),
+		slog.String("tag", "store.attachmentStore.InsertAttachment"),
 		slog.Int("attachment_size", len(attachments)),
 	)
 
@@ -313,54 +376,14 @@ func (s *idxStore) InsertAttachment(
 	return nil
 }
 
-func (s *idxStore) Announcement(ctx context.Context, id ...string) ([]model.Announcements, error) {
-	ctx, span := s.tracer.Start(ctx, "store.idxStore.Announcement")
-	defer span.End()
-
-	logger := s.logger.With(slog.String("tag", "store.idxStore.Announcement"))
-
-	if len(id) == 0 {
-		logger.DebugContext(ctx, "id empty returning")
-		span.AddEvent("id empty returning")
-		return []model.Announcements{}, nil
-	}
-
-	logger.DebugContext(ctx, "preparing statement")
-	span.AddEvent("preparing statement")
-	stmt := Announcements.SELECT(Announcements.AllColumns).
-		WHERE(Announcements.ID.EQ(ANY(StringArray(id...))))
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
-	}
-	logger.DebugContext(ctx, "prepared statement")
-	span.AddEvent("prepared statement")
-
-	logger.DebugContext(ctx, "getting announcement")
-	span.AddEvent("getting announcement")
-	var announcements []model.Announcements
-	if err := stmt.QueryContext(ctx, s.db, &announcements); err != nil {
-		err = fmt.Errorf("getting announcement: %w", err)
-		logger.ErrorContext(ctx, "getting announcement", slog.Any("error", err))
-		telemetry.RecordError(span, err)
-		return announcements, err
-	}
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("db_announcements", announcements))
-	}
-	logger.InfoContext(ctx, "got announcement")
-	span.AddEvent("got announcement")
-
-	return announcements, nil
-}
-
-func (s *idxStore) Attachment(
+func (s *attachmentStore) Attachment(
 	ctx context.Context,
 	id ...string,
 ) (model.Attachments, error) {
-	ctx, span := s.tracer.Start(ctx, "store.idxStore.Attachment")
+	ctx, span := s.tracer.Start(ctx, "store.attachmentStore.Attachment")
 	defer span.End()
 
-	logger := s.logger.With(slog.String("tag", "store.idxStore.Attachment"))
+	logger := s.logger.With(slog.String("tag", "store.attachmentStore.Attachment"))
 
 	if len(id) == 0 {
 		logger.DebugContext(ctx, "storagepath empty returning")
@@ -398,16 +421,16 @@ func (s *idxStore) Attachment(
 	return attachment, nil
 }
 
-func (s *idxStore) UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error) {
+func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.GetUnprocessedAttachments",
+		"store.attachmentStore.GetUnprocessedAttachments",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("tag", "store.idxStore.GetUnprocessedAttachments"))
+	logger := s.logger.With(slog.String("tag", "store.attachmentStore.GetUnprocessedAttachments"))
 
 	logger.DebugContext(ctx, "preparing statement")
 	span.AddEvent("preparing statement")
@@ -442,17 +465,17 @@ func (s *idxStore) UnprocessedAttachments(ctx context.Context) ([]model.Attachme
 	return attachments, nil
 }
 
-func (s *idxStore) ClaimAttachments(ctx context.Context, id ...string) error {
+func (s *attachmentStore) ClaimAttachments(ctx context.Context, id ...string) error {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.ClaimAttachments",
+		"store.attachmentStore.ClaimAttachments",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.idxStore.ClaimAttachments"),
+		slog.String("tag", "store.attachmentStore.ClaimAttachments"),
 		slog.Int("count", len(id)),
 	)
 
@@ -496,17 +519,17 @@ func (s *idxStore) ClaimAttachments(ctx context.Context, id ...string) error {
 	return nil
 }
 
-func (s *idxStore) UpdateAttachmentResult(ctx context.Context, attachment model.Attachments) error {
+func (s *attachmentStore) UpdateAttachmentResult(ctx context.Context, attachment model.Attachments) error {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.idxStore.UpdateAttachmentResult",
+		"store.attachmentStore.UpdateAttachmentResult",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.idxStore.UpdateAttachmentResult"),
+		slog.String("tag", "store.attachmentStore.UpdateAttachmentResult"),
 		slog.String("id", attachment.ID.String()),
 		slog.Bool("is_downloaded", attachment.IsDownloaded),
 	)

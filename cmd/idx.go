@@ -99,7 +99,8 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	idxStore := store.NewIDXStore(database, logger, telemetry.AppTelemetry.Tracer)
+	announcementStore := store.NewAnnouncementStore(database, logger, telemetry.AppTelemetry.Tracer)
+	attachmentStore := store.NewAttachmentStore(database, logger, telemetry.AppTelemetry.Tracer)
 
 	httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
 	idxClient := idx.NewClient(
@@ -115,7 +116,6 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		telemetry.AppTelemetry.Tracer,
 		idxClient,
 		stg,
-		idxStore,
 	)
 	attachmentPool := idx.NewAttachmentPool(
 		ctx,
@@ -123,7 +123,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		logger.With(slog.String("tag", "attachment.Pool")),
 		telemetry.AppTelemetry.Tracer,
 		attachmentWorker,
-		idxStore,
+		attachmentStore,
 	)
 	defer attachmentPool.Shutdown()
 
@@ -132,7 +132,8 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		cfg,
 		logger.With(slog.String("tag", "idx.Worker")),
 		telemetry.AppTelemetry.Tracer,
-		idxStore,
+		announcementStore,
+		attachmentStore,
 		idxClient,
 		database,
 		stg,

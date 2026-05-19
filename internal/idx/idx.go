@@ -21,14 +21,15 @@ import (
 )
 
 type IDX struct {
-	config  *config.Config
-	logger  *slog.Logger
-	ctx     context.Context
-	db      *sql.DB
-	tracer  trace.Tracer
-	client  Client
-	storage blobstorage.Storage
-	store   store.IDXStore
+	config         *config.Config
+	logger         *slog.Logger
+	ctx            context.Context
+	db             *sql.DB
+	tracer         trace.Tracer
+	client         Client
+	storage        blobstorage.Storage
+	announcementStore store.AnnouncementStore
+	attachmentStore   store.AttachmentStore
 }
 
 func NewWorkerIdx(
@@ -36,20 +37,22 @@ func NewWorkerIdx(
 	config *config.Config,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	store store.IDXStore,
+	announcementStore store.AnnouncementStore,
+	attachmentStore store.AttachmentStore,
 	client Client,
 	db *sql.DB,
 	storage blobstorage.Storage,
 ) *IDX {
 	return &IDX{
-		ctx:     ctx,
-		config:  config,
-		logger:  logger,
-		tracer:  tracer,
-		client:  client,
-		db:      db,
-		storage: storage,
-		store:   store,
+		ctx:                 ctx,
+		config:              config,
+		logger:              logger,
+		tracer:              tracer,
+		client:              client,
+		db:                  db,
+		storage:             storage,
+		announcementStore:   announcementStore,
+		attachmentStore:     attachmentStore,
 	}
 }
 
@@ -110,7 +113,7 @@ func (w *IDX) Process(ctx context.Context) error {
 	)
 	defer span.End()
 
-	latestAnnouncement, err := w.store.LatestAnnouncement(ctx)
+	latestAnnouncement, err := w.announcementStore.LatestAnnouncement(ctx)
 	if err != nil {
 		latestAnnouncement.Date = time.Time{}
 	}
@@ -168,7 +171,7 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 			idxIDs[i] = ann.ID
 		}
 
-		processedMap, err := w.store.IsProcessed(ctx, idxIDs...)
+		processedMap, err := w.announcementStore.IsProcessed(ctx, idxIDs...)
 		if err != nil {
 			logger.ErrorContext(ctx, "batch check processed", slog.Any("error", err))
 			continue
@@ -257,7 +260,7 @@ func (w *IDX) SaveAnnouncements(
 
 	logger.DebugContext(ctx, "inserting announcements")
 	span.AddEvent("inserting announcements")
-	if err := w.store.InsertAnnouncement(ctx, tx, modelAnnouncements...); err != nil {
+	if err := w.announcementStore.InsertAnnouncement(ctx, tx, modelAnnouncements...); err != nil {
 		logger.ErrorContext(ctx, "inserting announcements", slog.Any("error", err))
 		return err
 	}
@@ -266,7 +269,7 @@ func (w *IDX) SaveAnnouncements(
 
 	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
-	if err := w.store.InsertAttachment(ctx, tx, allAttachments...); err != nil {
+	if err := w.attachmentStore.InsertAttachment(ctx, tx, allAttachments...); err != nil {
 		logger.ErrorContext(ctx, "inserting attachments", slog.Any("error", err))
 		return err
 	}

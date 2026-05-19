@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/alturino/bloodhound/internal/store"
 )
 
 type AttachmentPathCleaner interface {
-	Clean(context.Context, AttachmentTask) string
+	Clean(context.Context, store.AttachmentTask) string
 }
 
 func NewAttachmentPathCleaner() AttachmentPathCleaner {
@@ -32,7 +34,7 @@ type attachmentPathCleaner struct {
 	replacer *strings.Replacer
 }
 
-func (a *attachmentPathCleaner) Clean(ctx context.Context, task AttachmentTask) string {
+func (a *attachmentPathCleaner) Clean(ctx context.Context, task store.AttachmentTask) string {
 	originalname := a.replacer.Replace(task.Attachment.OriginalFilename)
 	originalname = strings.TrimSpace(originalname)
 	originalname = filepath.Clean(originalname)

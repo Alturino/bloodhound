@@ -15,7 +15,7 @@ import (
 )
 
 type AttachmentWorker interface {
-	Work(ctx context.Context, task AttachmentTask) (AttachmentResult, error)
+	Work(ctx context.Context, task store.AttachmentTask) (AttachmentResult, error)
 }
 
 func NewAttachmentWorker(
@@ -24,7 +24,6 @@ func NewAttachmentWorker(
 	tracer trace.Tracer,
 	client Client,
 	storage blobstorage.Storage,
-	store store.IDXStore,
 ) AttachmentWorker {
 	return &attachment{
 		configMinio: configMinio,
@@ -33,7 +32,6 @@ func NewAttachmentWorker(
 		client:      client,
 		storage:     storage,
 		cleaner:     NewAttachmentPathCleaner(),
-		store:       store,
 	}
 }
 
@@ -44,10 +42,9 @@ type attachment struct {
 	client      Client
 	cleaner     AttachmentPathCleaner
 	storage     blobstorage.Storage
-	store       store.IDXStore
 }
 
-func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentResult, error) {
+func (a *attachment) Work(ctx context.Context, task store.AttachmentTask) (AttachmentResult, error) {
 	ctx, span := a.tracer.Start(
 		ctx,
 		"idx.attachment.Work",
