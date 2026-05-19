@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
-	"time"
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/trace"
@@ -56,15 +55,13 @@ func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentR
 	ctx = slogctx.Append(ctx, slog.String("filepath", filePath))
 	logger := a.logger.With(slog.String("tag", "attachment.Work"))
 
-	data, contentType, err := a.client.DownloadFile(ctx, task.Attachment.FullSavePath)
+	data, contentType, err := a.client.DownloadFile(ctx, task.Attachment.IdxURL)
 	if err != nil {
 		logger.ErrorContext(ctx, "downloading attachment", slog.Any("error", err))
-		return AttachmentResult{
-			IsDownloaded:   false,
-			ChecksumSHA256: "",
-			StoragePath:    "",
-			Err:            err,
-		}, err
+		task.Attachment.IsDownloaded = false
+		task.Attachment.IsProcessing = false
+		task.Attachment.Error = err.Error()
+		return AttachmentResult{AttachmentTask: task}, err
 	}
 
 	reader := bytes.NewReader(data)
@@ -72,21 +69,16 @@ func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentR
 	result, err := a.storage.SaveReader(ctx, filePath, reader, int64(len(data)), contentType)
 	if err != nil {
 		logger.ErrorContext(ctx, "save attachment locally", slog.Any("error", err))
-		return AttachmentResult{
-			IsDownloaded:   false,
-			ChecksumSHA256: "",
-			StoragePath:    "",
-			Err:            err,
-		}, err
+		task.Attachment.IsDownloaded = false
+		task.Attachment.IsProcessing = false
+		task.Attachment.Error = err.Error()
+		return AttachmentResult{AttachmentTask: task}, err
 	}
 	ctx = slogctx.Append(ctx, slog.Any("save_result", result))
 	logger.InfoContext(ctx, "attachment processed")
 
-	return AttachmentResult{
-		IsDownloaded:   true,
-		ChecksumSHA256: result.ChecksumSHA256,
-		StoragePath:    result.Key,
-		Err:            nil,
-		UploadedAt:     time.Now(),
-	}, nil
+	task.Attachment.IsDownloaded = true
+	task.Attachment.IsProcessing = false
+	task.Attachment.Error = ""
+	return AttachmentResult{AttachmentTask: task}, nil
 }
