@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-jet/jet/v2/qrm"
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -19,13 +20,13 @@ import (
 )
 
 type IDX struct {
-	config         *config.Config
-	logger         *slog.Logger
-	ctx            context.Context
-	db             *sql.DB
-	tracer         trace.Tracer
-	client         Client
-	storage        blobstorage.Storage
+	config            *config.Config
+	logger            *slog.Logger
+	ctx               context.Context
+	db                *sql.DB
+	tracer            trace.Tracer
+	client            Client
+	storage           blobstorage.Storage
 	announcementStore AnnouncementStore
 	attachmentStore   AttachmentStore
 }
@@ -42,15 +43,15 @@ func NewWorkerIdx(
 	storage blobstorage.Storage,
 ) *IDX {
 	return &IDX{
-		ctx:                 ctx,
-		config:              config,
-		logger:              logger,
-		tracer:              tracer,
-		client:              client,
-		db:                  db,
-		storage:             storage,
-		announcementStore:   announcementStore,
-		attachmentStore:     attachmentStore,
+		ctx:               ctx,
+		config:            config,
+		logger:            logger,
+		tracer:            tracer,
+		client:            client,
+		db:                db,
+		storage:           storage,
+		announcementStore: announcementStore,
+		attachmentStore:   attachmentStore,
 	}
 }
 
@@ -111,7 +112,7 @@ func (w *IDX) Process(ctx context.Context) error {
 	)
 	defer span.End()
 
-	latestAnnouncement, err := w.announcementStore.LatestAnnouncement(ctx)
+	latestAnnouncement, err := w.announcementStore.LatestAnnouncement(ctx, nil)
 	if err != nil {
 		latestAnnouncement.Date = time.Time{}
 	}
@@ -153,6 +154,9 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 
 	for page, curr := pageTotal, 1; page >= 0; page, curr = page-1, curr+1 {
 		ctx := slogctx.Append(ctx, slog.Int("page", page), slog.Int("processed_page", curr))
+
+		logger.DebugContext(ctx, "fetching announcements")
+		span.AddEvent("fetching announcements")
 		resp, err := w.client.FetchAnnouncements(ctx, page, since)
 		if err != nil {
 			logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
@@ -163,57 +167,112 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 			break
 		}
 		logger.DebugContext(ctx, "fetched announcements")
+		span.AddEvent("fetched announcements")
 
-		idxIDs := make([]string, len(resp.Announcements))
-		for i, ann := range resp.Announcements {
-			idxIDs[i] = ann.ID
-		}
-
-		processedMap, err := w.announcementStore.IsProcessed(ctx, idxIDs...)
-		if err != nil {
-			logger.ErrorContext(ctx, "batch check processed", slog.Any("error", err))
+		logger.DebugContext(ctx, "processing announcements page")
+		span.AddEvent("processing announcements page")
+		if err := w.processAnnouncementPage(ctx, resp.Announcements); err != nil {
+			logger.ErrorContext(ctx, "processing announcements page", slog.Any("error", err))
 			continue
 		}
-		if len(processedMap) == 0 {
-			logger.InfoContext(ctx, "no processed announcements")
-			if err := w.SaveAnnouncements(ctx, resp.Announcements); err != nil {
-				logger.ErrorContext(ctx, "save announcements", slog.Any("error", err))
-			}
-			continue
-		}
-
-		unprocessed := make([]Announcement, 0, len(resp.Announcements))
-		for _, ann := range resp.Announcements {
-			if !processedMap[ann.ID] {
-				unprocessed = append(unprocessed, ann)
-				continue
-			}
-		}
-		if logger.Enabled(ctx, slog.LevelDebug) {
-			if len(unprocessed) < 10 {
-				ctx = slogctx.Append(ctx, slog.Any("unprocessed_announcements", unprocessed))
-			}
-		}
-
-		if len(unprocessed) == 0 {
-			logger.InfoContext(ctx, "no new announcements")
-			continue
-		}
-
-		if err := w.SaveAnnouncements(ctx, unprocessed); err != nil {
-			logger.ErrorContext(ctx, "insert announcements and attachments", slog.Any("error", err))
-			continue
-		}
-		logger.DebugContext(ctx, "fetched announcements")
-
-		logger.InfoContext(ctx, "processing completed")
+		logger.InfoContext(ctx, "processed announcements page")
+		span.AddEvent("processed announcements page")
 	}
+
+	return nil
+}
+
+func (w *IDX) processAnnouncementPage(
+	ctx context.Context,
+	announcements []Announcement,
+) error {
+	ctx, span := w.tracer.Start(ctx, "idx.IDX.processAnnouncementPage")
+	defer span.End()
+
+	logger := w.logger.With(slog.String("tag", "idx.IDX.processAnnouncementPage"))
+
+	logger.DebugContext(ctx, "begin transaction")
+	span.AddEvent("begin transaction")
+	tx, err := w.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		err := fmt.Errorf("begin transaction: %w", err)
+		logger.ErrorContext(ctx, "begin transaction", slog.Any("error", err))
+		telemetry.RecordError(span, err)
+		return err
+	}
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			if !errors.Is(err, sql.ErrTxDone) {
+				logger.ErrorContext(ctx, "rollback transaction", slog.Any("error", err))
+				telemetry.RecordError(span, err)
+				return
+			}
+			logger.InfoContext(ctx, "rollback on closed tx")
+		}
+	}()
+
+	logger.DebugContext(ctx, "checking processed announcements")
+	span.AddEvent("checking processed announcements")
+	idxIDs := make([]string, len(announcements))
+	for i, ann := range announcements {
+		idxIDs[i] = ann.ID
+	}
+	processedMap, err := w.announcementStore.IsProcessed(ctx, tx, idxIDs...)
+	if err != nil {
+		logger.ErrorContext(ctx, "batch check processed", slog.Any("error", err))
+		telemetry.RecordError(span, err)
+		return err
+	}
+	if len(processedMap) == 0 {
+		logger.InfoContext(ctx, "no processed announcements")
+		if err := w.SaveAnnouncements(ctx, tx, announcements); err != nil {
+			logger.ErrorContext(ctx, "save announcements", slog.Any("error", err))
+			telemetry.RecordError(span, err)
+			return err
+		}
+	}
+
+	unprocessed := make([]Announcement, 0, len(announcements))
+	for _, ann := range announcements {
+		if !processedMap[ann.ID] {
+			unprocessed = append(unprocessed, ann)
+			continue
+		}
+	}
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		if len(unprocessed) <= 10 {
+			ctx = slogctx.Append(ctx, slog.Any("unprocessed_announcements", unprocessed))
+		}
+	}
+	if len(unprocessed) == 0 {
+		logger.InfoContext(ctx, "no new announcements")
+		return nil
+	}
+
+	logger.DebugContext(ctx, "saving announcements")
+	span.AddEvent("saving announcements")
+	if err := w.SaveAnnouncements(ctx, tx, unprocessed); err != nil {
+		logger.ErrorContext(ctx, "saving announcements", slog.Any("error", err))
+		telemetry.RecordError(span, err)
+		return err
+	}
+
+	logger.DebugContext(ctx, "committing transaction")
+	span.AddEvent("committing transaction")
+	if err := tx.Commit(); err != nil {
+		logger.ErrorContext(ctx, "committing transaction", slog.Any("error", err))
+		telemetry.RecordError(span, err)
+		return err
+	}
+	logger.DebugContext(ctx, "committed transaction")
+	span.AddEvent("committed transaction")
 
 	return nil
 }
 
 func (w *IDX) SaveAnnouncements(
 	ctx context.Context,
+	tx qrm.DB,
 	announcements []Announcement,
 ) error {
 	ctx, span := w.tracer.Start(
@@ -236,26 +295,6 @@ func (w *IDX) SaveAnnouncements(
 		allAttachments = append(allAttachments, attachments...)
 	}
 
-	logger.DebugContext(ctx, "begin transaction")
-	span.AddEvent("begin transaction")
-	tx, err := w.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		err := fmt.Errorf("begin transaction: %w", err)
-		logger.ErrorContext(ctx, "begin transaction", slog.Any("error", err))
-		telemetry.RecordError(span, err)
-		return err
-	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			if !errors.Is(err, sql.ErrTxDone) {
-				logger.ErrorContext(ctx, "rollback transaction", slog.Any("error", err))
-				telemetry.RecordError(span, err)
-				return
-			}
-			logger.InfoContext(ctx, "tx closed")
-		}
-	}()
-
 	logger.DebugContext(ctx, "inserting announcements")
 	span.AddEvent("inserting announcements")
 	if err := w.announcementStore.InsertAnnouncement(ctx, tx, modelAnnouncements...); err != nil {
@@ -273,16 +312,6 @@ func (w *IDX) SaveAnnouncements(
 	}
 	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
-
-	logger.DebugContext(ctx, "committing transaction")
-	span.AddEvent("committing transaction")
-	if err := tx.Commit(); err != nil {
-		logger.ErrorContext(ctx, "committing transaction", slog.Any("error", err))
-		telemetry.RecordError(span, err)
-		return err
-	}
-	logger.DebugContext(ctx, "committed transaction")
-	span.AddEvent("committed transaction")
 
 	logger.InfoContext(
 		ctx,
