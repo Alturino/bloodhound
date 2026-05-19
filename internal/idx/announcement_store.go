@@ -20,11 +20,11 @@ import (
 )
 
 type AnnouncementStore interface {
-	Announcement(ctx context.Context, id ...string) ([]model.Announcements, error)
-	InsertAnnouncement(ctx context.Context, tx qrm.DB, ann ...model.Announcements) error
-	LatestAnnouncement(ctx context.Context) (model.Announcements, error)
-	IsExists(ctx context.Context) (bool, error)
-	IsProcessed(ctx context.Context, idxIDs ...string) (map[string]bool, error)
+	Announcement(ctx context.Context, db qrm.DB, id ...string) ([]model.Announcements, error)
+	InsertAnnouncement(ctx context.Context, db qrm.DB, ann ...model.Announcements) error
+	LatestAnnouncement(ctx context.Context, db qrm.DB) (model.Announcements, error)
+	IsExists(ctx context.Context, db qrm.DB) (bool, error)
+	IsProcessed(ctx context.Context, db qrm.DB, idxIDs ...string) (map[string]bool, error)
 }
 
 func NewAnnouncementStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) AnnouncementStore {
@@ -40,16 +40,19 @@ type announcementStore struct {
 	tracer trace.Tracer
 }
 
-func (s *announcementStore) IsExists(ctx context.Context) (bool, error) {
+func (s *announcementStore) IsExists(ctx context.Context, db qrm.DB) (bool, error) {
+	if db == nil {
+		db = s.db
+	}
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.announcementStore.isExists",
+		"idx.announcementStore.isExists",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(attribute.String("tag", "store.announcementStore.IsExists")),
+		trace.WithAttributes(attribute.String("tag", "idx.announcementStore.IsExists")),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("tag", "store.announcementStore.IsExists"))
+	logger := s.logger.With(slog.String("tag", "idx.announcementStore.IsExists"))
 
 	logger.DebugContext(ctx, "preparing statement")
 	span.AddEvent("preparing statement")
@@ -63,7 +66,7 @@ func (s *announcementStore) IsExists(ctx context.Context) (bool, error) {
 	logger.DebugContext(ctx, "checking announcements")
 	span.AddEvent("checking announcements")
 	var isExists struct{ bool }
-	if err := isEmptyStmt.QueryContext(ctx, s.db, &isExists); err != nil {
+	if err := isEmptyStmt.QueryContext(ctx, db, &isExists); err != nil {
 		err = fmt.Errorf("checking announcements: %w", err)
 		telemetry.RecordError(span, err)
 		return false, err
@@ -75,18 +78,21 @@ func (s *announcementStore) IsExists(ctx context.Context) (bool, error) {
 	return isExists.bool, nil
 }
 
-func (s *announcementStore) LatestAnnouncement(ctx context.Context) (model.Announcements, error) {
+func (s *announcementStore) LatestAnnouncement(ctx context.Context, db qrm.DB) (model.Announcements, error) {
+	if db == nil {
+		db = s.db
+	}
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.announcementStore.LatestAnnouncement",
-		trace.WithAttributes(attribute.String("tag", "store.announcementStore.LatestAnnouncement")),
+		"idx.announcementStore.LatestAnnouncement",
+		trace.WithAttributes(attribute.String("tag", "idx.announcementStore.LatestAnnouncement")),
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
 	now := time.Now()
 	logger := s.logger.With(
-		slog.String("tag", "store.announcementStore.LatestAnnouncement"),
+		slog.String("tag", "idx.announcementStore.LatestAnnouncement"),
 		slog.Time("current_time", now),
 	)
 
@@ -104,7 +110,7 @@ func (s *announcementStore) LatestAnnouncement(ctx context.Context) (model.Annou
 	logger.DebugContext(ctx, "get latest announcement")
 	span.AddEvent("get latest announcement")
 	var ann model.Announcements
-	if err := stmt.QueryContext(ctx, s.db, &ann); err != nil {
+	if err := stmt.QueryContext(ctx, db, &ann); err != nil {
 		err = fmt.Errorf("get latest announcement: %w", err)
 		telemetry.RecordError(span, err)
 		return model.Announcements{}, err
@@ -117,18 +123,22 @@ func (s *announcementStore) LatestAnnouncement(ctx context.Context) (model.Annou
 
 func (s *announcementStore) IsProcessed(
 	ctx context.Context,
+	db qrm.DB,
 	idxIDs ...string,
 ) (map[string]bool, error) {
+	if db == nil {
+		db = s.db
+	}
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.announcementStore.IsProcessed",
+		"idx.announcementStore.IsProcessed",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.announcementStore.IsProcessed"),
+		slog.String("tag", "idx.announcementStore.IsProcessed"),
 		slog.Int("count", len(idxIDs)),
 	)
 
@@ -151,7 +161,7 @@ func (s *announcementStore) IsProcessed(
 	logger.DebugContext(ctx, "is processed")
 	span.AddEvent("is processed")
 	var announcements []model.Announcements
-	if err := stmt.QueryContext(ctx, s.db, &announcements); err != nil {
+	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
 		err = fmt.Errorf("is processed: %w", err)
 		if errors.Is(err, qrm.ErrNoRows) {
 			logger.WarnContext(ctx, "announcement not processed", slog.Any("error", err))
@@ -183,22 +193,22 @@ func (s *announcementStore) IsProcessed(
 
 func (s *announcementStore) InsertAnnouncement(
 	ctx context.Context,
-	tx qrm.DB,
+	db qrm.DB,
 	ann ...model.Announcements,
 ) error {
-	if tx == nil {
-		tx = s.db
+	if db == nil {
+		db = s.db
 	}
 	ctx, span := s.tracer.Start(
 		ctx,
-		"store.announcementStore.InsertAnnouncement",
+		"idx.announcementStore.InsertAnnouncement",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "store.announcementStore.InsertAnnouncement"),
+		slog.String("tag", "idx.announcementStore.InsertAnnouncement"),
 		slog.Int("count", len(ann)),
 	)
 
@@ -224,7 +234,7 @@ func (s *announcementStore) InsertAnnouncement(
 	logger.InfoContext(ctx, "inserting announcements")
 	span.AddEvent("inserting announcements")
 	var inserted []model.Announcements
-	if err := stmt.QueryContext(ctx, tx, &inserted); err != nil {
+	if err := stmt.QueryContext(ctx, db, &inserted); err != nil {
 		err = fmt.Errorf("inserting announcements: %w", err)
 		logger.ErrorContext(ctx, "inserting announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
@@ -241,12 +251,16 @@ func (s *announcementStore) InsertAnnouncement(
 
 func (s *announcementStore) Announcement(
 	ctx context.Context,
+	db qrm.DB,
 	id ...string,
 ) ([]model.Announcements, error) {
-	ctx, span := s.tracer.Start(ctx, "store.announcementStore.Announcement")
+	if db == nil {
+		db = s.db
+	}
+	ctx, span := s.tracer.Start(ctx, "idx.announcementStore.Announcement")
 	defer span.End()
 
-	logger := s.logger.With(slog.String("tag", "store.announcementStore.Announcement"))
+	logger := s.logger.With(slog.String("tag", "idx.announcementStore.Announcement"))
 
 	if len(id) == 0 {
 		logger.DebugContext(ctx, "id empty returning")
@@ -267,7 +281,7 @@ func (s *announcementStore) Announcement(
 	logger.DebugContext(ctx, "getting announcement")
 	span.AddEvent("getting announcement")
 	var announcements []model.Announcements
-	if err := stmt.QueryContext(ctx, s.db, &announcements); err != nil {
+	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
 		err = fmt.Errorf("getting announcement: %w", err)
 		logger.ErrorContext(ctx, "getting announcement", slog.Any("error", err))
 		telemetry.RecordError(span, err)
