@@ -16,7 +16,6 @@ import (
 	"github.com/alturino/bloodhound/internal/blobstorage"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 	"github.com/alturino/bloodhound/internal/models"
-	"github.com/alturino/bloodhound/internal/store"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -28,8 +27,8 @@ type IDX struct {
 	tracer         trace.Tracer
 	client         Client
 	storage        blobstorage.Storage
-	announcementStore store.AnnouncementStore
-	attachmentStore   store.AttachmentStore
+	announcementStore AnnouncementStore
+	attachmentStore   AttachmentStore
 }
 
 func NewWorkerIdx(
@@ -37,8 +36,8 @@ func NewWorkerIdx(
 	config *config.Config,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	announcementStore store.AnnouncementStore,
-	attachmentStore store.AttachmentStore,
+	announcementStore AnnouncementStore,
+	attachmentStore AttachmentStore,
 	client Client,
 	db *sql.DB,
 	storage blobstorage.Storage,

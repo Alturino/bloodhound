@@ -20,7 +20,6 @@ import (
 	"github.com/alturino/bloodhound/internal/httpclient"
 	"github.com/alturino/bloodhound/internal/idx"
 	"github.com/alturino/bloodhound/internal/log"
-	"github.com/alturino/bloodhound/internal/store"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -99,8 +98,8 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	announcementStore := store.NewAnnouncementStore(database, logger, telemetry.AppTelemetry.Tracer)
-	attachmentStore := store.NewAttachmentStore(database, logger, telemetry.AppTelemetry.Tracer)
+	announcementStore := idx.NewAnnouncementStore(database, logger, telemetry.AppTelemetry.Tracer)
+	attachmentStore := idx.NewAttachmentStore(database, logger, telemetry.AppTelemetry.Tracer)
 
 	httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
 	idxClient := idx.NewClient(

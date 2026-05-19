@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/alturino/bloodhound/internal/models"
-	"github.com/alturino/bloodhound/internal/store"
 )
 
 func TestAttachmentPathCleaner_Clean(t *testing.T) {
@@ -25,12 +24,12 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		task     store.AttachmentTask
+		task     AttachmentTask
 		wantPath string
 	}{
 		{
 			name: "DMND_Laporan_Bulanan",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260507132617-DU/L-039/IDX/V/2026_id-id",
 				AnnouncementTitle: "Laporan Bulanan Registrasi Pemegang Efek",
 				StockCode:         "DMND",
@@ -43,7 +42,7 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 		},
 		{
 			name: "RSCH_Bukti_Iklan",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260507132308-053/PTCH/SKLR-CORSEC/V/2026_id-id",
 				AnnouncementTitle: "Penyampaian Bukti Iklan Pemberitahuan RUPS",
 				StockCode:         "RSCH",
@@ -56,7 +55,7 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 		},
 		{
 			name: "JTPE_Pemanggilan_RUPS",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260507132157-157/JTP/ACC/CS/V/2026_id-id",
 				AnnouncementTitle: "Pemanggilan Rapat Umum Pemegang Saham Tahunan",
 				StockCode:         "JTPE",
@@ -69,7 +68,7 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 		},
 		{
 			name: "TAMA_Rencana_RUPS",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260507130905-023/LTS-CORSEC/V/2026_id-id",
 				AnnouncementTitle: "Pemberitahuan Rencana Rapat Umum Pemegang Saham Tahunan dan Luar Biasa",
 				StockCode:         "TAMA",
@@ -82,7 +81,7 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 		},
 		{
 			name: "ADES_Volatilitas",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260507120236-089/ER/LEG-SRT/AWI/V/2026_id-id",
 				AnnouncementTitle: "Penjelasan atas Volatilitas Transaksi",
 				StockCode:         "ADES",
@@ -95,7 +94,7 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 		},
 		{
 			name: "XPFT_Laporan_Unit_Penyertaan",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260507120408-07-A/XPFT/V/2026_id-id",
 				AnnouncementTitle: "Laporan Jumlah Peradaran Unit Penyertaan",
 				StockCode:         "XPFT",
@@ -108,7 +107,7 @@ func TestAttachmentPathCleaner_Clean(t *testing.T) {
 		},
 		{
 			name: "Long_Indonesian_Title_With_Colons_Semicolons",
-			task: store.AttachmentTask{
+			task: AttachmentTask{
 				AnnouncementID:    "20260508000001-001/XXX/V/2026_id-id",
 				AnnouncementTitle: "Penandatanganan: 1.\tAmandemen dan Pernyataan Kembali atas Perjanjian Investasi antara Perseroan, PT Aplikanusa Lintasarta (Lintasarta), PT Ainfrastruktur Indonesia Raya (Investor) tertanggal 6 Mei 2026 (A&R Perjanjian Investasi); 2.\tPerjanjian Jual Beli Saham Bersyarat (Conditional Sale and Purchase Agreement) antara Perseroan dan Lintasarta sebagai penjual (Para Penjual, atau masing-masing, Penjual) dan Perusahaan Baru (sebagaimana didefinisikan di bawah) sebagai pembeli (Pembeli) tertanggal 6 Mei 2026 (CSPA); dan 3.\tPerjanjian Pemegang Saham (Shareholders Agreement) antara Perseroan, Lintasarta dan Investor tertanggal 6 Mei 2026 (SHA).",
 				StockCode:         "TEST",

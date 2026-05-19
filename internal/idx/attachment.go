@@ -12,7 +12,6 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 	"github.com/alturino/bloodhound/internal/models"
-	"github.com/alturino/bloodhound/internal/store"
 )
 
 type AttachmentPool interface {
@@ -28,7 +27,7 @@ type attachmentPool struct {
 	cancel      context.CancelFunc
 	tracer      trace.Tracer
 	worker      AttachmentWorker
-	store       store.AttachmentStore
+	store       AttachmentStore
 }
 
 func NewAttachmentPool(
@@ -37,7 +36,7 @@ func NewAttachmentPool(
 	logger *slog.Logger,
 	tracer trace.Tracer,
 	worker AttachmentWorker,
-	store store.AttachmentStore,
+	store AttachmentStore,
 ) AttachmentPool {
 	workerCount := config.AttachmentWorkers
 	ctx, cancel := context.WithCancel(ctx)
@@ -163,7 +162,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, attachment model
 
 	logger := p.logger.With(slog.String("tag", "attachmentPool.processAttachment"))
 
-	task := store.AttachmentTask{
+	task := AttachmentTask{
 		AnnouncementID: attachment.IdxAnnouncementID,
 		Attachment: models.Attachment{
 			PDFFilename:      attachment.Filename,
