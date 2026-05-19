@@ -87,7 +87,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {
-		err = fmt.Errorf("initialize database %w", err)
+		err = fmt.Errorf("initialize database: %w", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
@@ -118,6 +118,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 	)
 	attachmentPool := idx.NewAttachmentPool(
 		ctx,
+		database,
 		&cfg.App.IDX.WorkerPool,
 		logger.With(slog.String("tag", "attachment.Pool")),
 		telemetry.AppTelemetry.Tracer,
