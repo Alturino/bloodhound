@@ -13,14 +13,14 @@ import (
 )
 
 type BrokerTransactions struct {
-	ID           uuid.UUID `sql:"primary_key"`
-	SummaryID    uuid.UUID
-	Symbol       string
-	InvestorType string
-	Side         string
-	BrokerCode   string
-	Frequency    int32
-	Lots         int64
-	AvgPrice     float64
-	TradeDate    time.Time
+	ID           uuid.UUID `sql:"primary_key" json:"id"`
+	SummaryID    uuid.UUID `json:"summary_id"`
+	Symbol       string    `json:"symbol"`
+	InvestorType string    `json:"investor_type"`
+	Side         string    `json:"side"`
+	BrokerCode   string    `json:"broker_code"`
+	Frequency    int32     `json:"frequency"`
+	Lots         int64     `json:"lots"`
+	AvgPrice     float64   `json:"avg_price"`
+	TradeDate    time.Time `json:"trade_date"`
 }

@@ -13,15 +13,18 @@ import (
 )
 
 type Attachments struct {
-	ID                uuid.UUID `sql:"primary_key"`
-	IdxAnnouncementID string
-	IdxURL            string
-	Error             string
-	OriginalFilename  string
-	Filename          string
-	Checksum          string
-	StoragePath       string
-	IsDownloaded      bool
-	IsProcessing      bool
-	UploadedAt        time.Time
+	ID                uuid.UUID `sql:"primary_key" json:"id"`
+	IdxAnnouncementID string    `json:"idx_announcement_id"`
+	IdxURL            string    `json:"idx_url"`
+	Error             string    `json:"error"`
+	OriginalFilename  string    `json:"original_filename"`
+	Filename          string    `json:"filename"`
+	Checksum          string    `json:"checksum"`
+	StoragePath       string    `json:"storage_path"`
+	Title             string    `json:"title"`
+	StockCode         string    `json:"stock_code"`
+	IsDownloaded      bool      `json:"is_downloaded"`
+	IsProcessing      bool      `json:"is_processing"`
+	Date              time.Time `json:"date"`
+	UploadedAt        time.Time `json:"uploaded_at"`
 }
