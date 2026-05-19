@@ -131,10 +131,12 @@ func (c *client) FetchAnnouncements(
 	}
 	result := convertToModel(rawResp)
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(
-			slog.Any("fetched_announcements", result),
-			slog.String("http_dump", resp.Dump()),
-		)
+		if len(result.Announcements) <= 10 {
+			logger = logger.With(
+				slog.Any("fetched_announcements", result),
+				slog.String("http_dump", resp.Dump()),
+			)
+		}
 	}
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")

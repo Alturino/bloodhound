@@ -65,22 +65,22 @@ type Attachment struct {
 	OriginalFilename string `json:"original_filename"` // OriginalFilename
 }
 
-func (a Attachment) ToAttachments(announcementID string) model.Attachments {
+func (a Attachment) ToAttachments(ann model.Announcements) model.Attachments {
 	return model.Attachments{
-		IdxAnnouncementID: announcementID,
+		IdxAnnouncementID: ann.IdxID,
 		IdxURL:            a.FullSavePath,
 		OriginalFilename:  a.OriginalFilename,
 		Filename:          a.PDFFilename,
-		IsDownloaded:      false,
-		IsProcessing:      false,
-		Error:             "",
+		Title:             ann.Title,
+		StockCode:         ann.StockCode,
+		Date:              ann.Date,
 	}
 }
 
 func (a Announcement) ToAttachments() []model.Attachments {
 	attachments := make([]model.Attachments, len(a.Attachments))
 	for i, att := range a.Attachments {
-		attachments[i] = att.ToAttachments(a.ID)
+		attachments[i] = att.ToAttachments(a.ToAnnouncement())
 	}
 	return attachments
 }
