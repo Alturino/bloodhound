@@ -1,4 +1,4 @@
-package models
+package idx
 
 import (
 	"log/slog"
@@ -7,14 +7,12 @@ import (
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 )
 
-// AnnouncementResponse is the top-level API response from IDX
 type AnnouncementResponse struct {
 	ResultCount   int            `json:"result_count"`
 	SearchParams  SearchParams   `json:"search_params"`
 	Announcements []Announcement `json:"replies"`
 }
 
-// SearchParams contains the search parameters used in the API request
 type SearchParams struct {
 	DateFrom   string `json:"date_from"`
 	DateTo     string `json:"date_to"`
@@ -28,7 +26,6 @@ type SearchParams struct {
 	PageSize   int    `json:"page_size"`
 }
 
-// Announcement contains announcement details
 type Announcement struct {
 	ID                string       `json:"id"`
 	AnnouncementTitle string       `json:"announcement_title"` // JudulPengumuman
@@ -62,7 +59,6 @@ func (a Announcement) LogValue() slog.Value {
 	)
 }
 
-// Attachment contains PDF attachment details
 type Attachment struct {
 	PDFFilename      string `json:"pdf_filename"`      // PDFFilename
 	FullSavePath     string `json:"full_save_path"`    // FullSavePath - URL to download

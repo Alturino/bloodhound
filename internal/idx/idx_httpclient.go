@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -24,7 +23,7 @@ type Client interface {
 		ctx context.Context,
 		page int,
 		dateFrom time.Time,
-	) (models.AnnouncementResponse, error)
+	) (AnnouncementResponse, error)
 	DownloadFile(ctx context.Context, url string) ([]byte, string, error)
 }
 
@@ -76,7 +75,7 @@ func (c *client) FetchAnnouncements(
 	ctx context.Context,
 	page int,
 	dateFrom time.Time,
-) (models.AnnouncementResponse, error) {
+) (AnnouncementResponse, error) {
 	now := time.Now()
 	ctx, span := c.tracer.Start(
 		ctx,
@@ -98,7 +97,7 @@ func (c *client) FetchAnnouncements(
 			err = fmt.Errorf("parsing default date: %w", err)
 			telemetry.RecordError(span, err)
 			logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
-			return models.AnnouncementResponse{}, err
+			return AnnouncementResponse{}, err
 		}
 		dateFrom = dt
 	}
@@ -121,14 +120,14 @@ func (c *client) FetchAnnouncements(
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
-		return models.AnnouncementResponse{}, err
+		return AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
 		err = fmt.Errorf("unexpected status_code=%d", resp.StatusCode)
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
-		return models.AnnouncementResponse{}, err
+		return AnnouncementResponse{}, err
 	}
 	result := convertToModel(rawResp)
 	if logger.Enabled(ctx, slog.LevelDebug) {
@@ -185,10 +184,10 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 	return data, contentType, nil
 }
 
-func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
-	result := models.AnnouncementResponse{
+func convertToModel(raw rawAnnouncementResponse) AnnouncementResponse {
+	result := AnnouncementResponse{
 		ResultCount: raw.ResultCount,
-		SearchParams: models.SearchParams{
+		SearchParams: SearchParams{
 			DateFrom:   raw.SearchParams.DateFrom,
 			DateTo:     raw.SearchParams.DateTo,
 			Query:      raw.SearchParams.Query,
@@ -200,14 +199,14 @@ func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
 			IndexFrom:  raw.SearchParams.IndexFrom,
 			PageSize:   raw.SearchParams.PageSize,
 		},
-		Announcements: make([]models.Announcement, 0, len(raw.Replies)),
+		Announcements: make([]Announcement, 0, len(raw.Replies)),
 	}
 
 	for _, r := range raw.Replies {
 		stockcode := r.Pengumuman.KodeEmiten
 		stockcode = strings.ReplaceAll(stockcode, " ", "")
 		stockcode = strings.ReplaceAll(stockcode, "//", "")
-		announcement := models.Announcement{
+		announcement := Announcement{
 			ID:                r.Pengumuman.Id2,
 			Date:              r.Pengumuman.TglPengumuman.Time(),
 			AnnouncementTitle: r.Pengumuman.JudulPengumuman,
@@ -215,13 +214,13 @@ func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
 			StockCode:         stockcode,
 			CreatedDate:       r.Pengumuman.CreatedDate.Time(),
 			IsStock:           r.Pengumuman.EfekEmiten_Saham,
-			Attachments:       make([]models.Attachment, len(r.Attachments)),
+			Attachments:       make([]Attachment, len(r.Attachments)),
 		}
 
 		var wg sync.WaitGroup
 		for i, attachment := range r.Attachments {
 			wg.Go(func() {
-				announcement.Attachments[i] = models.Attachment{
+				announcement.Attachments[i] = Attachment{
 					PDFFilename:      attachment.PDFFilename,
 					FullSavePath:     attachment.FullSavePath,
 					OriginalFilename: attachment.OriginalFilename,

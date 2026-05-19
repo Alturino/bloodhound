@@ -15,7 +15,6 @@ import (
 
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 	. "github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/table"
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -35,7 +34,7 @@ type AttachmentStoreTask struct {
 	Checksum          string
 	Path              string
 	Err               string
-	Attachment        models.Attachment
+	Attachment        Attachment
 }
 
 func NewAttachmentStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) AttachmentStore {
@@ -251,7 +250,10 @@ func (s *attachmentStore) ClaimAttachments(ctx context.Context, id ...string) er
 	return nil
 }
 
-func (s *attachmentStore) UpdateAttachmentResult(ctx context.Context, attachment model.Attachments) error {
+func (s *attachmentStore) UpdateAttachmentResult(
+	ctx context.Context,
+	attachment model.Attachments,
+) error {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"store.attachmentStore.UpdateAttachmentResult",

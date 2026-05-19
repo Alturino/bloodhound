@@ -115,7 +115,10 @@ func (s *announcementStore) LatestAnnouncement(ctx context.Context) (model.Annou
 	return ann, nil
 }
 
-func (s *announcementStore) IsProcessed(ctx context.Context, idxIDs ...string) (map[string]bool, error) {
+func (s *announcementStore) IsProcessed(
+	ctx context.Context,
+	idxIDs ...string,
+) (map[string]bool, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"store.announcementStore.IsProcessed",
@@ -236,7 +239,10 @@ func (s *announcementStore) InsertAnnouncement(
 	return nil
 }
 
-func (s *announcementStore) Announcement(ctx context.Context, id ...string) ([]model.Announcements, error) {
+func (s *announcementStore) Announcement(
+	ctx context.Context,
+	id ...string,
+) ([]model.Announcements, error) {
 	ctx, span := s.tracer.Start(ctx, "store.announcementStore.Announcement")
 	defer span.End()
 

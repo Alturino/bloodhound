@@ -15,7 +15,6 @@ import (
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/blobstorage"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -183,7 +182,7 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 			continue
 		}
 
-		unprocessed := make([]models.Announcement, 0, len(resp.Announcements))
+		unprocessed := make([]Announcement, 0, len(resp.Announcements))
 		for _, ann := range resp.Announcements {
 			if !processedMap[ann.ID] {
 				unprocessed = append(unprocessed, ann)
@@ -215,7 +214,7 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 
 func (w *IDX) SaveAnnouncements(
 	ctx context.Context,
-	announcements []models.Announcement,
+	announcements []Announcement,
 ) error {
 	ctx, span := w.tracer.Start(
 		ctx, "idx.IDX.SaveAnnouncements",

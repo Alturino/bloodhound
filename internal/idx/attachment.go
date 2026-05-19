@@ -11,7 +11,6 @@ import (
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
-	"github.com/alturino/bloodhound/internal/models"
 )
 
 type AttachmentPool interface {
@@ -164,7 +163,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, attachment model
 
 	task := AttachmentTask{
 		AnnouncementID: attachment.IdxAnnouncementID,
-		Attachment: models.Attachment{
+		Attachment: Attachment{
 			PDFFilename:      attachment.Filename,
 			FullSavePath:     attachment.IdxURL,
 			OriginalFilename: attachment.OriginalFilename,
