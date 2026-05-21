@@ -3,7 +3,6 @@ package idx
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
 type AttachmentPool interface {
@@ -21,7 +19,7 @@ type AttachmentPool interface {
 }
 
 type attachmentPool struct {
-	config      *config.WorkerPoolConfig
+	config      *config.WorkerPool
 	db          *sql.DB
 	logger      *slog.Logger
 	taskChan    chan AttachmentTask
@@ -36,7 +34,7 @@ type attachmentPool struct {
 func NewAttachmentPool(
 	ctx context.Context,
 	db *sql.DB,
-	config *config.WorkerPoolConfig,
+	config *config.WorkerPool,
 	logger *slog.Logger,
 	tracer trace.Tracer,
 	worker AttachmentWorker,
@@ -103,30 +101,11 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 
 	logger := p.logger.With(slog.String("tag", "attachmentPool.pollAndSubmit"))
 
-	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
+	attachments, err := p.store.UnprocessedAttachments(ctx)
 	if err != nil {
-		logger.ErrorContext(ctx, "begin transaction", slog.Any("error", err))
 		return
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			if !errors.Is(err, sql.ErrTxDone) {
-				logger.ErrorContext(ctx, "rollback tx", slog.Any("error", err))
-				telemetry.RecordError(span, err)
-				return
-			}
-			logger.WarnContext(ctx, "rollback", slog.Any("error", err))
-			return
-		}
-		logger.InfoContext(ctx, "rollback tx")
-	}()
-
-	attachments, err := p.store.UnprocessedAttachments(ctx, tx)
-	if err != nil {
-		logger.ErrorContext(ctx, "get unprocessed attachments", slog.Any("error", err))
-		return
-	}
-
+	ctx = slogctx.Append(ctx, slog.Int("unprocessed_attachments_count", len(attachments)))
 	if len(attachments) == 0 {
 		logger.InfoContext(ctx, "no unprocessed attachments")
 		return
@@ -137,14 +116,7 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 		ids[i] = att.ID
 	}
 
-	if err := p.store.ClaimAttachments(ctx, tx, ids...); err != nil {
-		logger.ErrorContext(ctx, "claim attachments", slog.Any("error", err))
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		logger.ErrorContext(ctx, "committing transaction")
-		telemetry.RecordError(span, err)
+	if err := p.store.ClaimAttachments(ctx, ids...); err != nil {
 		return
 	}
 
@@ -204,14 +176,14 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 	result, err := p.worker.Work(ctx, task)
 	if err != nil {
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
-		if err := p.store.UpdateAttachmentResult(ctx, nil, result.Attachment); err != nil {
+		if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 			logger.ErrorContext(ctx, "update attachment", slog.Any("error", err))
 			return
 		}
 		return
 	}
 
-	if err := p.store.UpdateAttachmentResult(ctx, nil, result.Attachment); err != nil {
+	if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
 	}

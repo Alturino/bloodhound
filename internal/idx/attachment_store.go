@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -22,9 +23,9 @@ import (
 type AttachmentStore interface {
 	InsertAttachment(ctx context.Context, db qrm.DB, attachments ...model.Attachments) error
 	Attachment(ctx context.Context, db qrm.DB, id ...uuid.UUID) (model.Attachments, error)
-	UnprocessedAttachments(ctx context.Context, db qrm.DB) ([]model.Attachments, error)
-	ClaimAttachments(ctx context.Context, db qrm.DB, id ...uuid.UUID) error
-	UpdateAttachmentResult(ctx context.Context, db qrm.DB, attachment model.Attachments) error
+	UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error)
+	ClaimAttachments(ctx context.Context, id ...uuid.UUID) error
+	UpdateAttachmentResult(ctx context.Context, attachment model.Attachments) error
 }
 
 type AttachmentStoreTask struct {
@@ -100,7 +101,12 @@ func (s *attachmentStore) InsertAttachment(
 		return err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("inserted_attachents", attachments))
+		if len(attachments) >= 2 {
+			ctx = slogctx.Append(
+				ctx,
+				slog.Any("inserted_attachents", slices.Clone(attachments[:2])),
+			)
+		}
 	}
 	logger.InfoContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
@@ -162,13 +168,7 @@ func (s *attachmentStore) Attachment(
 	return attachment, nil
 }
 
-func (s *attachmentStore) UnprocessedAttachments(
-	ctx context.Context,
-	db qrm.DB,
-) ([]model.Attachments, error) {
-	if db == nil {
-		db = s.db
-	}
+func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"idx.attachmentStore.GetUnprocessedAttachments",
@@ -187,7 +187,7 @@ func (s *attachmentStore) UnprocessedAttachments(
 			Attachments.IsDownloaded.IS_FALSE().
 				AND(Attachments.IsProcessing.IS_FALSE()).
 				AND(Attachments.Error.EQ(String(""))),
-		)
+		).LIMIT(5000) // limiting to 50k postgres only supports 16bit(65535) parameters
 	// if logger.Enabled(ctx, slog.LevelDebug) {
 	// 	ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
 	// }
@@ -197,8 +197,12 @@ func (s *attachmentStore) UnprocessedAttachments(
 	logger.DebugContext(ctx, "getting unprocessed attachments")
 	span.AddEvent("getting unprocessed attachments")
 	var attachments []model.Attachments
-	if err := stmt.QueryContext(ctx, db, &attachments); err != nil {
+	if err := stmt.QueryContext(ctx, s.db, &attachments); err != nil {
 		err = fmt.Errorf("getting unprocessed attachments: %w", err)
+		if errors.Is(err, qrm.ErrNoRows) {
+			logger.WarnContext(ctx, "no unprocessed attachments")
+			return nil, err
+		}
 		logger.ErrorContext(ctx, "getting unprocessed attachments", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return nil, err
@@ -212,10 +216,7 @@ func (s *attachmentStore) UnprocessedAttachments(
 	return attachments, nil
 }
 
-func (s *attachmentStore) ClaimAttachments(ctx context.Context, db qrm.DB, id ...uuid.UUID) error {
-	if db == nil {
-		db = s.db
-	}
+func (s *attachmentStore) ClaimAttachments(ctx context.Context, id ...uuid.UUID) error {
 	ctx, span := s.tracer.Start(
 		ctx,
 		"idx.attachmentStore.ClaimAttachments",
@@ -258,17 +259,22 @@ func (s *attachmentStore) ClaimAttachments(ctx context.Context, db qrm.DB, id ..
 
 	logger.DebugContext(ctx, "claiming attachments")
 	span.AddEvent("claiming attachments")
-	var claimAttachments []model.Attachments
-	if err := stmt.QueryContext(ctx, db, &claimAttachments); err != nil {
+	var attachments []model.Attachments
+	if err := stmt.QueryContext(ctx, s.db, &attachments); err != nil {
 		err = fmt.Errorf("claiming attachments: %w", err)
 		logger.ErrorContext(ctx, "claiming attachments", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("claimed_attachments", claimAttachments))
+		if len(attachments) >= 2 {
+			ctx = slogctx.Append(
+				ctx,
+				slog.Any("claimed_attachments", slices.Clone(attachments[:2])),
+			)
+		}
 	}
-	logger.InfoContext(ctx, "claimed attachments", slog.Int("claimed", len(claimAttachments)))
+	logger.InfoContext(ctx, "claimed attachments", slog.Int("claimed", len(attachments)))
 	span.AddEvent("claimed attachments")
 
 	return nil
@@ -276,12 +282,8 @@ func (s *attachmentStore) ClaimAttachments(ctx context.Context, db qrm.DB, id ..
 
 func (s *attachmentStore) UpdateAttachmentResult(
 	ctx context.Context,
-	db qrm.DB,
 	attachment model.Attachments,
 ) error {
-	if db == nil {
-		db = s.db
-	}
 	ctx, span := s.tracer.Start(
 		ctx,
 		"idx.attachmentStore.UpdateAttachmentResult",
@@ -317,14 +319,16 @@ func (s *attachmentStore) UpdateAttachmentResult(
 	logger.DebugContext(ctx, "updating attachment result")
 	span.AddEvent("updating attachment result")
 	var updated []model.Attachments
-	if err := stmt.QueryContext(ctx, db, &updated); err != nil {
+	if err := stmt.QueryContext(ctx, s.db, &updated); err != nil {
 		err = fmt.Errorf("updating attachment result: %w", err)
 		logger.ErrorContext(ctx, "updating attachment result", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("updated_attachments", updated))
+		if len(updated) >= 2 {
+			ctx = slogctx.Append(ctx, slog.Any("updated_attachments", slices.Clone(updated[:2])))
+		}
 	}
 	logger.InfoContext(ctx, "updated attachment result")
 	span.AddEvent("updated attachment result")
