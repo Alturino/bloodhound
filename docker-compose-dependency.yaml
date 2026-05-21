@@ -2,7 +2,7 @@
 services:
   postgres:
     image: postgres:18.3-trixie
-    restart: always
+    restart: on-failure
     environment:
       TZ: "Asia/Jakarta"
       PGTZ: "Asia/Jakarta"
@@ -20,7 +20,7 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.16.0
+    image: prometheuscommunity/postgres-exporter:v0.19.0
     env_file:
       - .env
     environment:

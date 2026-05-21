@@ -138,6 +138,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		database,
 		stg,
 	)
+	defer idxWorker.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {

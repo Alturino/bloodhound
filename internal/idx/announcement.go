@@ -55,7 +55,6 @@ func (a Announcement) LogValue() slog.Value {
 		slog.Bool("is_stock", a.IsStock),
 		slog.Time("date", a.Date),
 		slog.Time("created_date", a.CreatedDate),
-		slog.Any("attachments", a.Attachments),
 	)
 }
 
