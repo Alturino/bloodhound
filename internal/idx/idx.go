@@ -4,31 +4,34 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"time"
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/blobstorage"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
-	"github.com/alturino/bloodhound/internal/models"
-	"github.com/alturino/bloodhound/internal/store"
-	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
 type IDX struct {
-	config  *config.Config
-	logger  *slog.Logger
-	ctx     context.Context
-	db      *sql.DB
-	tracer  trace.Tracer
-	client  Client
-	storage blobstorage.Storage
-	store   store.IDXStore
+	config            *config.Config
+	logger            *slog.Logger
+	ctx               context.Context
+	cancel            context.CancelFunc
+	db                *sql.DB
+	tracer            trace.Tracer
+	client            Client
+	pageCh            chan Page
+	sem               *semaphore.Weighted
+	storage           blobstorage.Storage
+	announcementStore AnnouncementStore
+	attachmentStore   AttachmentStore
 }
 
 func NewWorkerIdx(
@@ -36,53 +39,52 @@ func NewWorkerIdx(
 	config *config.Config,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	store store.IDXStore,
+	announcementStore AnnouncementStore,
+	attachmentStore AttachmentStore,
 	client Client,
 	db *sql.DB,
 	storage blobstorage.Storage,
 ) *IDX {
-	return &IDX{
-		ctx:     ctx,
-		config:  config,
-		logger:  logger,
-		tracer:  tracer,
-		client:  client,
-		db:      db,
-		storage: storage,
-		store:   store,
+	ctx, cancel := context.WithCancel(ctx)
+	idx := &IDX{
+		ctx:    ctx,
+		cancel: cancel,
+		config: config,
+		logger: logger,
+		tracer: tracer,
+		client: client,
+		pageCh: make(chan Page, config.App.IDX.WorkerPool.AnnouncementWorkers*10),
+		sem: semaphore.NewWeighted(
+			int64(config.App.IDX.WorkerPool.AnnouncementWorkers),
+		),
+		db:                db,
+		storage:           storage,
+		announcementStore: announcementStore,
+		attachmentStore:   attachmentStore,
 	}
+	idx.Start()
+	return idx
 }
 
 func (w *IDX) Start() {
 	logger := w.logger.With(slog.String("tag", "idx.IDX.Start"))
 
 	logger.DebugContext(w.ctx, "seeding")
-	if err := w.Process(w.ctx); err != nil {
+	if err := w.process(w.ctx); err != nil {
 		logger.WarnContext(w.ctx, "seeding", slog.Any("error", err))
 	}
 	logger.DebugContext(w.ctx, "done seeding")
 
-	tick := time.Tick(w.config.Scheduler.Interval)
 	logger.DebugContext(w.ctx, "started scheduler work")
-	for {
-		select {
-		case <-w.ctx.Done():
-			err := w.ctx.Err()
-			logger.InfoContext(w.ctx, "received context done, stopping", slog.Any("error", err))
-			return
-		case t := <-tick:
-			logger.InfoContext(w.ctx, "executing", slog.Time("executed_at", t))
-			w.looper(w.ctx, w.Process)
-		}
+	for i := range w.config.App.IDX.WorkerPool.AnnouncementWorkers {
+		go w.worker(i)
 	}
+	w.schedule(w.ctx, w.process)
 }
 
-func (w *IDX) looper(ctx context.Context, run func(ctx context.Context) error) {
+func (w *IDX) schedule(ctx context.Context, onTick func(ctx context.Context) error) {
 	interval := w.config.Scheduler.Interval
-	logger := w.logger.With(
-		slog.String("tag", "idx.IDX.looper"),
-		slog.Duration("interval", interval),
-	)
+	logger := w.logger.With(slog.String("tag", "idx.IDX.tick"))
 	ticker := time.Tick(interval)
 	for {
 		select {
@@ -90,10 +92,10 @@ func (w *IDX) looper(ctx context.Context, run func(ctx context.Context) error) {
 			logger.InfoContext(ctx, "received context done, stopping", slog.Any("error", ctx.Err()))
 			return
 		case t := <-ticker:
-			logger := logger.With(slog.Time("executed_at", t))
-			logger.DebugContext(ctx, "excuting")
-			if err := run(ctx); err != nil {
-				logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+			ctx := slogctx.Append(ctx, slog.Time("executed_at", t))
+			logger.DebugContext(ctx, "executing")
+			if err := onTick(ctx); err != nil {
+				logger.ErrorContext(ctx, "scheduler executing", slog.Any("error", err))
 				continue
 			}
 			logger.InfoContext(ctx, "executed")
@@ -101,7 +103,7 @@ func (w *IDX) looper(ctx context.Context, run func(ctx context.Context) error) {
 	}
 }
 
-func (w *IDX) Process(ctx context.Context) error {
+func (w *IDX) process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
 		"idx.IDX.Process",
@@ -110,7 +112,7 @@ func (w *IDX) Process(ctx context.Context) error {
 	)
 	defer span.End()
 
-	latestAnnouncement, err := w.store.LatestAnnouncement(ctx)
+	latestAnnouncement, err := w.announcementStore.LatestAnnouncement(ctx, nil)
 	if err != nil {
 		latestAnnouncement.Date = time.Time{}
 	}
@@ -150,71 +152,164 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 		attribute.Int("page_size", pageSize),
 	)
 
-	for page, curr := pageTotal, 1; page >= 0; page, curr = page-1, curr+1 {
-		ctx := slogctx.Append(ctx, slog.Int("page", page), slog.Int("processed_page", curr))
-		resp, err := w.client.FetchAnnouncements(ctx, page, since)
-		if err != nil {
-			logger.ErrorContext(ctx, "fetch announcements", slog.Any("error", err))
-			continue
-		}
-		if resp.ResultCount == 0 || len(resp.Announcements) == 0 {
-			logger.InfoContext(ctx, "page empty, stopping")
-			break
-		}
-		logger.DebugContext(ctx, "fetched announcements")
+	if pageTotal < 0 {
+		logger.InfoContext(ctx, "no pages to process")
+		span.AddEvent("no pages to process")
+		return nil
+	}
 
-		idxIDs := make([]string, len(resp.Announcements))
-		for i, ann := range resp.Announcements {
-			idxIDs[i] = ann.ID
+	for curr := pageTotal - 1; curr >= 0; curr-- {
+		ctx := slogctx.Append(ctx, slog.Int("page_idx", curr))
+		select {
+		case <-ctx.Done():
+			logger.InfoContext(ctx, "context done, stop sending page", slog.Any("error", ctx.Err()))
+			return nil
+		default:
+			logger.DebugContext(ctx, "fetching announcements")
+			span.AddEvent("fetching announcements")
+			go func(ctx context.Context, curr, pageTotal int, since time.Time, resp AnnouncementResponse) {
+				if err := w.getAndSubmitPage(ctx, curr, pageTotal, since, resp); err != nil {
+					return
+				}
+			}(
+				ctx,
+				curr,
+				pageTotal,
+				since,
+				resp,
+			)
 		}
-
-		processedMap, err := w.store.IsProcessed(ctx, idxIDs...)
-		if err != nil {
-			logger.ErrorContext(ctx, "batch check processed", slog.Any("error", err))
-			continue
-		}
-		if len(processedMap) == 0 {
-			logger.InfoContext(ctx, "no processed announcements")
-			if err := w.SaveAnnouncements(ctx, resp.Announcements); err != nil {
-				logger.ErrorContext(ctx, "save announcements", slog.Any("error", err))
-			}
-			continue
-		}
-
-		unprocessed := make([]models.Announcement, 0, len(resp.Announcements))
-		for _, ann := range resp.Announcements {
-			if !processedMap[ann.ID] {
-				unprocessed = append(unprocessed, ann)
-				continue
-			}
-		}
-		if logger.Enabled(ctx, slog.LevelDebug) {
-			if len(unprocessed) < 10 {
-				ctx = slogctx.Append(ctx, slog.Any("unprocessed_announcements", unprocessed))
-			}
-		}
-
-		if len(unprocessed) == 0 {
-			logger.InfoContext(ctx, "no new announcements")
-			continue
-		}
-
-		if err := w.SaveAnnouncements(ctx, unprocessed); err != nil {
-			logger.ErrorContext(ctx, "insert announcements and attachments", slog.Any("error", err))
-			continue
-		}
-		logger.DebugContext(ctx, "fetched announcements")
-
-		logger.InfoContext(ctx, "processing completed")
 	}
 
 	return nil
 }
 
-func (w *IDX) SaveAnnouncements(
+func (w *IDX) getAndSubmitPage(
 	ctx context.Context,
-	announcements []models.Announcement,
+	curr, pageTotal int,
+	since time.Time,
+	resp AnnouncementResponse,
 ) error {
+	ctx, span := w.tracer.Start(
+		ctx,
+		"idx.IDX.fetchAndSubmitPage",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(),
+	)
+	defer span.End()
+
+	logger := w.logger.With(slog.String("tag", "idx.IDX.fetchAndSubmitPage"))
+
+	if err := w.sem.Acquire(ctx, 1); err != nil {
+		logger.ErrorContext(ctx, "acquire semaphore", slog.Any("error", err))
+		return err
+	}
+	defer w.sem.Release(1)
+
+	resp, err := w.client.FetchAnnouncements(ctx, curr, since)
+	if err != nil {
+		return err
+	}
+	page := Page{
+		Ctx:           ctx,
+		Index:         curr,
+		Total:         pageTotal,
+		Params:        resp.SearchParams,
+		Announcements: resp.Announcements,
+	}
+	ctx = slogctx.Append(ctx, slog.Any("page", page))
+	logger.InfoContext(ctx, "fetched announcements")
+
+	logger.DebugContext(ctx, "sending page")
+	w.pageCh <- page
+	logger.InfoContext(ctx, "sent page")
+	return nil
+}
+
+func (w *IDX) worker(id int) {
+	logger := w.logger.With(slog.String("tag", "idx.IDX.worker"), slog.Int("worker_id", id))
+	for {
+		select {
+		case <-w.ctx.Done():
+			logger.InfoContext(w.ctx, "context done, stopping worker")
+			return
+		case page, ok := <-w.pageCh:
+			ctx := slogctx.Append(page.Ctx, slog.Int("worker_id", id), slog.Any("page", page))
+			logger.DebugContext(ctx, "received page")
+			if !ok {
+				logger.InfoContext(ctx, "channel closed, stopping worker")
+				return
+			}
+			logger.InfoContext(ctx, "processing page")
+			if err := w.processPage(ctx, page.Announcements); err != nil {
+				logger.ErrorContext(ctx, "processing page", slog.Any("error", err))
+				continue
+			}
+			logger.InfoContext(ctx, "processed page")
+		}
+	}
+}
+
+func (w *IDX) processPage(ctx context.Context, announcements []Announcement) error {
+	ctx, span := w.tracer.Start(ctx, "idx.IDX.processAnnouncementPage")
+	defer span.End()
+
+	logger := w.logger.With(slog.String("tag", "idx.IDX.processAnnouncementPage"))
+
+	if len(announcements) == 0 {
+		return errors.New("no announcements to process")
+	}
+
+	logger.DebugContext(ctx, "checking processed announcements")
+	span.AddEvent("checking processed announcements")
+	idxIDs := make([]string, len(announcements))
+	for i, ann := range announcements {
+		idxIDs[i] = ann.ID
+	}
+	processedMap, err := w.announcementStore.IsProcessed(ctx, w.db, idxIDs...)
+	if err != nil {
+		return err
+	}
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		keys := slices.Collect(maps.Keys(processedMap))
+		if len(keys) >= 2 {
+			ctx = slogctx.Append(ctx, slog.Any("processed_id", slices.Clone(keys[:2])))
+		}
+	}
+	if len(processedMap) == 0 {
+		logger.InfoContext(ctx, "no processed announcements")
+		if err := w.saveAnnouncements(ctx, announcements); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	unprocessed := make([]Announcement, 0, len(announcements))
+	for _, ann := range announcements {
+		if !processedMap[ann.ID] {
+			unprocessed = append(unprocessed, ann)
+			continue
+		}
+	}
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		up := slices.Clone(unprocessed[:5])
+		ctx = slogctx.Append(ctx, slog.Any("unprocessed_announcements", up))
+	}
+	if len(unprocessed) == 0 {
+		logger.InfoContext(ctx, "no new announcements")
+		return nil
+	}
+
+	logger.DebugContext(ctx, "saving announcements")
+	span.AddEvent("saving announcements")
+	if err := w.saveAnnouncements(ctx, unprocessed); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcement) error {
 	ctx, span := w.tracer.Start(
 		ctx, "idx.IDX.SaveAnnouncements",
 		trace.WithSpanKind(trace.SpanKindInternal),
@@ -223,7 +318,7 @@ func (w *IDX) SaveAnnouncements(
 	defer span.End()
 
 	logger := w.logger.With(
-		slog.String("tag", "idx.IDX.SaveAnnouncements"),
+		slog.String("tag", "idx.IDX.saveAnnouncements"),
 		slog.Int("announcements_count", len(announcements)),
 	)
 
@@ -235,30 +330,9 @@ func (w *IDX) SaveAnnouncements(
 		allAttachments = append(allAttachments, attachments...)
 	}
 
-	logger.DebugContext(ctx, "begin transaction")
-	span.AddEvent("begin transaction")
-	tx, err := w.db.BeginTx(ctx, &sql.TxOptions{})
-	if err != nil {
-		err := fmt.Errorf("begin transaction: %w", err)
-		logger.ErrorContext(ctx, "begin transaction", slog.Any("error", err))
-		telemetry.RecordError(span, err)
-		return err
-	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			if !errors.Is(err, sql.ErrTxDone) {
-				logger.ErrorContext(ctx, "rollback transaction", slog.Any("error", err))
-				telemetry.RecordError(span, err)
-				return
-			}
-			logger.InfoContext(ctx, "tx closed")
-		}
-	}()
-
 	logger.DebugContext(ctx, "inserting announcements")
 	span.AddEvent("inserting announcements")
-	if err := w.store.InsertAnnouncement(ctx, tx, modelAnnouncements...); err != nil {
-		logger.ErrorContext(ctx, "inserting announcements", slog.Any("error", err))
+	if err := w.announcementStore.InsertAnnouncement(ctx, w.db, modelAnnouncements...); err != nil {
 		return err
 	}
 	logger.DebugContext(ctx, "inserted announcements")
@@ -266,29 +340,30 @@ func (w *IDX) SaveAnnouncements(
 
 	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
-	if err := w.store.InsertAttachment(ctx, tx, allAttachments...); err != nil {
-		logger.ErrorContext(ctx, "inserting attachments", slog.Any("error", err))
-		return err
+	errs := make([]error, 0, len(announcements))
+	for attachmentChunks := range slices.Chunk(allAttachments, 500) {
+		if len(attachmentChunks) == 0 {
+			break
+		}
+		if err := w.attachmentStore.InsertAttachment(ctx, w.db, attachmentChunks...); err != nil {
+			errs = append(errs, err)
+			continue
+		}
 	}
 	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
 
-	logger.DebugContext(ctx, "committing transaction")
-	span.AddEvent("committing transaction")
-	if err := tx.Commit(); err != nil {
-		logger.ErrorContext(ctx, "committing transaction", slog.Any("error", err))
-		telemetry.RecordError(span, err)
-		return err
-	}
-	logger.DebugContext(ctx, "committed transaction")
-	span.AddEvent("committed transaction")
-
 	logger.InfoContext(
 		ctx,
-		"announcements and attachments",
+		"inserted announcements",
 		slog.Int("announcements", len(announcements)),
 		slog.Int("attachments", len(allAttachments)),
 	)
 
-	return nil
+	return errors.Join(errs...)
+}
+
+func (w *IDX) Shutdown() {
+	w.cancel()
+	close(w.pageCh)
 }

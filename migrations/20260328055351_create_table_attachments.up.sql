@@ -8,8 +8,11 @@ CREATE TABLE IF NOT EXISTS attachments (
     filename TEXT NOT NULL,
     checksum TEXT NOT NULL,
     storage_path TEXT NOT NULL,
+  title text not null,
+    stock_code text NOT NULL,
     is_downloaded BOOLEAN NOT NULL,
     is_processing BOOLEAN NOT NULL DEFAULT false,
+    date TIMESTAMPTZ NOT NULL,
     uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

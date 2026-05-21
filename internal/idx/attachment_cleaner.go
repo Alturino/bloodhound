@@ -37,10 +37,10 @@ func (a *attachmentPathCleaner) Clean(ctx context.Context, task AttachmentTask) 
 	originalname = strings.TrimSpace(originalname)
 	originalname = filepath.Clean(originalname)
 
-	date := task.Date.Format("2006-01-02")
+	date := task.Attachment.Date.Format("2006-01-02")
 
-	stockcode := strings.ToLower(task.StockCode)
-	title := a.replacer.Replace(task.AnnouncementTitle)
+	stockcode := strings.ToLower(task.Attachment.StockCode)
+	title := a.replacer.Replace(task.Attachment.Title)
 	title = filepath.Clean(title)
 	title = strings.TrimSpace(title)
 	if len(title) > 64 {

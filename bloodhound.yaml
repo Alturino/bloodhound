@@ -6,7 +6,9 @@ app:
   idx:
     base_url: https://idx.co.id
     page_size: 1000
-    mock_mode: false
+    worker_pool:
+      announcement_workers: 3
+      attachment_workers: 5
   stockbit:
     base_url: https://exodus.stockbit.com
     token: ""
@@ -23,7 +25,7 @@ database:
 storage:
   local:
     enabled: true
-    bloodhound_dir: ~/.bloodhound/download
+    bloodhound_dir: /run/media/onirutla/Backup/bloodhound/local/
   minio:
     endpoint: localhost:9000
     access_key: minioadmin

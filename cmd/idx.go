@@ -20,7 +20,6 @@ import (
 	"github.com/alturino/bloodhound/internal/httpclient"
 	"github.com/alturino/bloodhound/internal/idx"
 	"github.com/alturino/bloodhound/internal/log"
-	"github.com/alturino/bloodhound/internal/store"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -88,7 +87,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {
-		err = fmt.Errorf("initialize database %w", err)
+		err = fmt.Errorf("initialize database: %w", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
@@ -99,7 +98,8 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	idxStore := store.NewIDXStore(database, logger, telemetry.AppTelemetry.Tracer)
+	announcementStore := idx.NewAnnouncementStore(database, logger, telemetry.AppTelemetry.Tracer)
+	attachmentStore := idx.NewAttachmentStore(database, logger, telemetry.AppTelemetry.Tracer)
 
 	httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
 	idxClient := idx.NewClient(
@@ -115,15 +115,15 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		telemetry.AppTelemetry.Tracer,
 		idxClient,
 		stg,
-		idxStore,
 	)
 	attachmentPool := idx.NewAttachmentPool(
 		ctx,
+		database,
 		&cfg.App.IDX.WorkerPool,
 		logger.With(slog.String("tag", "attachment.Pool")),
 		telemetry.AppTelemetry.Tracer,
 		attachmentWorker,
-		idxStore,
+		attachmentStore,
 	)
 	defer attachmentPool.Shutdown()
 
@@ -132,11 +132,13 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		cfg,
 		logger.With(slog.String("tag", "idx.Worker")),
 		telemetry.AppTelemetry.Tracer,
-		idxStore,
+		announcementStore,
+		attachmentStore,
 		idxClient,
 		database,
 		stg,
 	)
+	defer idxWorker.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {

@@ -2,7 +2,7 @@
 services:
   postgres:
     image: postgres:18.3-trixie
-    restart: always
+    restart: on-failure
     environment:
       TZ: "Asia/Jakarta"
       PGTZ: "Asia/Jakarta"
@@ -18,9 +18,9 @@ services:
       retries: 5
       start_period: 20s
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres:/var/lib/postgresql/
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.16.0
+    image: prometheuscommunity/postgres-exporter:v0.19.0
     env_file:
       - .env
     environment:
@@ -41,7 +41,7 @@ services:
       - "${MINIO_CONSOLE_PORT:-9001}:${MINIO_CONSOLE_PORT:-9001}"
     command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
-      # - minio_data:/data
+      # - minio:/data
       - /run/media/onirutla/Backup/bloodhound/minio/:/data
     healthcheck:
       test:
@@ -91,5 +91,5 @@ services:
   #     - 9121:9121
 
 volumes:
-  postgres_data:
-  minio_data:
+  postgres:
+  minio:

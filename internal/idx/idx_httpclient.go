@@ -2,10 +2,10 @@ package idx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/imroc/req/v3"
@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -24,7 +23,7 @@ type Client interface {
 		ctx context.Context,
 		page int,
 		dateFrom time.Time,
-	) (models.AnnouncementResponse, error)
+	) (AnnouncementResponse, error)
 	DownloadFile(ctx context.Context, url string) ([]byte, string, error)
 }
 
@@ -76,7 +75,7 @@ func (c *client) FetchAnnouncements(
 	ctx context.Context,
 	page int,
 	dateFrom time.Time,
-) (models.AnnouncementResponse, error) {
+) (AnnouncementResponse, error) {
 	now := time.Now()
 	ctx, span := c.tracer.Start(
 		ctx,
@@ -98,7 +97,7 @@ func (c *client) FetchAnnouncements(
 			err = fmt.Errorf("parsing default date: %w", err)
 			telemetry.RecordError(span, err)
 			logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
-			return models.AnnouncementResponse{}, err
+			return AnnouncementResponse{}, err
 		}
 		dateFrom = dt
 	}
@@ -117,25 +116,26 @@ func (c *client) FetchAnnouncements(
 		SetSuccessResult(&rawResp).
 		EnableDumpWithoutResponseBody().
 		Get("/primary/ListedCompany/GetAnnouncement")
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String("http_dump", resp.Dump()))
+	}
 	if err != nil {
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
-		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
-		return models.AnnouncementResponse{}, err
+		return AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
 		err = fmt.Errorf("unexpected status_code=%d", resp.StatusCode)
 		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
-		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
-		return models.AnnouncementResponse{}, err
+		return AnnouncementResponse{}, err
 	}
 	result := convertToModel(rawResp)
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(
-			slog.Any("fetched_announcements", result),
-			slog.String("http_dump", resp.Dump()),
-		)
+	if len(result.Announcements) == 0 {
+		err := errors.New("announcements empty")
+		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
+		telemetry.RecordError(span, err)
+		return AnnouncementResponse{}, err
 	}
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
@@ -161,6 +161,9 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		EnableDumpWithoutResponseBody().
 		SetContext(ctx).
 		Get(url)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String("http_dump", resp.Dump()))
+	}
 	if err != nil {
 		err = fmt.Errorf("downloading file: %w", err)
 		telemetry.RecordError(span, err)
@@ -173,9 +176,6 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		logger.ErrorContext(ctx, "downloading file", slog.Any("error", err))
 		return nil, "", err
 	}
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(slog.String("http_dump", resp.Dump()))
-	}
 	logger.InfoContext(ctx, "downloaded file")
 	span.AddEvent("downloaded file")
 
@@ -185,10 +185,10 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 	return data, contentType, nil
 }
 
-func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
-	result := models.AnnouncementResponse{
+func convertToModel(raw rawAnnouncementResponse) AnnouncementResponse {
+	result := AnnouncementResponse{
 		ResultCount: raw.ResultCount,
-		SearchParams: models.SearchParams{
+		SearchParams: SearchParams{
 			DateFrom:   raw.SearchParams.DateFrom,
 			DateTo:     raw.SearchParams.DateTo,
 			Query:      raw.SearchParams.Query,
@@ -200,37 +200,33 @@ func convertToModel(raw rawAnnouncementResponse) models.AnnouncementResponse {
 			IndexFrom:  raw.SearchParams.IndexFrom,
 			PageSize:   raw.SearchParams.PageSize,
 		},
-		Announcements: make([]models.Announcement, 0, len(raw.Replies)),
+		Announcements: make([]Announcement, len(raw.Replies)),
 	}
 
-	for _, r := range raw.Replies {
-		stockcode := r.Pengumuman.KodeEmiten
-		stockcode = strings.ReplaceAll(stockcode, " ", "")
+	for i, r := range raw.Replies {
+		stockcode := strings.ReplaceAll(r.Pengumuman.KodeEmiten, " ", "")
 		stockcode = strings.ReplaceAll(stockcode, "//", "")
-		announcement := models.Announcement{
+		title := strings.ReplaceAll(r.Pengumuman.JudulPengumuman, "//", "")
+		announcement := Announcement{
 			ID:                r.Pengumuman.Id2,
 			Date:              r.Pengumuman.TglPengumuman.Time(),
-			AnnouncementTitle: r.Pengumuman.JudulPengumuman,
+			AnnouncementTitle: title,
 			AnnouncementType:  r.Pengumuman.JenisPengumuman,
 			StockCode:         stockcode,
 			CreatedDate:       r.Pengumuman.CreatedDate.Time(),
 			IsStock:           r.Pengumuman.EfekEmiten_Saham,
-			Attachments:       make([]models.Attachment, len(r.Attachments)),
+			Attachments:       make([]Attachment, len(r.Attachments)),
 		}
 
-		var wg sync.WaitGroup
-		for i, attachment := range r.Attachments {
-			wg.Go(func() {
-				announcement.Attachments[i] = models.Attachment{
-					PDFFilename:      attachment.PDFFilename,
-					FullSavePath:     attachment.FullSavePath,
-					OriginalFilename: attachment.OriginalFilename,
-				}
-			})
+		for j, attachment := range r.Attachments {
+			announcement.Attachments[j] = Attachment{
+				PDFFilename:      attachment.PDFFilename,
+				FullSavePath:     attachment.FullSavePath,
+				OriginalFilename: attachment.OriginalFilename,
+			}
 		}
-		wg.Wait()
 
-		result.Announcements = append(result.Announcements, announcement)
+		result.Announcements[i] = announcement
 	}
 
 	return result
