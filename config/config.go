@@ -62,6 +62,7 @@ func Load(configPath string) (*Config, error) {
 
 	v.SetDefault("app.idx.base_url", "https://idx.co.id")
 	v.SetDefault("app.idx.page_size", 10)
+	v.SetDefault("app.idx.worker_count", 3)
 	v.SetDefault("app.idx.worker_pool.announcement_workers", 4)
 	v.SetDefault("app.idx.worker_pool.attachment_workers", 4)
 
