@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -56,9 +57,9 @@ func (s *announcementStore) IsExists(ctx context.Context, db qrm.DB) (bool, erro
 
 	logger.DebugContext(ctx, "preparing statement")
 	span.AddEvent("preparing statement")
-	isEmptyStmt := SELECT(EXISTS(Announcements.SELECT(Announcements.AllColumns).LIMIT(1)))
+	stmt := SELECT(EXISTS(Announcements.SELECT(Announcements.AllColumns).LIMIT(1)))
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.String("sql_statement", isEmptyStmt.DebugSql()))
+		ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
 	}
 	logger.DebugContext(ctx, "prepared statement")
 	span.AddEvent("prepared statement")
@@ -66,7 +67,7 @@ func (s *announcementStore) IsExists(ctx context.Context, db qrm.DB) (bool, erro
 	logger.DebugContext(ctx, "checking announcements")
 	span.AddEvent("checking announcements")
 	var isExists struct{ bool }
-	if err := isEmptyStmt.QueryContext(ctx, db, &isExists); err != nil {
+	if err := stmt.QueryContext(ctx, db, &isExists); err != nil {
 		err = fmt.Errorf("checking announcements: %w", err)
 		telemetry.RecordError(span, err)
 		return false, err
@@ -78,7 +79,10 @@ func (s *announcementStore) IsExists(ctx context.Context, db qrm.DB) (bool, erro
 	return isExists.bool, nil
 }
 
-func (s *announcementStore) LatestAnnouncement(ctx context.Context, db qrm.DB) (model.Announcements, error) {
+func (s *announcementStore) LatestAnnouncement(
+	ctx context.Context,
+	db qrm.DB,
+) (model.Announcements, error) {
 	if db == nil {
 		db = s.db
 	}
@@ -154,9 +158,9 @@ func (s *announcementStore) IsProcessed(
 	stmt := SELECT(Announcements.AllColumns).
 		FROM(Announcements).
 		WHERE(Announcements.IdxID.EQ(ANY(StringArray(idxIDs...))))
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
-	}
+	// if logger.Enabled(ctx, slog.LevelDebug) {
+	// 	ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
+	// }
 
 	logger.DebugContext(ctx, "is processed")
 	span.AddEvent("is processed")
@@ -172,7 +176,12 @@ func (s *announcementStore) IsProcessed(
 		return nil, err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("processed_announcements", announcements))
+		if len(announcements) >= 2 {
+			ctx = slogctx.Append(
+				ctx,
+				slog.Any("processed_announcements", slices.Clone(announcements[:2])),
+			)
+		}
 	}
 	logger.DebugContext(ctx, "is processed")
 	span.AddEvent("is processed")
@@ -225,9 +234,9 @@ func (s *announcementStore) InsertAnnouncement(
 		DO_NOTHING().
 		MODELS(ann).
 		RETURNING(Announcements.AllColumns)
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
-	}
+	// if logger.Enabled(ctx, slog.LevelDebug) {
+	// 	ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
+	// }
 	logger.DebugContext(ctx, "prepared statement")
 	span.AddEvent("prepared statement")
 
@@ -241,7 +250,10 @@ func (s *announcementStore) InsertAnnouncement(
 		return err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("inserted_announcements", inserted))
+		if len(inserted) >= 2 {
+			inserted := slices.Clone(inserted[:2])
+			ctx = slogctx.Append(ctx, slog.Any("inserted_announcements", inserted))
+		}
 	}
 	logger.InfoContext(ctx, "inserted announcements", slog.Int("inserted_count", len(inserted)))
 	span.AddEvent("inserted announcements")
@@ -272,9 +284,9 @@ func (s *announcementStore) Announcement(
 	span.AddEvent("preparing statement")
 	stmt := Announcements.SELECT(Announcements.AllColumns).
 		WHERE(Announcements.ID.EQ(ANY(StringArray(id...))))
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
-	}
+	// if logger.Enabled(ctx, slog.LevelDebug) {
+	// 	ctx = slogctx.Append(ctx, slog.String("sql_statement", stmt.DebugSql()))
+	// }
 	logger.DebugContext(ctx, "prepared statement")
 	span.AddEvent("prepared statement")
 
@@ -288,7 +300,9 @@ func (s *announcementStore) Announcement(
 		return announcements, err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("db_announcements", announcements))
+		if len(announcements) >= 2 {
+			ctx = slogctx.Append(ctx, slog.Any("db_announcements", slices.Clone(announcements[:2])))
+		}
 	}
 	logger.InfoContext(ctx, "got announcement")
 	span.AddEvent("got announcement")
