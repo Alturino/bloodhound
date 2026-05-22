@@ -1,5 +1,5 @@
 .env
-*.log
+logs/
 minio
 postgres
 main
