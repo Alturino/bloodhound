@@ -12,6 +12,7 @@ require (
 	github.com/imroc/req/v3 v3.57.0
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/slog-multi v1.7.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.2

@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -30,9 +30,15 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "bloodhound.yaml", "config file path")
 	RootCmd.PersistentFlags().BoolVar(&mock, "mock", false, "enable IDX mock mode")
 	if err := viper.BindPFlag("config", RootCmd.PersistentFlags().Lookup("config")); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		return
 	}
 	if err := viper.BindPFlag("mock", RootCmd.PersistentFlags().Lookup("mock")); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		return
 	}
+	viper.BindPFlag("config", RootCmd.PersistentFlags().Lookup("config"))
+	viper.BindPFlag("mock", RootCmd.PersistentFlags().Lookup("mock"))
+	viper.BindPFlag("config", RootCmd.PersistentFlags().Lookup("config"))
+	viper.BindPFlag("mock", RootCmd.PersistentFlags().Lookup("mock"))
 }

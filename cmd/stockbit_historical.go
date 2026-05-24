@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -21,15 +19,15 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-var StocbitWorker = &cobra.Command{
-	Use:     "sb run",
-	Short:   "Run the stockbit worker service",
-	RunE:    stockbitWorker,
-	Aliases: []string{"sr"},
+var HistoricalCmd = &cobra.Command{
+	Use:   "broker-historical",
+	Short: "Fetch broker activity historical data",
+	Long:  `Fetch broker activity historical data from Stockbit API and store in database`,
+	RunE:  runHistorical,
 }
 
-func stockbitWorker(cmd *cobra.Command, args []string) error {
-	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+func runHistorical(cmd *cobra.Command, args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	configPath := viper.GetString("config")
@@ -66,16 +64,9 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	// stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
-	// if err != nil {
-	// 	err = fmt.Errorf("initialize storage: %w", err)
-	// 	logger.ErrorContext(ctx, err.Error())
-	// 	return err
-	// }
-
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {
-		err = fmt.Errorf("initialize database %w", err)
+		err = fmt.Errorf("initialize database: %w", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
@@ -87,59 +78,32 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
+	stockbitStore := stockbit.NewStockbitStore(database, logger, telemetry.AppTelemetry.Tracer)
+
 	httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
-	stockbitClient := stockbit.NewClient(
+	stockbitHistoricalClient := stockbit.NewClient(
 		httpClient,
 		&cfg.App.Stockbit,
 		logger.With(slog.String("tag", "stockbithistorical.Client")),
 		telemetry.AppTelemetry.Tracer,
 	)
-	stockbitStore := stockbit.NewStockbitStore(database, logger, telemetry.AppTelemetry.Tracer)
+
 	historicalScheduler := stockbit.NewStockbitHistoricalScheduler(
 		cfg,
 		logger.With(slog.String("tag", "scheduler.StockbitHistoricalScheduler")),
 		telemetry.AppTelemetry.Tracer,
-		stockbitClient,
+		stockbitHistoricalClient,
 		stockbitStore,
 	)
 
-	stWorker := stockbit.NewWorker(
-		cfg,
-		logger,
-		telemetry.AppTelemetry.Tracer,
-		stockbitStore,
-		stockbitClient,
-	)
-	if err := stWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.ErrorContext(ctx, "stockbit worker error", slog.Any("error", err))
-		return err
-	}
-	go func() {
-		if err := historicalScheduler.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			logger.ErrorContext(ctx, "historical scheduler error", slog.Any("error", err))
-		}
-	}()
-	if err := stWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.ErrorContext(ctx, "stockbit worker error", slog.Any("error", err))
+	logger.InfoContext(ctx, "starting broker activity historical sync")
+
+	if err := historicalScheduler.Process(ctx); err != nil {
+		err = fmt.Errorf("historical sync: %w", err)
+		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
 
-	viper.OnConfigChange(func(in fsnotify.Event) {
-		if !in.Has(fsnotify.Write) {
-			return
-		}
-		if err := viper.MergeInConfig(); err != nil {
-			err = fmt.Errorf("merge config file: %w", err)
-			logger.ErrorContext(ctx, err.Error())
-			return
-		}
-		if err := viper.Unmarshal(cfg); err != nil {
-			err = fmt.Errorf("unmarshal config: %w", err)
-			logger.ErrorContext(ctx, err.Error())
-			return
-		}
-		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
-	})
-
+	logger.InfoContext(ctx, "broker activity historical sync completed")
 	return nil
 }

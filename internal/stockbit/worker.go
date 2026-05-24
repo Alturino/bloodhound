@@ -25,7 +25,23 @@ type Stockbit struct {
 	stockbitStore store.StockbitStore
 }
 
-func (w Stockbit) Start(ctx context.Context) error {
+func NewWorker(
+	cfg *config.Config,
+	logger *slog.Logger,
+	tracer trace.Tracer,
+	store Store,
+	client Client,
+) *Worker {
+	return &Worker{
+		config: cfg,
+		logger: logger,
+		tracer: tracer,
+		client: client,
+		store:  store,
+	}
+}
+
+func (w Worker) Start(ctx context.Context) error {
 	interval := w.config.Scheduler.Interval
 
 	logger := w.logger.With(
@@ -57,7 +73,7 @@ func (w Stockbit) Start(ctx context.Context) error {
 	}
 }
 
-func (w Stockbit) Process(ctx context.Context) error {
+func (w Worker) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
 		"stockbit.WorkerStockbit.Process",
@@ -67,7 +83,7 @@ func (w Stockbit) Process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.Process"))
 
-	stockCodes, err := w.stockbitStore.StockCodes(ctx)
+	stockCodes, err := w.store.StockCodes(ctx)
 	if err != nil {
 		err = fmt.Errorf("get stock codes: %w", err)
 		return err
@@ -148,7 +164,7 @@ func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 		})
 	}
 
-	if err := w.stockbitStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
+	if err := w.store.UpsertMarketDetector(ctx, summary, txns); err != nil {
 		err = fmt.Errorf("upsert: %w", err)
 		return err
 	}

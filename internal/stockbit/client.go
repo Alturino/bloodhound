@@ -19,6 +19,10 @@ type Client interface {
 		ctx context.Context,
 		symbol, dateFrom, dateTo string,
 	) (models.StockbitMarketDetectorResponse, error)
+	FetchBrokerActivity(
+		ctx context.Context,
+		symbol, dateFrom, dateTo string,
+	) (BrokerActivityResponse, error)
 }
 
 // Client handles API requests to Stockbit
@@ -68,7 +72,7 @@ func NewClient(
 }
 
 // FetchMarketDetector fetches broker flow and summary from Stockbit API
-func (c client) FetchMarketDetector(
+func (c *client) FetchMarketDetector(
 	ctx context.Context,
 	symbol, dateFrom, dateTo string,
 ) (models.StockbitMarketDetectorResponse, error) {
@@ -119,4 +123,13 @@ func (c client) FetchMarketDetector(
 	span.AddEvent("unmarshaled response")
 
 	return rawResp, nil
+}
+
+func (c *client) FetchBrokerActivity(
+	ctx context.Context,
+	symbol string,
+	dateFrom string,
+	dateTo string,
+) (BrokerActivityResponse, error) {
+	panic("not implemented") // TODO: Implement
 }

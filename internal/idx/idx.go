@@ -66,7 +66,6 @@ func NewWorkerIdx(
 		announcementStore: announcementStore,
 		attachmentStore:   attachmentStore,
 	}
-	idx.Start()
 	return idx
 }
 
