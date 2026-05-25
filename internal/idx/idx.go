@@ -11,12 +11,14 @@ import (
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/blobstorage"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
+	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
 type IDX struct {
@@ -26,6 +28,7 @@ type IDX struct {
 	cancel            context.CancelFunc
 	db                *sql.DB
 	tracer            trace.Tracer
+	metrics           *telemetry.Metrics
 	client            Client
 	pageCh            chan Page
 	sem               *semaphore.Weighted
@@ -39,6 +42,7 @@ func NewWorkerIdx(
 	config *config.Config,
 	logger *slog.Logger,
 	tracer trace.Tracer,
+	metrics *telemetry.Metrics,
 	announcementStore AnnouncementStore,
 	attachmentStore AttachmentStore,
 	client Client,
@@ -46,17 +50,17 @@ func NewWorkerIdx(
 	storage blobstorage.Storage,
 ) *IDX {
 	ctx, cancel := context.WithCancel(ctx)
+	worker := config.App.IDX.WorkerPool.AnnouncementWorkers
 	idx := &IDX{
-		ctx:    ctx,
-		cancel: cancel,
-		config: config,
-		logger: logger,
-		tracer: tracer,
-		client: client,
-		pageCh: make(chan Page, config.App.IDX.WorkerPool.AnnouncementWorkers*10),
-		sem: semaphore.NewWeighted(
-			int64(config.App.IDX.WorkerPool.AnnouncementWorkers),
-		),
+		ctx:               ctx,
+		cancel:            cancel,
+		config:            config,
+		logger:            logger,
+		tracer:            tracer,
+		metrics:           metrics,
+		client:            client,
+		pageCh:            make(chan Page, worker*10),
+		sem:               semaphore.NewWeighted(int64(worker)),
 		db:                db,
 		storage:           storage,
 		announcementStore: announcementStore,
@@ -104,6 +108,15 @@ func (w *IDX) schedule(ctx context.Context, onTick func(ctx context.Context) err
 }
 
 func (w *IDX) process(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		w.metrics.IdxProcessingDuration.Record(
+			ctx,
+			float64(time.Since(start).Milliseconds()),
+			metric.WithAttributes(attribute.String("service", "idx")),
+		)
+	}()
+
 	ctx, span := w.tracer.Start(
 		ctx,
 		"idx.IDX.Process",
@@ -140,6 +153,7 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 
 	totalAnnouncements, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
 	pageTotal := totalAnnouncements / pageSize
+
 	ctx = slogctx.Append(
 		ctx,
 		slog.Int("announcements_total", totalAnnouncements),
@@ -206,10 +220,14 @@ func (w *IDX) getAndSubmitPage(
 	}
 	defer w.sem.Release(1)
 
+	fetchStart := time.Now()
 	resp, err := w.client.FetchAnnouncements(ctx, curr, since)
 	if err != nil {
 		return err
 	}
+	w.metrics.IdxPageFetchDuration.Record(ctx, float64(time.Since(fetchStart).Milliseconds()))
+	w.metrics.IdxPagesFetched.Add(ctx, 1)
+	w.metrics.IdxAnnouncementsFetchedTotal.Record(ctx, int64(len(resp.Announcements)))
 	page := Page{
 		Ctx:           ctx,
 		Index:         curr,
@@ -276,6 +294,7 @@ func (w *IDX) processPage(ctx context.Context, announcements []Announcement) err
 			ctx = slogctx.Append(ctx, slog.Any("processed_id", slices.Clone(keys[:2])))
 		}
 	}
+
 	if len(processedMap) == 0 {
 		logger.InfoContext(ctx, "no processed announcements")
 		if err := w.saveAnnouncements(ctx, announcements); err != nil {
@@ -290,6 +309,7 @@ func (w *IDX) processPage(ctx context.Context, announcements []Announcement) err
 			unprocessed = append(unprocessed, ann)
 			continue
 		}
+		w.metrics.IdxAnnouncementsDuplicate.Add(ctx, 1)
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		up := slices.Clone(unprocessed[:5])
@@ -329,12 +349,18 @@ func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcemen
 		attachments := ann.ToAttachments()
 		allAttachments = append(allAttachments, attachments...)
 	}
+	ctx = slogctx.Append(
+		ctx,
+		slog.Int("announcements_count", len(announcements)),
+		slog.Int("attachments_count", len(allAttachments)),
+	)
 
 	logger.DebugContext(ctx, "inserting announcements")
 	span.AddEvent("inserting announcements")
 	if err := w.announcementStore.InsertAnnouncement(ctx, w.db, modelAnnouncements...); err != nil {
 		return err
 	}
+	w.metrics.IdxAnnouncementsSaved.Add(ctx, int64(len(announcements)))
 	logger.DebugContext(ctx, "inserted announcements")
 	span.AddEvent("inserted announcements")
 
@@ -353,12 +379,7 @@ func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcemen
 	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
 
-	logger.InfoContext(
-		ctx,
-		"inserted announcements",
-		slog.Int("announcements", len(announcements)),
-		slog.Int("attachments", len(allAttachments)),
-	)
+	logger.InfoContext(ctx, "inserted announcements")
 
 	return errors.Join(errs...)
 }

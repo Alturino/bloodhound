@@ -9,9 +9,11 @@ import (
 	"github.com/google/uuid"
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
 type AttachmentPool interface {
@@ -27,6 +29,7 @@ type attachmentPool struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	tracer      trace.Tracer
+	metrics     *telemetry.Metrics
 	worker      AttachmentWorker
 	store       AttachmentStore
 }
@@ -37,6 +40,7 @@ func NewAttachmentPool(
 	config *config.WorkerPool,
 	logger *slog.Logger,
 	tracer trace.Tracer,
+	metrics *telemetry.Metrics,
 	worker AttachmentWorker,
 	store AttachmentStore,
 ) AttachmentPool {
@@ -49,6 +53,7 @@ func NewAttachmentPool(
 		worker:      worker,
 		logger:      logger,
 		tracer:      tracer,
+		metrics:     metrics,
 		store:       store,
 		taskChan:    make(chan AttachmentTask, workerCount*2),
 		ctx:         ctx,
@@ -105,6 +110,9 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 	if err != nil {
 		return
 	}
+
+	p.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
+
 	ctx = slogctx.Append(ctx, slog.Int("unprocessed_attachments_count", len(attachments)))
 	if len(attachments) == 0 {
 		logger.InfoContext(ctx, "no unprocessed attachments")
@@ -175,6 +183,9 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 
 	result, err := p.worker.Work(ctx, task)
 	if err != nil {
+		p.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("status", "failure"),
+		))
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
 		if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 			logger.ErrorContext(ctx, "update attachment", slog.Any("error", err))
@@ -182,6 +193,10 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 		}
 		return
 	}
+
+	p.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("status", "success"),
+	))
 
 	if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))

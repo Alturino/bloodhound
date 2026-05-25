@@ -113,6 +113,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		&cfg.Storage.MinIO,
 		logger.With(slog.String("tag", "idx.Processor")),
 		telemetry.AppTelemetry.Tracer,
+		telemetry.AppTelemetry.Metrics,
 		idxClient,
 		stg,
 	)
@@ -122,6 +123,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		&cfg.App.IDX.WorkerPool,
 		logger.With(slog.String("tag", "attachment.Pool")),
 		telemetry.AppTelemetry.Tracer,
+		telemetry.AppTelemetry.Metrics,
 		attachmentWorker,
 		attachmentStore,
 	)
@@ -132,6 +134,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		cfg,
 		logger.With(slog.String("tag", "idx.Worker")),
 		telemetry.AppTelemetry.Tracer,
+		telemetry.AppTelemetry.Metrics,
 		announcementStore,
 		attachmentStore,
 		idxClient,
