@@ -2,6 +2,7 @@ package stockbit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -12,18 +13,30 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
+type BrokerActivityParams struct {
+	Interval     string
+	Period       string
+	DateFrom     string
+	DateTo       string
+	BrokerCodes  string
+	Symbols      string
+	MarketBoard  string
+	InvestorType string
+	Page         int
+	Limit        int
+}
+
 type Client interface {
 	FetchMarketDetector(
 		ctx context.Context,
 		symbol, dateFrom, dateTo string,
-	) (MarketDetectorResponse, error)
+	) (Response[MarketData], error)
 	FetchBrokerActivity(
 		ctx context.Context,
 		symbol, dateFrom, dateTo string,
-	) (BrokerActivityResponse, error)
+	) (Response[BrokerActivityData], error)
 }
 
-// Client handles API requests to Stockbit
 type client struct {
 	httpclient *req.Client
 	config     *config.Stockbit
@@ -31,7 +44,6 @@ type client struct {
 	tracer     trace.Tracer
 }
 
-// NewClient creates a new Stockbit HTTP client
 func NewClient(
 	httpclient *req.Client,
 	config *config.Stockbit,
@@ -72,7 +84,7 @@ func NewClient(
 func (c *client) FetchMarketDetector(
 	ctx context.Context,
 	symbol, dateFrom, dateTo string,
-) (MarketDetectorResponse, error) {
+) (Response[MarketData], error) {
 	ctx, span := c.tracer.Start(
 		ctx,
 		"stockbit.Client.FetchMarketDetector",
@@ -90,7 +102,7 @@ func (c *client) FetchMarketDetector(
 	logger.DebugContext(ctx, "fetching stockbit market detector")
 	span.AddEvent("fetching stockbit market detector")
 	// API Endpoint: https://exodus.stockbit.com/marketdetectors/{symbol}
-	var rawResp MarketDetectorResponse
+	var rawResp Response[MarketData]
 	resp, err := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
@@ -105,11 +117,11 @@ func (c *client) FetchMarketDetector(
 		Get("/marketdetectors/" + symbol)
 	if err != nil {
 		err = fmt.Errorf("fetching stockbit market detector: %v", err)
-		return MarketDetectorResponse{}, err
+		return Response[MarketData]{}, err
 	}
 	if resp.IsErrorState() {
 		err := fmt.Errorf("fetching stockbit market detector: status_code=%d", resp.StatusCode)
-		return MarketDetectorResponse{}, err
+		return Response[MarketData]{}, err
 	}
 	span.AddEvent("fetched stockbit market detector")
 	logger.DebugContext(ctx, "fetched stockbit market detector")
@@ -122,6 +134,6 @@ func (c *client) FetchBrokerActivity(
 	symbol string,
 	dateFrom string,
 	dateTo string,
-) (BrokerActivityResponse, error) {
-	panic("not implemented") // TODO: Implement
+) (Response[BrokerActivityData], error) {
+	return Response[BrokerActivityData]{}, errors.ErrUnsupported
 }

@@ -2,9 +2,9 @@ package stockbit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.opentelemetry.io/otel/trace"
@@ -15,6 +15,7 @@ import (
 type StockbitHistoricalScheduler struct {
 	config *config.Config
 	logger *slog.Logger
+	ctx    context.Context
 	tracer trace.Tracer
 	client Client
 	store  Store
@@ -22,6 +23,7 @@ type StockbitHistoricalScheduler struct {
 }
 
 func NewStockbitHistoricalScheduler(
+	ctx context.Context,
 	cfg *config.Config,
 	logger *slog.Logger,
 	tracer trace.Tracer,
@@ -31,6 +33,7 @@ func NewStockbitHistoricalScheduler(
 	return &StockbitHistoricalScheduler{
 		config: cfg,
 		logger: logger,
+		ctx:    ctx,
 		tracer: tracer,
 		client: client,
 		store:  store,
@@ -38,7 +41,7 @@ func NewStockbitHistoricalScheduler(
 	}
 }
 
-func (s *StockbitHistoricalScheduler) Start(ctx context.Context) error {
+func (s *StockbitHistoricalScheduler) Start() {
 	logger := s.logger.With(slog.String("tag", "scheduler.StockbitHistoricalScheduler.Start"))
 
 	cronExpr := s.config.Scheduler.HistoricalCron
@@ -47,21 +50,22 @@ func (s *StockbitHistoricalScheduler) Start(ctx context.Context) error {
 	}
 
 	_, err := s.cron.AddFunc(cronExpr, func() {
-		if err := s.Process(ctx); err != nil {
-			logger.ErrorContext(ctx, "historical sync error", slog.Any("error", err))
+		if err := s.Process(s.ctx); err != nil {
+			logger.ErrorContext(s.ctx, "historical sync error", slog.Any("error", err))
 		}
 	})
+	defer s.cron.Stop()
 	if err != nil {
-		return fmt.Errorf("add cron job: %v", err)
+		err = fmt.Errorf("add cron job: %v", err)
+		logger.ErrorContext(s.ctx, err.Error())
+		return
 	}
 
 	s.cron.Start()
-	logger.InfoContext(ctx, "started historical scheduler", slog.String("cron", cronExpr))
+	logger.InfoContext(s.ctx, "started historical scheduler", slog.String("cron", cronExpr))
 
-	<-ctx.Done()
-	s.cron.Stop()
-	logger.InfoContext(ctx, "stopped historical scheduler")
-	return ctx.Err()
+	<-s.ctx.Done()
+	logger.InfoContext(s.ctx, "received done, stopping", slog.Any("error", s.ctx.Err()))
 }
 
 func (s *StockbitHistoricalScheduler) Process(ctx context.Context) error {
@@ -95,93 +99,95 @@ func (s *StockbitHistoricalScheduler) Process(ctx context.Context) error {
 }
 
 func (s *StockbitHistoricalScheduler) syncSymbol(ctx context.Context, symbol string) error {
-	ctx, span := s.tracer.Start(ctx, "scheduler.StockbitHistoricalScheduler.syncSymbol")
-	defer span.End()
-
-	logger := s.logger.With(
-		slog.String("tag", "scheduler.StockbitHistoricalScheduler.syncSymbol"),
-		slog.String("symbol", symbol),
-	)
-
-	existingDates, err := s.store.GetExistingTradeDates(ctx, symbol)
-	if err != nil {
-		return fmt.Errorf("get existing dates: %v", err)
-	}
-
-	today := time.Now()
-	oneYearAgo := today.AddDate(-1, 0, 0)
-
-	var dateFrom, dateTo string
-
-	if len(existingDates) == 0 {
-		dateFrom = ""
-		dateTo = ""
-		logger.InfoContext(ctx, "first run - using period RT_PERIOD_LAST_1_YEAR")
-	} else {
-		existingDateSet := make(map[string]bool)
-		for _, d := range existingDates {
-			existingDateSet[d.Format("2006-01-02")] = true
-		}
-
-		for d := oneYearAgo; !d.After(today); d = d.AddDate(0, 0, 1) {
-			dateStr := d.Format("2006-01-02")
-			if !existingDateSet[dateStr] {
-				dateFrom = dateStr
-				dateTo = today.Format("2006-01-02")
-				break
-			}
-		}
-
-		if dateFrom == "" {
-			logger.InfoContext(ctx, "no missing dates to sync")
-			return nil
-		}
-		logger.InfoContext(ctx, "incremental sync",
-			slog.String("from", dateFrom),
-			slog.String("to", dateTo))
-	}
-
-	// resp, err := s.client.FetchBrokerActivity(ctx, symbol, dateFrom, dateTo)
-	// if err != nil {
-	// 	return fmt.Errorf("fetch broker activity: %v", err)
-	// }
-
-	// var txns []models.BrokerTransaction
-	// for _, record := range resp.Data.Records {
-	// 	if record.TradeActivity.BuySummary.Freq > 0 {
-	// 		tradeDate, _ := time.Parse("2006-01-02", record.Date)
-	// 		txns = append(txns, models.BrokerTransaction{
-	// 			Symbol:       symbol,
-	// 			TradeDate:    tradeDate.Format("2006-01-02"),
-	// 			BrokerCode:   record.BrokerCode,
-	// 			Side:         "BUY",
-	// 			InvestorType: "ALL",
-	// 			Frequency:    record.TradeActivity.BuySummary.Freq,
-	// 			Lots:         record.TradeActivity.BuySummary.Lot,
-	// 			AvgPrice:     decimal.NewFromFloat(record.TradeActivity.BuySummary.AvgPrice),
-	// 		})
+	// 	ctx, span := s.tracer.Start(ctx, "scheduler.StockbitHistoricalScheduler.syncSymbol")
+	// 	defer span.End()
+	//
+	// 	logger := s.logger.With(
+	// 		slog.String("tag", "scheduler.StockbitHistoricalScheduler.syncSymbol"),
+	// 		slog.String("symbol", symbol),
+	// 	)
+	//
+	// 	existingDates, err := s.store.GetExistingTradeDates(ctx, symbol)
+	// 	if err != nil {
+	// 		return fmt.Errorf("get existing dates: %v", err)
 	// 	}
-	// 	if record.TradeActivity.SellSummary.Freq > 0 {
-	// 		tradeDate, _ := time.Parse("2006-01-02", record.Date)
-	// 		txns = append(txns, models.BrokerTransaction{
-	// 			Symbol:       symbol,
-	// 			TradeDate:    tradeDate.Format("2006-01-02"),
-	// 			BrokerCode:   record.BrokerCode,
-	// 			Side:         "SELL",
-	// 			InvestorType: "ALL",
-	// 			Frequency:    record.TradeActivity.SellSummary.Freq,
-	// 			Lots:         record.TradeActivity.SellSummary.Lot,
-	// 			AvgPrice:     decimal.NewFromFloat(record.TradeActivity.SellSummary.AvgPrice),
-	// 		})
+	//
+	// 	today := time.Now()
+	// 	oneYearAgo := today.AddDate(-1, 0, 0)
+	//
+	// 	var dateFrom, dateTo string
+	//
+	// 	if len(existingDates) == 0 {
+	// 		dateFrom = ""
+	// 		dateTo = ""
+	// 		logger.InfoContext(ctx, "first run - using period RT_PERIOD_LAST_1_YEAR")
+	// 	} else {
+	// 		existingDateSet := make(map[string]bool)
+	// 		for _, d := range existingDates {
+	// 			existingDateSet[d.Format("2006-01-02")] = true
+	// 		}
+	//
+	// 		for d := oneYearAgo; !d.After(today); d = d.AddDate(0, 0, 1) {
+	// 			dateStr := d.Format("2006-01-02")
+	// 			if !existingDateSet[dateStr] {
+	// 				dateFrom = dateStr
+	// 				dateTo = today.Format("2006-01-02")
+	// 				break
+	// 			}
+	// 		}
+	//
+	// 		if dateFrom == "" {
+	// 			logger.InfoContext(ctx, "no missing dates to sync")
+	// 			return nil
+	// 		}
+	// 		logger.InfoContext(ctx, "incremental sync",
+	// 			slog.String("from", dateFrom),
+	// 			slog.String("to", dateTo))
 	// 	}
+	//
+	// 	// resp, err := s.client.FetchBrokerActivity(ctx, symbol, dateFrom, dateTo)
+	// 	// if err != nil {
+	// 	// 	return fmt.Errorf("fetch broker activity: %v", err)
+	// 	// }
+	//
+	// 	// var txns []models.BrokerTransaction
+	// 	// for _, record := range resp.Data.Records {
+	// 	// 	if record.TradeActivity.BuySummary.Freq > 0 {
+	// 	// 		tradeDate, _ := time.Parse("2006-01-02", record.Date)
+	// 	// 		txns = append(txns, models.BrokerTransaction{
+	// 	// 			Symbol:       symbol,
+	// 	// 			TradeDate:    tradeDate.Format("2006-01-02"),
+	// 	// 			BrokerCode:   record.BrokerCode,
+	// 	// 			Side:         "BUY",
+	// 	// 			InvestorType: "ALL",
+	// 	// 			Frequency:    record.TradeActivity.BuySummary.Freq,
+	// 	// 			Lots:         record.TradeActivity.BuySummary.Lot,
+	// 	// 			AvgPrice:     decimal.NewFromFloat(record.TradeActivity.BuySummary.AvgPrice),
+	// 	// 		})
+	// 	// 	}
+	// 	// 	if record.TradeActivity.SellSummary.Freq > 0 {
+	// 	// 		tradeDate, _ := time.Parse("2006-01-02", record.Date)
+	// 	// 		txns = append(txns, models.BrokerTransaction{
+	// 	// 			Symbol:       symbol,
+	// 	// 			TradeDate:    tradeDate.Format("2006-01-02"),
+	// 	// 			BrokerCode:   record.BrokerCode,
+	// 	// 			Side:         "SELL",
+	// 	// 			InvestorType: "ALL",
+	// 	// 			Frequency:    record.TradeActivity.SellSummary.Freq,
+	// 	// 			Lots:         record.TradeActivity.SellSummary.Lot,
+	// 	// 			AvgPrice:     decimal.NewFromFloat(record.TradeActivity.SellSummary.AvgPrice),
+	// 	// 		})
+	// 	// 	}
+	// 	// }
+	//
+	// 	// if len(txns) > 0 {
+	// 	// 	if err := s.store.UpsertBrokerTransactions(ctx, txns); err != nil {
+	// 	// 		return fmt.Errorf("upsert transactions: %v", err)
+	// 	// 	}
+	// 	// 	logger.InfoContext(ctx, "synced transactions", slog.Int("count", len(txns)))
+	// 	// }
+	//
+	// 	return nil
 	// }
-
-	// if len(txns) > 0 {
-	// 	if err := s.store.UpsertBrokerTransactions(ctx, txns); err != nil {
-	// 		return fmt.Errorf("upsert transactions: %v", err)
-	// 	}
-	// 	logger.InfoContext(ctx, "synced transactions", slog.Int("count", len(txns)))
-	// }
-
-	return nil
+	return errors.ErrUnsupported
 }

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -96,6 +94,7 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 	)
 	stockbitStore := stockbit.NewStockbitStore(database, logger, telemetry.AppTelemetry.Tracer)
 	historicalScheduler := stockbit.NewStockbitHistoricalScheduler(
+		ctx,
 		cfg,
 		logger.With(slog.String("tag", "scheduler.StockbitHistoricalScheduler")),
 		telemetry.AppTelemetry.Tracer,
@@ -104,25 +103,19 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 	)
 
 	stWorker := stockbit.NewWorker(
+		ctx,
 		cfg,
 		logger,
 		telemetry.AppTelemetry.Tracer,
 		stockbitStore,
 		stockbitClient,
 	)
-	if err := stWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.ErrorContext(ctx, "stockbit worker error", slog.Any("error", err))
-		return err
-	}
 	go func() {
-		if err := historicalScheduler.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			logger.ErrorContext(ctx, "historical scheduler error", slog.Any("error", err))
-		}
+		historicalScheduler.Start()
 	}()
-	if err := stWorker.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.ErrorContext(ctx, "stockbit worker error", slog.Any("error", err))
-		return err
-	}
+	go func() {
+		stWorker.Start()
+	}()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {

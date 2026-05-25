@@ -11,68 +11,71 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/models"
-	"github.com/alturino/bloodhound/internal/store"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-type Stockbit struct {
-	config        *config.Config
-	logger        *slog.Logger
-	tracer        trace.Tracer
-	metrics       *telemetry.Metrics
-	client        Client
-	stockbitStore store.StockbitStore
+type Worker struct {
+	config  *config.Config
+	logger  *slog.Logger
+	ctx     context.Context
+	tracer  trace.Tracer
+	metrics *telemetry.Metrics
+	client  Client
+	store   Store
 }
 
 func NewWorker(
+	ctx context.Context,
 	cfg *config.Config,
 	logger *slog.Logger,
 	tracer trace.Tracer,
 	store Store,
 	client Client,
 ) *Worker {
-	return &Worker{
+	w := &Worker{
 		config: cfg,
+		ctx:    ctx,
 		logger: logger,
 		tracer: tracer,
 		client: client,
 		store:  store,
 	}
+	go func() {
+		w.Start()
+	}()
+	return w
 }
 
-func (w Worker) Start(ctx context.Context) error {
+func (w *Worker) Start() {
 	interval := w.config.Scheduler.Interval
-
 	logger := w.logger.With(
 		slog.String("tag", "stockbit.WorkerStockbit.Start"),
 		slog.Duration("interval", interval),
 	)
 
-	logger.InfoContext(ctx, "started background Stockbit worker")
+	logger.InfoContext(w.ctx, "started background Stockbit worker")
+	w.looper(w.Process)
+}
 
-	if err := w.Process(ctx); err != nil {
-		err = fmt.Errorf("initial processing: %v", err)
-		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
-		return err
-	}
-
+func (w *Worker) looper(run func(ctx context.Context) error) {
+	interval := w.config.Scheduler.Interval
 	tick := time.Tick(interval)
-
 	for {
 		select {
-		case <-ctx.Done():
-			logger.InfoContext(ctx, "received context done, stopping", slog.Any("error", ctx.Err()))
-			return ctx.Err()
+		case <-w.ctx.Done():
+			w.logger.InfoContext(w.ctx, "stopping", slog.Any("error", w.ctx.Err()))
+			return
 		case <-tick:
-			if err := w.Process(ctx); err != nil {
-				return err
+			if err := run(w.ctx); err != nil {
+				err = fmt.Errorf("run: %v", err)
+				w.logger.ErrorContext(w.ctx, err.Error(), slog.Any("error", err))
+				return
 			}
 		}
 	}
 }
 
-func (w Worker) Process(ctx context.Context) error {
+func (w *Worker) Process(ctx context.Context) error {
 	ctx, span := w.tracer.Start(
 		ctx,
 		"stockbit.WorkerStockbit.Process",
@@ -109,18 +112,16 @@ func (w Worker) Process(ctx context.Context) error {
 	return nil
 }
 
-func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
-	start := time.Now()
-	defer func() {
-		w.metrics.SbSyncDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
-	}()
-
+func (w *Worker) syncMarketDetector(ctx context.Context, symbol string) error {
 	ctx, span := w.tracer.Start(ctx, "stockbit.WorkerStockbit.syncMarketDetector")
 	defer span.End()
 
 	// dateStr := time.Now().Format("2006-01-02")
 
-	_ = w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.syncMarketDetector"))
+	// logger := w.logger.With(
+	// 	slog.String("tag", "stockbit.WorkerStockbit.syncMarketDetector"),
+	// 	slog.String("symbol", symbol),
+	// )
 
 	// resp, err := w.client.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
 	// if err != nil {

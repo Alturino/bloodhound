@@ -15,7 +15,7 @@ type Store interface {
 	UpsertMarketDetector(
 		ctx context.Context,
 		summary MarketDetectorSummary,
-		transactions []BrokerTransaction,
+		transactions []MarketDetectorBrokerTransaction,
 	) error
 	StockCodes(ctx context.Context) ([]string, error)
 	GetExistingTradeDates(ctx context.Context, symbol string) ([]time.Time, error)
@@ -36,7 +36,7 @@ func NewStockbitStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) Stor
 func (s *stockbitStore) UpsertMarketDetector(
 	ctx context.Context,
 	summary MarketDetectorSummary,
-	transactions []BrokerTransaction,
+	transactions []MarketDetectorBrokerTransaction,
 ) error {
 	return errors.ErrUnsupported
 }

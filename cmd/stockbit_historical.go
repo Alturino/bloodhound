@@ -88,7 +88,8 @@ func runHistorical(cmd *cobra.Command, args []string) error {
 		telemetry.AppTelemetry.Tracer,
 	)
 
-	historicalScheduler := stockbit.NewStockbitHistoricalScheduler(
+	_ = stockbit.NewStockbitHistoricalScheduler(
+		ctx,
 		cfg,
 		logger.With(slog.String("tag", "scheduler.StockbitHistoricalScheduler")),
 		telemetry.AppTelemetry.Tracer,
@@ -97,12 +98,6 @@ func runHistorical(cmd *cobra.Command, args []string) error {
 	)
 
 	logger.InfoContext(ctx, "starting broker activity historical sync")
-
-	if err := historicalScheduler.Process(ctx); err != nil {
-		err = fmt.Errorf("historical sync: %v", err)
-		logger.ErrorContext(ctx, err.Error())
-		return err
-	}
 
 	logger.InfoContext(ctx, "broker activity historical sync completed")
 	return nil
