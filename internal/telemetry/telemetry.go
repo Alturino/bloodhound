@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
@@ -28,7 +29,7 @@ type Telemetry struct {
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
 	Tracer         trace.Tracer
-	Meter          metric.Meter
+	Metrics        *Metrics
 	Logger         *slog.Logger
 }
 
@@ -41,11 +42,18 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		tp, mp := tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider()
 		otel.SetTracerProvider(tp)
 		otel.SetMeterProvider(mp)
+
+		mtr := mp.Meter(cfg.Telemetry.ServiceName)
+		metrics, err := NewMetrics(mtr)
+		if err != nil {
+			return nil, err
+		}
+
 		AppTelemetry = Telemetry{
 			TracerProvider: tp,
 			MeterProvider:  mp,
 			Tracer:         tp.Tracer(cfg.Telemetry.ServiceName),
-			Meter:          mp.Meter(cfg.Telemetry.ServiceName),
+			Metrics:        metrics,
 			Logger:         slog.Default(),
 		}
 		return &AppTelemetry, nil
@@ -74,6 +82,12 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		return nil, err
 	}
 
+	mtr := mp.Meter(cfg.Telemetry.ServiceName)
+	metrics, err := NewMetrics(mtr)
+	if err != nil {
+		return nil, err
+	}
+
 	// 3. Initialize Logger
 	logger := initLogger(cfg)
 
@@ -81,7 +95,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		TracerProvider: tp,
 		MeterProvider:  mp,
 		Tracer:         tp.Tracer(cfg.Telemetry.ServiceName),
-		Meter:          mp.Meter(cfg.Telemetry.ServiceName),
+		Metrics:        metrics,
 		Logger:         logger,
 	}
 	return &AppTelemetry, nil
@@ -146,7 +160,9 @@ func initMeter(
 	}
 
 	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
+		sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(time.Second*5)),
+		),
 		sdkmetric.WithResource(res),
 	)
 	otel.SetMeterProvider(mp)
