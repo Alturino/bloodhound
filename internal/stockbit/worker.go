@@ -52,20 +52,19 @@ func (w Worker) Start(ctx context.Context) error {
 	logger.InfoContext(ctx, "started background Stockbit worker")
 
 	if err := w.Process(ctx); err != nil {
-		err = fmt.Errorf("initial processing: %w", err)
+		err = fmt.Errorf("initial processing: %v", err)
 		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		return err
 	}
 
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	tick := time.Tick(interval)
 
 	for {
 		select {
 		case <-ctx.Done():
 			logger.InfoContext(ctx, "received context done, stopping", slog.Any("error", ctx.Err()))
 			return ctx.Err()
-		case <-ticker.C:
+		case <-tick:
 			if err := w.Process(ctx); err != nil {
 				return err
 			}
@@ -85,7 +84,7 @@ func (w Worker) Process(ctx context.Context) error {
 
 	stockCodes, err := w.store.StockCodes(ctx)
 	if err != nil {
-		err = fmt.Errorf("get stock codes: %w", err)
+		err = fmt.Errorf("get stock codes: %v", err)
 		return err
 	}
 
@@ -119,55 +118,55 @@ func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 	ctx, span := w.tracer.Start(ctx, "stockbit.WorkerStockbit.syncMarketDetector")
 	defer span.End()
 
-	dateStr := time.Now().Format("2006-01-02")
+	// dateStr := time.Now().Format("2006-01-02")
 
 	_ = w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.syncMarketDetector"))
 
-	resp, err := w.client.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
-	if err != nil {
-		return err
-	}
+	// resp, err := w.client.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
+	// if err != nil {
+	// 	return err
+	// }
 
-	summary := models.MarketDetectorSummary{
-		Symbol:        symbol,
-		TradeDate:     dateStr,
-		AccDistStatus: resp.Data.BandarDetector.BrokerAccDist,
-		TotalValue:    resp.Data.BandarDetector.Value,
-	}
+	// summary := MarketDetectorSummary{
+	// 	Symbol:        symbol,
+	// 	TradeDate:     dateStr,
+	// 	AccDistStatus: resp.Data.BandarDetector.BrokerAccDist,
+	// 	TotalValue:    resp.Data.BandarDetector.Value,
+	// }
 
-	var txns []models.BrokerTransaction
-	for _, b := range resp.Data.BrokerSummary.BrokersBuy {
-		lots := b.BLot.IntPart()
-		txns = append(txns, models.BrokerTransaction{
-			Symbol:       symbol,
-			TradeDate:    dateStr,
-			BrokerCode:   b.BrokerCode,
-			Side:         "BUY",
-			Lots:         lots,
-			Frequency:    b.Freq,
-			InvestorType: b.InvestorType,
-			AvgPrice:     b.BuyAvgPrice,
-		})
-	}
+	// var txns []BrokerTransaction
+	// for _, b := range resp.Data.BrokerSummary.BrokersBuy {
+	// 	lots := b.BLot.IntPart()
+	// 	txns = append(txns, BrokerTransaction{
+	// 		Symbol:       symbol,
+	// 		TradeDate:    dateStr,
+	// 		BrokerCode:   b.BrokerCode,
+	// 		Side:         "BUY",
+	// 		Lots:         lots,
+	// 		Frequency:    b.Freq,
+	// 		InvestorType: b.InvestorType,
+	// 		AvgPrice:     b.BuyAvgPrice,
+	// 	})
+	// }
 
-	for _, b := range resp.Data.BrokerSummary.BrokersSell {
-		lots := b.SLot.IntPart()
-		txns = append(txns, models.BrokerTransaction{
-			Symbol:       symbol,
-			TradeDate:    dateStr,
-			BrokerCode:   b.BrokerCode,
-			Side:         "SELL",
-			Lots:         lots,
-			Frequency:    b.Freq,
-			InvestorType: b.InvestorType,
-			AvgPrice:     b.SellAvgPrice,
-		})
-	}
+	// for _, b := range resp.Data.BrokerSummary.BrokersSell {
+	// 	lots := b.SLot.IntPart()
+	// 	txns = append(txns, models.BrokerTransaction{
+	// 		Symbol:       symbol,
+	// 		TradeDate:    dateStr,
+	// 		BrokerCode:   b.BrokerCode,
+	// 		Side:         "SELL",
+	// 		Lots:         lots,
+	// 		Frequency:    b.Freq,
+	// 		InvestorType: b.InvestorType,
+	// 		AvgPrice:     b.SellAvgPrice,
+	// 	})
+	// }
 
-	if err := w.store.UpsertMarketDetector(ctx, summary, txns); err != nil {
-		err = fmt.Errorf("upsert: %w", err)
-		return err
-	}
+	// if err := w.store.UpsertMarketDetector(ctx, summary, txns); err != nil {
+	// 	err = fmt.Errorf("upsert: %v", err)
+	// 	return err
+	// }
 
 	w.metrics.SbSymbolsSynced.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("status", "success"),

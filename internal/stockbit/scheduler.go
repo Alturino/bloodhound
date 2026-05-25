@@ -52,7 +52,7 @@ func (s *StockbitHistoricalScheduler) Start(ctx context.Context) error {
 		}
 	})
 	if err != nil {
-		return fmt.Errorf("add cron job: %w", err)
+		return fmt.Errorf("add cron job: %v", err)
 	}
 
 	s.cron.Start()
@@ -72,7 +72,7 @@ func (s *StockbitHistoricalScheduler) Process(ctx context.Context) error {
 
 	// symbols, err := s.store.GetStockCodesForMarketDetector(ctx)
 	// if err != nil {
-	// 	return fmt.Errorf("get stock codes: %w", err)
+	// 	return fmt.Errorf("get stock codes: %v", err)
 	// }
 
 	// if len(symbols) == 0 {
@@ -105,7 +105,7 @@ func (s *StockbitHistoricalScheduler) syncSymbol(ctx context.Context, symbol str
 
 	existingDates, err := s.store.GetExistingTradeDates(ctx, symbol)
 	if err != nil {
-		return fmt.Errorf("get existing dates: %w", err)
+		return fmt.Errorf("get existing dates: %v", err)
 	}
 
 	today := time.Now()
@@ -143,7 +143,7 @@ func (s *StockbitHistoricalScheduler) syncSymbol(ctx context.Context, symbol str
 
 	// resp, err := s.client.FetchBrokerActivity(ctx, symbol, dateFrom, dateTo)
 	// if err != nil {
-	// 	return fmt.Errorf("fetch broker activity: %w", err)
+	// 	return fmt.Errorf("fetch broker activity: %v", err)
 	// }
 
 	// var txns []models.BrokerTransaction
@@ -178,7 +178,7 @@ func (s *StockbitHistoricalScheduler) syncSymbol(ctx context.Context, symbol str
 
 	// if len(txns) > 0 {
 	// 	if err := s.store.UpsertBrokerTransactions(ctx, txns); err != nil {
-	// 		return fmt.Errorf("upsert transactions: %w", err)
+	// 		return fmt.Errorf("upsert transactions: %v", err)
 	// 	}
 	// 	logger.InfoContext(ctx, "synced transactions", slog.Int("count", len(txns)))
 	// }

@@ -19,7 +19,7 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-var HistoricalCmd = &cobra.Command{
+var StockbitHistoricalCmd = &cobra.Command{
 	Use:   "broker-historical",
 	Short: "Fetch broker activity historical data",
 	Long:  `Fetch broker activity historical data from Stockbit API and store in database`,
@@ -37,7 +37,7 @@ func runHistorical(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		err = fmt.Errorf("load config: %w", err)
+		err = fmt.Errorf("load config: %v", err)
 		slog.ErrorContext(ctx, err.Error())
 		return err
 	}
@@ -52,13 +52,13 @@ func runHistorical(cmd *cobra.Command, args []string) error {
 
 	tmt, err := telemetry.New(ctx, cfg)
 	if err != nil {
-		err = fmt.Errorf("initialize telemetry: %w", err)
+		err = fmt.Errorf("initialize telemetry: %v", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
 	defer func() {
 		if err := tmt.Shutdown(ctx); err != nil {
-			err = fmt.Errorf("shutdown telemetry: %w", err)
+			err = fmt.Errorf("shutdown telemetry: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
@@ -66,13 +66,13 @@ func runHistorical(cmd *cobra.Command, args []string) error {
 
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {
-		err = fmt.Errorf("initialize database: %w", err)
+		err = fmt.Errorf("initialize database: %v", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
 	defer func() {
 		if err := database.Close(); err != nil {
-			err = fmt.Errorf("close database: %w", err)
+			err = fmt.Errorf("close database: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
@@ -99,7 +99,7 @@ func runHistorical(cmd *cobra.Command, args []string) error {
 	logger.InfoContext(ctx, "starting broker activity historical sync")
 
 	if err := historicalScheduler.Process(ctx); err != nil {
-		err = fmt.Errorf("historical sync: %w", err)
+		err = fmt.Errorf("historical sync: %v", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}

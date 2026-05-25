@@ -42,7 +42,7 @@ func Get(ctx context.Context, config *config.Database) (*sql.DB, error) {
 		otelsql.WithAttributes(semconv.DBSystemNamePostgreSQL),
 	)
 	if err != nil {
-		err = fmt.Errorf("parsing postgres url: %w", err)
+		err = fmt.Errorf("parsing postgres url: %v", err)
 		logger.ErrorContext(ctx, err.Error())
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func Get(ctx context.Context, config *config.Database) (*sql.DB, error) {
 
 	logger.DebugContext(ctx, "pinging database")
 	if err := db.PingContext(ctx); err != nil {
-		err = fmt.Errorf("pinging db: %w", err)
+		err = fmt.Errorf("pinging db: %v", err)
 		return nil, err
 	}
 	logger.InfoContext(ctx, "connected to database")
@@ -90,7 +90,7 @@ func migrateUp(ctx context.Context, config *config.Database, db *sql.DB, postgre
 	span.AddEvent("creating postgres driver for migration")
 	driver, err := migratepostgres.WithInstance(db, &migratepostgres.Config{})
 	if err != nil {
-		err = fmt.Errorf("creating postgres driver for migration: %w", err)
+		err = fmt.Errorf("creating postgres driver for migration: %v", err)
 		return err
 	}
 	logger.DebugContext(ctx, "created postgres driver for migration")
@@ -100,7 +100,7 @@ func migrateUp(ctx context.Context, config *config.Database, db *sql.DB, postgre
 	span.AddEvent("creating migration instance")
 	migration, err := migrate.NewWithDatabaseInstance(config.MigrationPath, postgresURL, driver)
 	if err != nil {
-		err = fmt.Errorf("migration postgres: %w", err)
+		err = fmt.Errorf("migration postgres: %v", err)
 		return err
 	}
 	logger.DebugContext(ctx, "created migration instance")
@@ -109,7 +109,7 @@ func migrateUp(ctx context.Context, config *config.Database, db *sql.DB, postgre
 	logger.DebugContext(ctx, "running database migration")
 	span.AddEvent("running database migration")
 	if err := migration.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		err = fmt.Errorf("migration up: %w", err)
+		err = fmt.Errorf("migration up: %v", err)
 		return err
 	}
 	logger.DebugContext(ctx, "ran database migration")
@@ -151,7 +151,7 @@ func generateJet(ctx context.Context, config *config.Database) error {
 	logger.DebugContext(ctx, "generating jet files")
 	span.AddEvent("generating jet files")
 	if err := jetgenpostgres.GenerateDSN(dsn, "public", destinationdir, template); err != nil {
-		err = fmt.Errorf("generating jet files: %w", err)
+		err = fmt.Errorf("generating jet files: %v", err)
 		return err
 	}
 	logger.DebugContext(ctx, "generated jet files")

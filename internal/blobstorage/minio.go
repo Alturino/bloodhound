@@ -47,7 +47,7 @@ func NewMinIO(
 		TrailingHeaders: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("NewMinIOStorage create minio client: %w", err)
+		return nil, fmt.Errorf("NewMinIOStorage create minio client: %v", err)
 	}
 
 	minio := &MinIO{
@@ -58,7 +58,7 @@ func NewMinIO(
 		config:  config,
 	}
 	if err := minio.CreateBucket(context.Background()); err != nil {
-		err = fmt.Errorf("create bucket: %w", err)
+		err = fmt.Errorf("create bucket: %v", err)
 		return nil, err
 	}
 
@@ -108,20 +108,19 @@ func (s *MinIO) SaveReader(
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf("uploading file=%s bucket=%s: %w", filename, bucket, err)
-		logger.ErrorContext(ctx, err.Error())
+		err = fmt.Errorf("saving file: %v", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		ctx = slogctx.Append(ctx, slog.Any("minio_result", info))
 	}
-	logger.InfoContext(ctx, "uploaded file")
-	span.AddEvent("uploaded file")
+	logger.InfoContext(ctx, "saved file")
+	span.AddEvent("saved file")
 
 	saveres, err := s.storage.SaveReader(ctx, filename, &buf, contentSize, contentType)
 	if err != nil {
-		logger.ErrorContext(ctx, "save file locally", slog.Any("error", err))
+		logger.WarnContext(ctx, "saving file locally", slog.Any("error", err))
 		return SaveResult{UploadInfo: info}, nil
 	}
 	ctx = slogctx.Append(ctx, slog.Any("local_save_res", saveres))
@@ -150,7 +149,7 @@ func (s *MinIO) Exists(ctx context.Context, object string) (bool, error) {
 	span.AddEvent("check object")
 	info, err := s.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("check object: %w", err)
+		err = fmt.Errorf("check object: %v", err)
 		if minio.ToErrorResponse(err).Code == minio.NoSuchKey {
 			return false, nil
 		}

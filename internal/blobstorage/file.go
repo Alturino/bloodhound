@@ -95,7 +95,7 @@ func (f *localFile) SaveReader(
 	hash := sha256.New()
 	tee := io.TeeReader(content, hash)
 	if _, err := io.Copy(file, tee); err != nil {
-		err = fmt.Errorf("save reader: %w", err)
+		err = fmt.Errorf("save reader: %v", err)
 		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
@@ -157,7 +157,7 @@ func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser,
 func (f *localFile) CreateBucket(ctx context.Context) error {
 	fp := filepath.Join(f.config.BloodhoundDir)
 	if err := os.MkdirAll(fp, os.FileMode(0o755)); err != nil {
-		err = fmt.Errorf("create dir: %w", err)
+		err = fmt.Errorf("create dir: %v", err)
 		return err
 	}
 	return nil

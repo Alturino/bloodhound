@@ -2,7 +2,6 @@ package stockbit
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -10,7 +9,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -18,7 +16,7 @@ type Client interface {
 	FetchMarketDetector(
 		ctx context.Context,
 		symbol, dateFrom, dateTo string,
-	) (models.StockbitMarketDetectorResponse, error)
+	) (MarketDetectorResponse, error)
 	FetchBrokerActivity(
 		ctx context.Context,
 		symbol, dateFrom, dateTo string,
@@ -60,7 +58,6 @@ func NewClient(
 		"sec-fetch-dest":     "empty",
 		"sec-fetch-mode":     "cors",
 		"sec-fetch-site":     "same-site",
-		"user-agent":         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
 	}).SetBaseURL(config.BaseURL)
 
 	return &client{
@@ -75,8 +72,12 @@ func NewClient(
 func (c *client) FetchMarketDetector(
 	ctx context.Context,
 	symbol, dateFrom, dateTo string,
-) (models.StockbitMarketDetectorResponse, error) {
-	ctx, span := c.tracer.Start(ctx, "stockbit.Client.FetchMarketDetector")
+) (MarketDetectorResponse, error) {
+	ctx, span := c.tracer.Start(
+		ctx,
+		"stockbit.Client.FetchMarketDetector",
+		trace.WithSpanKind(trace.SpanKindClient),
+	)
 	defer span.End()
 
 	logger := c.logger.With(
@@ -89,6 +90,7 @@ func (c *client) FetchMarketDetector(
 	logger.DebugContext(ctx, "fetching stockbit market detector")
 	span.AddEvent("fetching stockbit market detector")
 	// API Endpoint: https://exodus.stockbit.com/marketdetectors/{symbol}
+	var rawResp MarketDetectorResponse
 	resp, err := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
@@ -99,28 +101,18 @@ func (c *client) FetchMarketDetector(
 			"investor_type":    "INVESTOR_TYPE_ALL",
 			"limit":            "25",
 		}).
+		SetSuccessResult(&rawResp).
 		Get("/marketdetectors/" + symbol)
 	if err != nil {
-		err = fmt.Errorf("fetching stockbit market detector: %w", err)
-		return models.StockbitMarketDetectorResponse{}, err
+		err = fmt.Errorf("fetching stockbit market detector: %v", err)
+		return MarketDetectorResponse{}, err
 	}
-	if !resp.IsSuccessState() {
-		err := fmt.Errorf("fetching stockbit market detector msg: status code: %d", resp.StatusCode)
-		return models.StockbitMarketDetectorResponse{}, err
+	if resp.IsErrorState() {
+		err := fmt.Errorf("fetching stockbit market detector: status_code=%d", resp.StatusCode)
+		return MarketDetectorResponse{}, err
 	}
 	span.AddEvent("fetched stockbit market detector")
 	logger.DebugContext(ctx, "fetched stockbit market detector")
-
-	logger.DebugContext(ctx, "unmarshaling response")
-	span.AddEvent("unmarshaling response")
-	var rawResp models.StockbitMarketDetectorResponse
-	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
-		err = fmt.Errorf("unmarshaling response: %w", err)
-		telemetry.RecordError(span, err)
-		return models.StockbitMarketDetectorResponse{}, err
-	}
-	logger.DebugContext(ctx, "unmarshaled response")
-	span.AddEvent("unmarshaled response")
 
 	return rawResp, nil
 }

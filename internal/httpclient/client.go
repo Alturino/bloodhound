@@ -7,7 +7,6 @@ import (
 
 	"github.com/imroc/req/v3"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
@@ -22,9 +21,9 @@ func NewClient(config *config.Config, t trace.Tracer) *req.Client {
 		SetLogger(req.NewLoggerFromStandardLogger(slog.NewLogLogger(slog.Default().Handler(), config.App.LogLevelVar.Level()))).
 		SetTimeout(30*time.Second).
 		SetCommonRetryCount(3).
-		SetCommonRetryBackoffInterval(1*time.Second, 5*time.Second)
-		// WrapRoundTripFunc(traceReq(t)).
-		// OnAfterResponse(errWrapper()).
+		SetCommonRetryBackoffInterval(1*time.Second, 5*time.Minute).
+		WrapRoundTripFunc(traceReq(t)).
+		OnAfterResponse(errWrapper())
 	// AddCommonRetryCondition(middleware.ShouldGetCookie()).
 	// SetCommonRetryHook(middleware.GetCookie(ctx)).
 	// SetOutputDirectory(common.BloodhoundDir).
@@ -39,13 +38,13 @@ func errWrapper() req.ResponseMiddleware {
 	return req.ResponseMiddleware(func(client *req.Client, resp *req.Response) error {
 		if resp.Err != nil {
 			if dump := resp.Dump(); dump != "" {
-				resp.Err = fmt.Errorf("%w: raw_content=%s", resp.Err, dump)
+				resp.Err = fmt.Errorf("%v: raw_content=%s", resp.Err, dump)
 			}
 			return nil
 		}
-		if !resp.IsSuccessState() {
+		if resp.IsErrorState() {
 			resp.Err = fmt.Errorf(
-				"unexpected status_code=%d, url=%s, raw_content=%s",
+				"unexpected status_code=%d, url=%s, http_dump=%s",
 				resp.StatusCode,
 				resp.Request.URL.String(),
 				resp.Dump(),
@@ -58,9 +57,8 @@ func errWrapper() req.ResponseMiddleware {
 func traceReq(tracer trace.Tracer) req.RoundTripWrapperFunc {
 	return req.RoundTripWrapperFunc(func(rt req.RoundTripper) req.RoundTripFunc {
 		return req.RoundTripFunc(func(req *req.Request) (resp *req.Response, err error) {
-			ctx := req.Context()
-			ctx, span := tracer.Start(
-				ctx,
+			_, span := tracer.Start(
+				req.Context(),
 				"httpclient",
 				trace.WithSpanKind(trace.SpanKindClient),
 				trace.WithAttributes(
@@ -74,11 +72,9 @@ func traceReq(tracer trace.Tracer) req.RoundTripWrapperFunc {
 			)
 			defer span.End()
 
-			ctx = baggage.ContextWithoutBaggage(ctx)
-			req = req.SetContext(ctx)
-
 			resp, err = rt.RoundTrip(req)
 			if err != nil {
+				err = fmt.Errorf("round trip: %v", err)
 				telemetry.RecordError(span, err)
 				return nil, err
 			}

@@ -21,7 +21,7 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-var StocbitWorker = &cobra.Command{
+var StockbitWorker = &cobra.Command{
 	Use:     "sb run",
 	Short:   "Run the stockbit worker service",
 	RunE:    stockbitWorker,
@@ -39,7 +39,7 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		err = fmt.Errorf("load config: %w", err)
+		err = fmt.Errorf("load config: %v", err)
 		slog.ErrorContext(ctx, err.Error())
 		return err
 	}
@@ -54,13 +54,13 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 
 	tmt, err := telemetry.New(ctx, cfg)
 	if err != nil {
-		err = fmt.Errorf("initialize telemetry: %w", err)
+		err = fmt.Errorf("initialize telemetry: %v", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
 	defer func() {
 		if err := tmt.Shutdown(ctx); err != nil {
-			err = fmt.Errorf("shutdown telemetry: %w", err)
+			err = fmt.Errorf("shutdown telemetry: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
@@ -68,20 +68,20 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 
 	// stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	// if err != nil {
-	// 	err = fmt.Errorf("initialize storage: %w", err)
+	// 	err = fmt.Errorf("initialize storage: %v", err)
 	// 	logger.ErrorContext(ctx, err.Error())
 	// 	return err
 	// }
 
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {
-		err = fmt.Errorf("initialize database %w", err)
+		err = fmt.Errorf("initialize database %v", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
 	defer func() {
 		if err := database.Close(); err != nil {
-			err = fmt.Errorf("close database: %w", err)
+			err = fmt.Errorf("close database: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
@@ -129,12 +129,12 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 		if err := viper.MergeInConfig(); err != nil {
-			err = fmt.Errorf("merge config file: %w", err)
+			err = fmt.Errorf("merge config file: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
 		if err := viper.Unmarshal(cfg); err != nil {
-			err = fmt.Errorf("unmarshal config: %w", err)
+			err = fmt.Errorf("unmarshal config: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
