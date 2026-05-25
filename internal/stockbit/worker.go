@@ -6,17 +6,21 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/store"
+	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
 type Stockbit struct {
 	config        *config.Config
 	logger        *slog.Logger
 	tracer        trace.Tracer
+	metrics       *telemetry.Metrics
 	client        Client
 	stockbitStore store.StockbitStore
 }
@@ -69,6 +73,8 @@ func (w Stockbit) Process(ctx context.Context) error {
 		return err
 	}
 
+	w.metrics.SbStockCodesTotal.Record(ctx, int64(len(stockCodes)))
+
 	if len(stockCodes) == 0 {
 		logger.InfoContext(ctx, "no stock codes found for market detector sync")
 		return nil
@@ -89,6 +95,11 @@ func (w Stockbit) Process(ctx context.Context) error {
 }
 
 func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
+	start := time.Now()
+	defer func() {
+		w.metrics.SbSyncDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
+	}()
+
 	ctx, span := w.tracer.Start(ctx, "stockbit.WorkerStockbit.syncMarketDetector")
 	defer span.End()
 
@@ -141,6 +152,10 @@ func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 		err = fmt.Errorf("upsert: %w", err)
 		return err
 	}
+
+	w.metrics.SbSymbolsSynced.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("status", "success"),
+	))
 
 	return nil
 }

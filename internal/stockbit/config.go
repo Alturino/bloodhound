@@ -7,11 +7,13 @@ import (
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/store"
+	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
 type Config struct {
 	Config        *config.Config
 	Logger        *slog.Logger
 	Tracer        trace.Tracer
+	Metrics       *telemetry.Metrics
 	StockbitStore store.StockbitStore
 }
