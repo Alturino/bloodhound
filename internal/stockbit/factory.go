@@ -5,6 +5,7 @@ func NewWorkerStockbit(cfg *Config, stockbitClient Client) *Stockbit {
 		config:        cfg.Config,
 		logger:        cfg.Logger,
 		tracer:        cfg.Tracer,
+		metrics:       cfg.Metrics,
 		client:        stockbitClient,
 		stockbitStore: cfg.StockbitStore,
 	}
