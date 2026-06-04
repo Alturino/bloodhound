@@ -42,7 +42,7 @@ services:
     command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       # - minio:/data
-      - /run/media/onirutla/Backup/bloodhound/minio/:/data
+      - /run/media/onirutla/Backup/bloodhound/minio:/data
     healthcheck:
       test:
         [

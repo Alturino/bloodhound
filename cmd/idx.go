@@ -77,13 +77,14 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	logger.InfoContext(ctx, "initialize blobstorage")
+	logger.DebugContext(ctx, "initialize blobstorage")
 	stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	if err != nil {
 		err = fmt.Errorf("initialize storage: %w", err)
 		logger.ErrorContext(ctx, err.Error())
 		return err
 	}
+	logger.InfoContext(ctx, "initialized blobstorage")
 
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {

@@ -62,7 +62,7 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	// stg, err := storage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
+	// stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	// if err != nil {
 	// 	err = fmt.Errorf("initialize storage: %w", err)
 	// 	logger.ErrorContext(ctx, err.Error())
