@@ -2,6 +2,8 @@ package idx
 
 import (
 	"log/slog"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
@@ -82,6 +84,10 @@ func (a Announcement) ToAttachments() []model.Attachments {
 		attachments[i] = att.ToAttachments(a.ToAnnouncement())
 	}
 	return attachments
+}
+
+func isPDF(att Attachment) bool {
+	return strings.EqualFold(filepath.Ext(att.OriginalFilename), ".pdf")
 }
 
 func (a Attachment) LogValue() slog.Value {

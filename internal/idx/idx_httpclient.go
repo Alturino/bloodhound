@@ -215,15 +215,19 @@ func convertToModel(raw rawAnnouncementResponse) AnnouncementResponse {
 			StockCode:         stockcode,
 			CreatedDate:       r.Pengumuman.CreatedDate.Time(),
 			IsStock:           r.Pengumuman.EfekEmiten_Saham,
-			Attachments:       make([]Attachment, len(r.Attachments)),
+			Attachments:       make([]Attachment, 0, len(r.Attachments)),
 		}
 
-		for j, attachment := range r.Attachments {
-			announcement.Attachments[j] = Attachment{
+		for _, attachment := range r.Attachments {
+			candidate := Attachment{
 				PDFFilename:      attachment.PDFFilename,
 				FullSavePath:     attachment.FullSavePath,
 				OriginalFilename: attachment.OriginalFilename,
 			}
+			if !isPDF(candidate) {
+				continue
+			}
+			announcement.Attachments = append(announcement.Attachments, candidate)
 		}
 
 		result.Announcements[i] = announcement

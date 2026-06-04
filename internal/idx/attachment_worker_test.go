@@ -37,7 +37,10 @@ type stubStorage struct {
 	err    error
 }
 
-func (s *stubStorage) SaveReader(context.Context, string, io.Reader, int64, string) (blobstorage.SaveResult, error) {
+func (s *stubStorage) SaveReader(_ context.Context, filename string, _ io.Reader, _ int64, _ string) (blobstorage.SaveResult, error) {
+	if s.result.Key == "" {
+		s.result.Key = filename
+	}
 	return s.result, s.err
 }
 
@@ -67,7 +70,7 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 	date := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
 	task := AttachmentTask{
 		Ctx: context.Background(),
-		Attachment: model.Attachments{
+		Attachment: &model.Attachments{
 			ID:               uuid.New(),
 			OriginalFilename: "laporan.pdf",
 			Filename:         "laporan.pdf",
@@ -116,7 +119,7 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 func TestAttachmentWork_LeavesStoragePathEmptyOnDownloadError(t *testing.T) {
 	task := AttachmentTask{
 		Ctx: context.Background(),
-		Attachment: model.Attachments{
+		Attachment: &model.Attachments{
 			ID:               uuid.New(),
 			OriginalFilename: "laporan.pdf",
 			Title:            "Judul",
