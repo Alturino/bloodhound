@@ -114,7 +114,7 @@ func (c *client) FetchAnnouncements(
 			"dateTo":    now.Format("20060102"),
 		}).
 		SetSuccessResult(&rawResp).
-		EnableDumpWithoutResponseBody().
+		EnableDump().
 		Get("/primary/ListedCompany/GetAnnouncement")
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		logger = logger.With(slog.String("http_dump", resp.Dump()))
