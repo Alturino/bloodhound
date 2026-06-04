@@ -206,13 +206,13 @@ func (w *IDX) getAndSubmitPage(
 ) error {
 	ctx, span := w.tracer.Start(
 		ctx,
-		"idx.IDX.fetchAndSubmitPage",
+		"idx.IDX.getAndSubmitPage",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
-	logger := w.logger.With(slog.String("tag", "idx.IDX.fetchAndSubmitPage"))
+	logger := w.logger.With(slog.String("tag", "idx.IDX.getAndSubmitPage"))
 
 	if err := w.sem.Acquire(ctx, 1); err != nil {
 		logger.ErrorContext(ctx, "acquire semaphore", slog.Any("error", err))
@@ -367,7 +367,7 @@ func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcemen
 	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
 	errs := make([]error, 0, len(announcements))
-	for attachmentChunks := range slices.Chunk(allAttachments, 500) {
+	for attachmentChunks := range slices.Chunk(allAttachments, 1000) {
 		if len(attachmentChunks) == 0 {
 			break
 		}
