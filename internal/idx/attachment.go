@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
@@ -73,7 +72,7 @@ func (p *attachmentPool) Start() {
 }
 
 func (p *attachmentPool) poller() {
-	interval := time.Minute
+	interval := 30 * time.Second
 	logger := p.logger.With(
 		slog.String("tag", "attachmentPool.poller"),
 		slog.Duration("interval", interval),
@@ -124,7 +123,9 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 		ids[i] = att.ID
 	}
 
-	if err := p.store.ClaimAttachments(ctx, ids...); err != nil {
+	attachments, err = p.store.ClaimAttachments(ctx, ids...)
+	if err != nil {
+		logger.ErrorContext(ctx, "claiming attachments", slog.Any("error", err))
 		return
 	}
 
@@ -133,7 +134,7 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 		case <-p.ctx.Done():
 			logger.InfoContext(ctx, "context done, stopping")
 			return
-		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: att}:
+		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: &att}:
 			logger.InfoContext(ctx, "submitted attachment", slog.Any("attachment", att))
 			continue
 		}
@@ -170,7 +171,7 @@ func (p *attachmentPool) workerLoop(id int) {
 func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentTask) {
 	ctx, span := p.tracer.Start(
 		ctx,
-		"attachmentPool.processAttachment",
+		"idx.attachmentPool.processAttachment",
 		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(
 			attribute.String("attachment_id", task.Attachment.ID.String()),
@@ -183,22 +184,17 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 
 	result, err := p.worker.Work(ctx, task)
 	if err != nil {
-		p.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("status", "failure"),
-		))
+		p.metrics.AttFailedDownload.Add(ctx, 1)
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
-		if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
+		if err := p.store.UpdateAttachmentResult(ctx, *result.Attachment); err != nil {
 			logger.ErrorContext(ctx, "update attachment", slog.Any("error", err))
 			return
 		}
 		return
 	}
 
-	p.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("status", "success"),
-	))
-
-	if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
+	p.metrics.AttDownloaded.Add(ctx, 1)
+	if err := p.store.UpdateAttachmentResult(ctx, *result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
 	}

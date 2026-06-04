@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"path/filepath"
 	"time"
 
 	slogctx "github.com/veqryn/slog-context"
@@ -61,8 +62,8 @@ func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentR
 	start := time.Now()
 
 	filePath := a.cleaner.Clean(ctx, task)
-	ctx = slogctx.Append(ctx, slog.String("filepath", filePath))
-	logger := a.logger.With(slog.String("tag", "attachment.Work"))
+	ctx = slogctx.Append(ctx, slog.String("clean_filepath", filePath))
+	logger := a.logger.With(slog.String("tag", "idx.attachment.Work"))
 
 	data, contentType, err := a.client.DownloadFile(ctx, task.Attachment.IdxURL)
 	if err != nil {
@@ -74,7 +75,7 @@ func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentR
 		task.Attachment.IsDownloaded = false
 		task.Attachment.IsProcessing = false
 		task.Attachment.Error = err.Error()
-		return AttachmentResult{AttachmentTask: task}, err
+		return AttachmentResult{AttachmentTask{Ctx: task.Ctx, Attachment: task.Attachment}}, err
 	}
 
 	reader := bytes.NewReader(data)
@@ -93,7 +94,6 @@ func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentR
 		return AttachmentResult{AttachmentTask: task}, err
 	}
 	ctx = slogctx.Append(ctx, slog.Any("save_result", result))
-	logger.InfoContext(ctx, "attachment processed")
 
 	a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
 	a.metrics.AttDownloadSize.Record(ctx, int64(len(data)))
@@ -104,5 +104,9 @@ func (a *attachment) Work(ctx context.Context, task AttachmentTask) (AttachmentR
 	task.Attachment.IsDownloaded = true
 	task.Attachment.IsProcessing = false
 	task.Attachment.Error = ""
+	task.Attachment.Checksum = result.ChecksumSHA256
+	task.Attachment.StoragePath = filepath.Clean(result.Key)
+	task.Attachment.UploadedAt = time.Now()
+	logger.InfoContext(ctx, "attachment processed", slog.Any("task_result", task))
 	return AttachmentResult{AttachmentTask: task}, nil
 }

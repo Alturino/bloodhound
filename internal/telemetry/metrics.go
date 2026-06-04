@@ -13,6 +13,7 @@ type Metrics struct {
 	IdxPagesFetched              metric.Int64Counter
 	IdxPageFetchDuration         metric.Float64Histogram
 	AttDownloaded                metric.Int64Counter
+	AttFailedDownload            metric.Int64Counter
 	AttDownloadDuration          metric.Float64Histogram
 	AttDownloadSize              metric.Int64Histogram
 	AttPolledCount               metric.Int64Gauge
@@ -94,6 +95,15 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		return nil, err
 	}
 
+	attFailedDownload, err := meter.Int64Counter(
+		"bloodhound.attachment.failed.download",
+		metric.WithDescription("Attachments downloaded, status attribute"),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	attDownloadDuration, err := meter.Float64Histogram(
 		"bloodhound.attachment.download.duration",
 		metric.WithDescription("Attachment download duration (ms)"),
@@ -157,6 +167,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		IdxPagesFetched:              idxPagesFetched,
 		IdxPageFetchDuration:         idxPageFetchDuration,
 		AttDownloaded:                attDownloaded,
+		AttFailedDownload:            attFailedDownload,
 		AttDownloadDuration:          attDownloadDuration,
 		AttDownloadSize:              attDownloadSize,
 		AttPolledCount:               attPolledCount,
