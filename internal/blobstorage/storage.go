@@ -22,7 +22,7 @@ func (s SaveResult) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("bucket", s.Bucket),
 		slog.Int64("size", s.Size),
-		slog.String("key", s.Location),
+		slog.String("key", s.Key),
 		slog.String("etag", s.ETag),
 		slog.String("checksum_sha256", s.ChecksumSHA256),
 	)
@@ -53,17 +53,21 @@ type storage struct {
 }
 
 func NewStorage(config *config.Storage, logger *slog.Logger, tracer trace.Tracer) (Storage, error) {
-	fsLogger := logger.With(slog.String("tag", "storage.Filestorage"))
-	fs := NewLocalFile(&config.Local, fsLogger, tracer)
+	logger.Debug("initializing local file storage storage")
+	fsLogger := logger.With(slog.String("tag", "blobstorage.FileStorage"))
+	localFileStorage := NewLocalFile(&config.Local, fsLogger, tracer)
+	logger.Info("initialized local file storage storage")
 
-	minioLogger := logger.With(slog.String("tag", "storage.Minio"))
-	minio, err := NewMinIO(&config.MinIO, fs, minioLogger, tracer)
+	logger.Debug("initializing minio storage")
+	minioLogger := logger.With(slog.String("tag", "blobstorage.Minio"))
+	minioStorage, err := NewMinIO(&config.MinIO, localFileStorage, minioLogger, tracer)
 	if err != nil {
 		logger.Error("create minio client", slog.Any("error", err))
 		return nil, err
 	}
+	logger.Info("initialized minio storage")
 
-	return &storage{s: minio, logger: logger, tracer: tracer}, nil
+	return &storage{s: minioStorage, logger: logger, tracer: tracer}, nil
 }
 
 // SaveReader uploads a file to the storage
@@ -74,8 +78,6 @@ func (s *storage) SaveReader(
 	contentSize int64,
 	contentType string,
 ) (SaveResult, error) {
-	logger := s.logger.With(slog.String("tag", "storage.Storage.SaveReader"))
-	logger.DebugContext(ctx, "saving file")
 	return s.s.SaveReader(ctx, filename, content, contentSize, contentType)
 }
 

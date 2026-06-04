@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// Fake is a fake implementation of storage.Storage for testing
+// Fake is a fake implementation of blobstorage.Storage for testing
 type Fake struct {
 	Saved    map[string][]byte
 	saveErr  error

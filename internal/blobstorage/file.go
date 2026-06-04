@@ -104,6 +104,7 @@ func (f *localFile) SaveReader(
 		UploadInfo: minio.UploadInfo{
 			Bucket:         f.config.BloodhoundDir,
 			Key:            fp,
+			Location:       fp,
 			ChecksumSHA256: base64.StdEncoding.EncodeToString(hash.Sum(nil)),
 		},
 	}

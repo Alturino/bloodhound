@@ -36,7 +36,7 @@ func NewMinIO(
 	tracer trace.Tracer,
 ) (*MinIO, error) {
 	if logger == nil {
-		logger = slog.Default().With(slog.String("tag", "storage.MinIO"))
+		logger = slog.Default().With(slog.String("tag", "blobstorage.MinIO"))
 	}
 	if tracer == nil {
 		tracer = telemetry.AppTelemetry.Tracer
@@ -76,7 +76,7 @@ func (s *MinIO) SaveReader(
 	bucket := s.config.Bucket
 	ctx, span := s.tracer.Start(
 		ctx,
-		"storage.MinIO.Upload",
+		"blobstorage.MinIO.SaveReader",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
 			attribute.String("bucket", bucket),
@@ -86,12 +86,12 @@ func (s *MinIO) SaveReader(
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "storage.MinIO.SaveReader"),
+		slog.String("tag", "blobstorage.MinIO.SaveReader"),
 		slog.String("bucket", bucket),
 		slog.String("object", filename),
 	)
 
-	logger.InfoContext(ctx, "uploading file")
+	logger.DebugContext(ctx, "uploading file")
 	span.AddEvent("uploading file")
 	var buf bytes.Buffer
 	tee := io.TeeReader(content, &buf)
@@ -114,7 +114,7 @@ func (s *MinIO) SaveReader(
 		return SaveResult{}, err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("upload_result", info))
+		ctx = slogctx.Append(ctx, slog.Any("minio_result", info))
 	}
 	logger.InfoContext(ctx, "uploaded file")
 	span.AddEvent("uploaded file")
@@ -124,10 +124,10 @@ func (s *MinIO) SaveReader(
 		logger.ErrorContext(ctx, "save file locally", slog.Any("error", err))
 		return SaveResult{UploadInfo: info}, nil
 	}
-	logger = logger.With(slog.Any("local_save_res", saveres))
+	ctx = slogctx.Append(ctx, slog.Any("local_save_res", saveres))
 	logger.InfoContext(ctx, "saved file locally")
 
-	return SaveResult{info}, nil
+	return SaveResult{UploadInfo: info}, nil
 }
 
 // Exists checks if an object exists in MinIO and is not empty
@@ -135,7 +135,7 @@ func (s *MinIO) Exists(ctx context.Context, object string) (bool, error) {
 	bucket := s.config.Bucket
 	ctx, span := s.tracer.Start(
 		ctx,
-		"storage.MinIO.Exists",
+		"blobstorage.MinIO.Exists",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
 			attribute.String("bucket", bucket),
@@ -168,7 +168,7 @@ func (s *MinIO) Download(ctx context.Context, object string) (io.ReadCloser, err
 	bucket := s.config.Bucket
 	ctx, span := s.tracer.Start(
 		ctx,
-		"storage.MinIO.Download",
+		"blobstorage.MinIO.Download",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
 			attribute.String("bucket", bucket),
@@ -179,17 +179,17 @@ func (s *MinIO) Download(ctx context.Context, object string) (io.ReadCloser, err
 
 	logger := s.logger.With(slog.String("bucket", bucket), slog.String("object", object))
 
-	logger.DebugContext(ctx, "downloading object from MinIO")
-	span.AddEvent("downloading object from MinIO")
+	logger.DebugContext(ctx, "downloading object from minio")
+	span.AddEvent("downloading object from minio")
 	obj, err := s.client.GetObject(ctx, bucket, object, minio.GetObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("storage.MinIO.Download download file: %w", err)
+		err = fmt.Errorf("downloading object from minio: %w", err)
 		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
-	logger.DebugContext(ctx, "downloaded object from MinIO")
-	span.AddEvent("downloaded object from MinIO")
+	logger.DebugContext(ctx, "downloaded object from minio")
+	span.AddEvent("downloaded object from minio")
 
 	return obj, nil
 }
@@ -199,7 +199,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 	bucket := s.config.Bucket
 	ctx, span := s.tracer.Start(
 		ctx,
-		"storage.MinIO.CreateBucket",
+		"blobstorage.MinIO.CreateBucket",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attribute.String("bucket", bucket)),
 	)
@@ -211,7 +211,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 	span.AddEvent("is bucket exists")
 	isExists, err := s.client.BucketExists(ctx, bucket)
 	if err != nil {
-		err = fmt.Errorf("storage.MinIO.CreateBucket is bucket exists: %w", err)
+		err = fmt.Errorf("minio is bucket exists: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -219,7 +219,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 		logger.DebugContext(ctx, "bucket doesn't exist, creating bucket")
 		span.AddEvent("bucket doesn't exist, creating bucket")
 		if err := s.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-			err = fmt.Errorf("storage.MinIO.CreateBucket create bucket %w", err)
+			err = fmt.Errorf("minio create bucket: %w", err)
 			telemetry.RecordError(span, err)
 			return err
 		}
