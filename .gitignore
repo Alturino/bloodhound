@@ -11,3 +11,4 @@ queries/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+/wt
