@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS announcements (
-    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     idx_id TEXT NOT NULL UNIQUE,
     stock_code TEXT NOT NULL,
     title TEXT NOT NULL,
     date TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
 );
