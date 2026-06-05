@@ -18,7 +18,7 @@ services:
       start_period: 20s
     volumes:
       - postgres:/var/lib/postgresql/
-      - ./db/init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./db_init:/docker-entrypoint-initdb.d:ro
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.19.0
     env_file:
