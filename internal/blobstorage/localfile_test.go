@@ -81,7 +81,7 @@ func TestLocalFile_NewLocalFile_CreateBucketFails(t *testing.T) {
 	tracer := noop.Tracer{}
 	storage := NewLocalFile(&cfg, logger, tracer)
 
-	_, ok := blobstorage.(*noopLocalFile)
+	_, ok := storage.(*noopLocalFile)
 	if !ok {
 		t.Error("expected noopLocalFile when CreateBucket fails")
 	}
