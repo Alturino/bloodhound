@@ -76,7 +76,7 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 		task.Attachment.IsDownloaded = false
 		task.Attachment.IsProcessing = false
 		task.Attachment.Error = err.Error()
-		return AttachmentResult{AttachmentTask: task}, err
+		return AttachmentResult{AttachmentTask: *task}, err
 	}
 
 	reader := bytes.NewReader(data)
@@ -91,7 +91,7 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 		task.Attachment.IsDownloaded = false
 		task.Attachment.IsProcessing = false
 		task.Attachment.Error = err.Error()
-		return AttachmentResult{AttachmentTask: task}, err
+		return AttachmentResult{AttachmentTask: *task}, err
 	}
 	ctx = slogctx.Append(ctx, slog.Any(constants.LocalSaveResult, result))
 
@@ -109,5 +109,5 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	task.Attachment.UploadedAt = time.Now()
 	logger.InfoContext(ctx, "attachment processed", slog.Any(constants.Attachment, task))
 	span.AddEvent("attachment processed")
-	return AttachmentResult{AttachmentTask: task}, nil
+	return AttachmentResult{AttachmentTask: *task}, nil
 }

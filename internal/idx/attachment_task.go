@@ -7,6 +7,6 @@ import (
 )
 
 type AttachmentTask struct {
-	Ctx        context.Context   `json:"-"`
+	Ctx        context.Context
 	Attachment model.Attachments `json:"attachment"`
 }

@@ -132,7 +132,7 @@ func (w *IDX) process(ctx context.Context) error {
 	)
 	defer span.End()
 
-	span.AddEvent("processing idx")
+	logger := w.logger.With(slog.String("tag", "idx.IDX.process"))
 
 	latestAnnouncement, err := w.announcementStore.LatestAnnouncement(ctx, nil)
 	if err != nil {
@@ -144,7 +144,6 @@ func (w *IDX) process(ctx context.Context) error {
 		return err
 	}
 
-	span.AddEvent("processed idx")
 	return nil
 }
 
@@ -154,8 +153,6 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
-
-	span.AddEvent("processing announcements")
 
 	logger := w.logger.With(slog.String("tag", "idx.IDX.processAnnouncements"))
 
@@ -219,8 +216,6 @@ func (w *IDX) getAndSubmitPage(
 		trace.WithAttributes(),
 	)
 	defer span.End()
-
-	span.AddEvent("fetching announcements")
 
 	logger := w.logger.With(slog.String("tag", "idx.IDX.getAndSubmitPage"))
 
@@ -313,7 +308,6 @@ func (w *IDX) processPage(ctx context.Context, announcements []Announcement) err
 		keys := slices.Collect(maps.Keys(processedMap))
 		ctx = slogctx.Append(ctx, slog.Any(constants.ProcessedID, slices.Clone(keys[:2])))
 	}
-
 	if len(processedMap) == 0 {
 		logger.InfoContext(ctx, "no processed announcements")
 		span.AddEvent("no processed announcements, saving all")

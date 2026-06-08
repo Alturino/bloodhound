@@ -24,7 +24,7 @@ type attachmentPool struct {
 	config      *config.WorkerPool
 	db          *sql.DB
 	logger      *slog.Logger
-	taskChan    chan *AttachmentTask
+	taskChan    chan AttachmentTask
 	workerCount int
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -55,7 +55,7 @@ func NewAttachmentPool(
 		tracer:      tracer,
 		metrics:     metrics,
 		store:       store,
-		taskChan:    make(chan *AttachmentTask, workerCount*2),
+		taskChan:    make(chan AttachmentTask, workerCount*2),
 		ctx:         ctx,
 		cancel:      cancel,
 		workerCount: config.AttachmentWorkers,
@@ -75,7 +75,7 @@ func (p *attachmentPool) Start() {
 func (p *attachmentPool) poller() {
 	interval := p.config.Scheduler.Interval
 	logger := p.logger.With(
-		slog.String("tag", "attachmentPool.poller"),
+		slog.String("tag", "idx.attachmentPool.poller"),
 		slog.Duration(constants.Interval, interval),
 	)
 
@@ -99,20 +99,22 @@ func (p *attachmentPool) poller() {
 func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 	ctx, span := p.tracer.Start(
 		ctx,
-		"attachmentPool.pollAndSubmit",
+		"idx.attachmentPool.pollAndSubmit",
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
 	span.AddEvent("polling and submitting")
 
-	logger := p.logger.With(slog.String("tag", "attachmentPool.pollAndSubmit"))
+	logger := p.logger.With(slog.String("tag", "idx.attachmentPool.pollAndSubmit"))
 
 	attachments, err := p.store.UnprocessedAttachments(ctx)
 	if err != nil {
 		return
 	}
-
+	if len(attachments) == 0 {
+		return
+	}
 	p.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
 
 	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
@@ -138,7 +140,7 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 			logger.InfoContext(ctx, "context done, stopping")
 			span.AddEvent("context done, stopping")
 			return
-		case p.taskChan <- &AttachmentTask{Ctx: ctx, Attachment: att}:
+		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: att}:
 			continue
 		}
 	}
@@ -149,7 +151,7 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 
 func (p *attachmentPool) workerLoop(id int) {
 	logger := p.logger.With(
-		slog.String("tag", "attachmentPool.workerLoop"),
+		slog.String("tag", "idx.attachmentPool.workerLoop"),
 		slog.Int(constants.WorkerID, id),
 	)
 	for {
@@ -160,7 +162,7 @@ func (p *attachmentPool) workerLoop(id int) {
 		case task, ok := <-p.taskChan:
 			ctx := slogctx.Append(
 				task.Ctx,
-				slog.String(constants.AttachmentID, task.Attachment.ID.String()),
+				slog.Any(constants.Attachment, task.Attachment),
 				slog.Int(constants.WorkerID, id),
 			)
 			if !ok {
@@ -172,7 +174,7 @@ func (p *attachmentPool) workerLoop(id int) {
 	}
 }
 
-func (p *attachmentPool) processAttachment(ctx context.Context, task *AttachmentTask) {
+func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentTask) {
 	ctx, span := p.tracer.Start(
 		ctx,
 		"idx.attachmentPool.processAttachment",
@@ -184,11 +186,11 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 	)
 	defer span.End()
 
-	span.AddEvent("processing attachment")
-
 	logger := p.logger.With(slog.String("tag", "attachmentPool.processAttachment"))
 
-	result, err := p.worker.Work(ctx, task)
+	logger.DebugContext(ctx, "processing attachment")
+	span.AddEvent("processing attachment")
+	result, err := p.worker.Work(ctx, &task)
 	if err != nil {
 		p.metrics.AttFailedDownload.Add(ctx, 1)
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
@@ -198,8 +200,8 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 		}
 		return
 	}
-
 	p.metrics.AttDownloaded.Add(ctx, 1)
+
 	if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
