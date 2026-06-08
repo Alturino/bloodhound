@@ -78,8 +78,6 @@ func (s *attachmentStore) InsertAttachment(
 		return nil
 	}
 
-	logger.DebugContext(ctx, "preparing statement")
-	span.AddEvent("preparing statement")
 	stmt := Attachments.INSERT(Attachments.AllColumns.Except(Attachments.DefaultColumns)).
 		ON_CONFLICT().
 		DO_NOTHING().
@@ -113,6 +111,8 @@ func (s *attachmentStore) Attachment(
 	defer span.End()
 
 	logger := s.logger.With(slog.String("tag", "idx.attachmentStore.Attachment"))
+
+	span.AddEvent("getting attachment")
 
 	if len(id) == 0 {
 		return model.Attachments{}, nil
