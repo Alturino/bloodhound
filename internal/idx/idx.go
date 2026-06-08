@@ -8,12 +8,10 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"strconv"
 	"time"
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
@@ -134,15 +132,23 @@ func (w *IDX) process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "idx.IDX.process"))
 
+	logger.DebugContext(ctx, "get latest announcement")
+	span.AddEvent("get latest announcement")
 	latestAnnouncement, err := w.announcementStore.LatestAnnouncement(ctx, nil)
 	if err != nil {
 		latestAnnouncement.Date = time.Time{}
 	}
 	ctx = slogctx.Append(ctx, slog.Time(constants.LatestAnnouncementDate, latestAnnouncement.Date))
+	logger.DebugContext(ctx, "got latest announcement")
+	span.AddEvent("got latest announcement")
 
+	logger.DebugContext(ctx, "processing announcements")
+	span.AddEvent("processing announcements")
 	if err := w.processAnnouncements(ctx, latestAnnouncement.Date); err != nil {
 		return err
 	}
+	logger.InfoContext(ctx, "processed announcements")
+	span.AddEvent("processed announcements")
 
 	return nil
 }
@@ -183,9 +189,11 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 			span.AddEvent("context done, stop sending page")
 			return nil
 		default:
-			logger.DebugContext(ctx, "fetching announcements")
+			logger.DebugContext(ctx, "get and submit announcements")
+			span.AddEvent("get and submit announcements")
 			go func(ctx context.Context, curr, pageTotal int, since time.Time, resp AnnouncementResponse) {
 				if err := w.getAndSubmitPage(ctx, curr, pageTotal, since, resp); err != nil {
+					logger.ErrorContext(ctx, "getAndSubmitPage", slog.Any("error", err))
 					return
 				}
 			}(
@@ -213,7 +221,10 @@ func (w *IDX) getAndSubmitPage(
 		ctx,
 		"idx.IDX.getAndSubmitPage",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(),
+		trace.WithAttributes(
+			attribute.Int(constants.PageIdx, curr),
+			attribute.Int(constants.PageTotal, pageTotal),
+		),
 	)
 	defer span.End()
 
@@ -317,6 +328,8 @@ func (w *IDX) processPage(ctx context.Context, announcements []Announcement) err
 		span.AddEvent("processed page")
 		return nil
 	}
+	logger.DebugContext(ctx, "found processed announcements")
+	span.AddEvent("found processed announcements")
 
 	unprocessed := make([]Announcement, 0, len(announcements))
 	for _, ann := range announcements {
@@ -378,7 +391,11 @@ func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcemen
 		return err
 	}
 	w.metrics.IdxAnnouncementsSaved.Add(ctx, int64(len(announcements)))
+	logger.InfoContext(ctx, "inserted announcements")
+	span.AddEvent("inserted announcements")
 
+	logger.DebugContext(ctx, "inserting attachments")
+	span.AddEvent("inserting attachments")
 	errs := make([]error, 0, len(announcements))
 	for attachmentChunks := range slices.Chunk(allAttachments, 1000) {
 		if len(attachmentChunks) == 0 {
@@ -392,9 +409,8 @@ func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcemen
 	if err := errors.Join(errs...); err != nil {
 		return err
 	}
-
-	logger.InfoContext(ctx, "inserted announcements")
-	span.AddEvent("inserted announcements")
+	logger.DebugContext(ctx, "inserted attachments")
+	span.AddEvent("inserted attachments")
 
 	return nil
 }

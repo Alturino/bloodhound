@@ -78,6 +78,8 @@ func (s *attachmentStore) InsertAttachment(
 		return nil
 	}
 
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := Attachments.INSERT(Attachments.AllColumns.Except(Attachments.DefaultColumns)).
 		ON_CONFLICT().
 		DO_NOTHING().
@@ -86,14 +88,18 @@ func (s *attachmentStore) InsertAttachment(
 	logger.DebugContext(ctx, "prepared statement")
 	span.AddEvent("prepared statement")
 
-	logger.InfoContext(ctx, "inserting attachments")
+	logger.DebugContext(ctx, "inserting attachments")
 	span.AddEvent("inserting attachments")
 	if err := stmt.QueryContext(ctx, db, &attachments); err != nil {
 		err = fmt.Errorf("inserting attachments: %v", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(ctx, "inserted attachments")
+	logger.InfoContext(
+		ctx,
+		"inserted attachments",
+		slog.Int(constants.InsertedCount, len(attachments)),
+	)
 	span.AddEvent("inserted attachments")
 
 	return nil
@@ -146,16 +152,18 @@ func (s *attachmentStore) Attachment(
 func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error) {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"idx.attachmentStore.GetUnprocessedAttachments",
+		"idx.attachmentStore.UnprocessedAttachments",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("tag", "idx.attachmentStore.GetUnprocessedAttachments"))
+	logger := s.logger.With(slog.String("tag", "idx.attachmentStore.UnprocessedAttachments"))
 
 	span.AddEvent("getting unprocessed attachments")
 
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := SELECT(Attachments.AllColumns).
 		FROM(Attachments).
 		WHERE(
@@ -163,7 +171,14 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 				AND(Attachments.IsProcessing.IS_FALSE()).
 				AND(Attachments.Error.EQ(String(""))),
 		).LIMIT(5000) // limiting to 50k postgres only supports 16bit(65535) parameters
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
+	}
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 
+	logger.DebugContext(ctx, "getting unprocessed attachments")
+	span.AddEvent("getting unprocessed attachments")
 	var attachments []model.Attachments
 	if err := stmt.QueryContext(ctx, s.db, &attachments); err != nil {
 		err = fmt.Errorf("getting unprocessed attachments: %v", err)
@@ -174,6 +189,8 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
+	logger.DebugContext(ctx, "got unprocessed attachments")
+	span.AddEvent("got unprocessed attachments")
 
 	logger.InfoContext(
 		ctx,

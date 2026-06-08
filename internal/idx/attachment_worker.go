@@ -80,7 +80,11 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	}
 
 	reader := bytes.NewReader(data)
-	ctx = slogctx.Append(ctx, slog.Int(constants.Count, len(data)), slog.String(constants.ContentType, contentType))
+	ctx = slogctx.Append(
+		ctx,
+		slog.Int(constants.Count, len(data)),
+		slog.String(constants.ContentType, contentType),
+	)
 	result, err := a.storage.SaveReader(ctx, filePath, reader, int64(len(data)), contentType)
 	if err != nil {
 		a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))

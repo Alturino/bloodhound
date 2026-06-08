@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,6 +15,7 @@ func main() {
 	defer stop()
 
 	if err := cmd.RootCmd.ExecuteContext(ctx); err != nil {
+		slog.ErrorContext(ctx, err.Error())
 		os.Exit(1)
 	}
 }

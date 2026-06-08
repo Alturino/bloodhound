@@ -163,7 +163,11 @@ func (s *announcementStore) IsProcessed(
 		result[ann.IdxID] = true
 	}
 
-	logger.DebugContext(ctx, "batch checked processed", slog.Int(constants.Found, len(announcements)))
+	logger.DebugContext(
+		ctx,
+		"batch checked processed",
+		slog.Int(constants.Found, len(announcements)),
+	)
 	span.AddEvent("batch checked processed")
 
 	return result, nil
@@ -193,13 +197,17 @@ func (s *announcementStore) InsertAnnouncement(
 		return nil
 	}
 
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := Announcements.INSERT(Announcements.AllColumns.Except(Announcements.DefaultColumns)).
 		ON_CONFLICT().
 		DO_NOTHING().
 		MODELS(ann).
 		RETURNING(Announcements.AllColumns)
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
 
-	logger.InfoContext(ctx, "inserting announcements")
+	logger.DebugContext(ctx, "inserting announcements")
 	span.AddEvent("inserting announcements")
 	var inserted []model.Announcements
 	if err := stmt.QueryContext(ctx, db, &inserted); err != nil {
@@ -207,7 +215,11 @@ func (s *announcementStore) InsertAnnouncement(
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(ctx, "inserted announcements", slog.Int(constants.InsertedCount, len(inserted)))
+	logger.InfoContext(
+		ctx,
+		"inserted announcements",
+		slog.Int(constants.InsertedCount, len(inserted)),
+	)
 	span.AddEvent("inserted announcements")
 
 	return nil

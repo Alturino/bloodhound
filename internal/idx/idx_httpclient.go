@@ -84,7 +84,11 @@ func (c *client) FetchAnnouncements(
 	)
 	defer span.End()
 
-	ctx = slogctx.Append(ctx, slog.Time(constants.DateFrom, dateFrom), slog.Time(constants.DateTo, now))
+	ctx = slogctx.Append(
+		ctx,
+		slog.Time(constants.DateFrom, dateFrom),
+		slog.Time(constants.DateTo, now),
+	)
 	logger := c.logger.With(slog.String("tag", "idx.client.FetchAnnouncements"))
 
 	if dateFrom.IsZero() {
@@ -146,7 +150,7 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 
 	logger := c.logger.With(slog.String("tag", "idx.client.DownloadFile"))
 
-	logger.InfoContext(ctx, "downloading file")
+	logger.DebugContext(ctx, "downloading file")
 	span.AddEvent("downloading file")
 	resp, err := c.httpclient.R().
 		EnableDumpWithoutResponseBody().
