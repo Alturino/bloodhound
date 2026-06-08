@@ -73,14 +73,20 @@ func (s *attachmentStore) InsertAttachment(
 	)
 
 	if len(attachments) == 0 {
+		logger.InfoContext(ctx, "no attachments to insert")
+		span.AddEvent("no attachments to insert")
 		return nil
 	}
 
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := Attachments.INSERT(Attachments.AllColumns.Except(Attachments.DefaultColumns)).
 		ON_CONFLICT().
 		DO_NOTHING().
 		MODELS(attachments).
 		RETURNING(Attachments.AllColumns)
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
 
 	logger.InfoContext(ctx, "inserting attachments")
 	span.AddEvent("inserting attachments")
@@ -107,8 +113,6 @@ func (s *attachmentStore) Attachment(
 	defer span.End()
 
 	logger := s.logger.With(slog.String("tag", "idx.attachmentStore.Attachment"))
-
-	span.AddEvent("getting attachment")
 
 	if len(id) == 0 {
 		return model.Attachments{}, nil
@@ -171,7 +175,11 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "got unprocessed attachments", slog.Int(constants.Count, len(attachments)))
+	logger.InfoContext(
+		ctx,
+		"got unprocessed attachments",
+		slog.Int(constants.Count, len(attachments)),
+	)
 	span.AddEvent("got unprocessed attachments")
 
 	return attachments, nil
