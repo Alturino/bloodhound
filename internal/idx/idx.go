@@ -81,10 +81,12 @@ func (w *IDX) Start() {
 		logger.WarnContext(w.ctx, "seeding", slog.Any("error", err))
 	}
 
+	logger.DebugContext(w.ctx, "starting")
 	for i := range w.config.App.IDX.WorkerPool.AnnouncementWorkers {
 		go w.worker(i)
 	}
-	w.schedule(w.ctx, w.process)
+	go w.schedule(w.ctx, w.process)
+	logger.InfoContext(w.ctx, "started")
 }
 
 func (w *IDX) schedule(ctx context.Context, onTick func(ctx context.Context) error) {

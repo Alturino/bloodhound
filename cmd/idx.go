@@ -161,9 +161,6 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
 	})
 
-	go func() {
-		idxWorker.Start()
-	}()
 	<-ctx.Done()
 	logger.InfoContext(ctx, "received context done, stopping")
 
