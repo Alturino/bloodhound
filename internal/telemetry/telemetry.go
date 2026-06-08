@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/processors/baggagecopy"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -130,6 +131,7 @@ func initTracer(
 	}
 
 	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(baggagecopy.NewSpanProcessor(baggagecopy.AllowAllMembers)),
 		sdktrace.WithBatcher(
 			exporter,
 			sdktrace.WithMaxExportBatchSize(1024*1024),
@@ -231,7 +233,6 @@ func RecordError(span trace.Span, err error) {
 	if err == nil {
 		return
 	}
-	span.AddEvent(err.Error())
 	span.SetStatus(codes.Error, err.Error())
 	span.RecordError(err)
 }

@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -55,48 +56,51 @@ func (f *localFile) SaveReader(
 
 	logger := f.logger.With(slog.String("tag", "blobstorage.localFile.SaveReader"))
 
+	logger.DebugContext(ctx, "expanding path")
+	span.AddEvent("expanding path")
 	dir := f.config.BloodhoundDir
 	if strings.HasPrefix(f.config.BloodhoundDir, "~") {
 		homedir, err := os.UserHomeDir()
 		if err != nil {
-			logger.ErrorContext(ctx, "get user home dir", slog.Any("error", err))
+			err = fmt.Errorf("get user home dir: %v", err)
+			telemetry.RecordError(span, err)
 			return SaveResult{}, nil
 		}
 		dir = strings.Replace(f.config.BloodhoundDir, "~", homedir, 1)
 	}
-
 	if strings.ContainsAny(f.config.BloodhoundDir, "$") {
 		dir = os.ExpandEnv(f.config.BloodhoundDir)
 	}
+	logger.DebugContext(ctx, "expanded path")
+	span.AddEvent("expanded path")
 
 	logger.DebugContext(ctx, "creating dir")
 	span.AddEvent("creating dir")
 	dir = filepath.Join(dir, filepath.Dir(filename))
 	if err := os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
-		logger.WarnContext(ctx, "creating dir", slog.Any("error", err))
+		err = fmt.Errorf("creating dir: %v", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
-	logger.DebugContext(ctx, "created dir")
-	span.AddEvent("created dir")
 
 	logger.DebugContext(ctx, "creating file")
 	span.AddEvent("creating file")
 	fp := filepath.Join(dir, filepath.Base(filename))
 	file, err := os.Create(fp)
 	if err != nil {
-		logger.ErrorContext(ctx, "creating file", slog.Any("error", err))
+		err = fmt.Errorf("creating file: %v", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
 	logger.DebugContext(ctx, "created file")
 	span.AddEvent("created file")
 
+	span.AddEvent("saving file locally")
+	logger.DebugContext(ctx, "saving file locally")
 	hash := sha256.New()
 	tee := io.TeeReader(content, hash)
 	if _, err := io.Copy(file, tee); err != nil {
-		err = fmt.Errorf("save reader: %w", err)
-		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+		err = fmt.Errorf("save reader: %v", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
@@ -108,8 +112,9 @@ func (f *localFile) SaveReader(
 			ChecksumSHA256: base64.StdEncoding.EncodeToString(hash.Sum(nil)),
 		},
 	}
-	logger = logger.With(slog.Any("local_save_res", saveres))
+	logger = logger.With(slog.Any(constants.LocalSaveResult, saveres))
 	logger.InfoContext(ctx, "saved file locally")
+	span.AddEvent("saved file locally")
 
 	return saveres, nil
 }
@@ -146,6 +151,7 @@ func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser,
 
 	byte, err := os.ReadFile(filepath.Join(f.config.BloodhoundDir, filepath.Clean(object)))
 	if err != nil {
+		err = fmt.Errorf("reading local file: %w", err)
 		return nil, err
 	}
 

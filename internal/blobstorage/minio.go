@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -79,20 +80,20 @@ func (s *MinIO) SaveReader(
 		"blobstorage.MinIO.SaveReader",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
-			attribute.String("bucket", bucket),
-			attribute.String("file", filename),
+			attribute.String(constants.Bucket, bucket),
+			attribute.String(constants.File, filename),
 		),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
 		slog.String("tag", "blobstorage.MinIO.SaveReader"),
-		slog.String("bucket", bucket),
-		slog.String("object", filename),
+		slog.String(constants.Bucket, bucket),
+		slog.String(constants.Object, filename),
 	)
 
-	logger.DebugContext(ctx, "uploading file")
-	span.AddEvent("uploading file")
+	logger.DebugContext(ctx, "uploading file to minio")
+	span.AddEvent("uploading file to minio")
 	var buf bytes.Buffer
 	tee := io.TeeReader(content, &buf)
 	info, err := s.client.PutObject(
@@ -108,24 +109,20 @@ func (s *MinIO) SaveReader(
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf("uploading file=%s bucket=%s: %w", filename, bucket, err)
-		logger.ErrorContext(ctx, err.Error())
+		err = fmt.Errorf("uploading file=%s bucket=%s: %v", filename, bucket, err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.Any("minio_result", info))
-	}
-	logger.InfoContext(ctx, "uploaded file")
-	span.AddEvent("uploaded file")
+	ctx = slogctx.Append(ctx, slog.Any(constants.MinIOResult, info))
+	logger.InfoContext(ctx, "uploaded file to minio")
+	span.AddEvent("uploaded file to minio")
 
-	saveres, err := s.storage.SaveReader(ctx, filename, &buf, contentSize, contentType)
+	_, err = s.storage.SaveReader(ctx, filename, &buf, contentSize, contentType)
 	if err != nil {
-		logger.ErrorContext(ctx, "save file locally", slog.Any("error", err))
+		err = fmt.Errorf("save file locally: %v", err)
+		telemetry.RecordError(span, err)
 		return SaveResult{UploadInfo: info}, nil
 	}
-	ctx = slogctx.Append(ctx, slog.Any("local_save_res", saveres))
-	logger.InfoContext(ctx, "saved file locally")
 
 	return SaveResult{UploadInfo: info}, nil
 }
@@ -138,27 +135,30 @@ func (s *MinIO) Exists(ctx context.Context, object string) (bool, error) {
 		"blobstorage.MinIO.Exists",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
-			attribute.String("bucket", bucket),
-			attribute.String("object", object),
+			attribute.String(constants.Bucket, bucket),
+			attribute.String(constants.Object, object),
 		),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("bucket", bucket), slog.String("object", object))
+	logger := s.logger.With(
+		slog.String(constants.Bucket, bucket),
+		slog.String(constants.Object, object),
+	)
 
-	logger.DebugContext(ctx, "check object")
-	span.AddEvent("check object")
+	logger.DebugContext(ctx, "checking object in minio")
+	span.AddEvent("checking object in minio")
 	info, err := s.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("check object: %w", err)
+		err = fmt.Errorf("check object: %v", err)
 		if minio.ToErrorResponse(err).Code == minio.NoSuchKey {
 			return false, nil
 		}
 		telemetry.RecordError(span, err)
 		return false, err
 	}
-	logger.InfoContext(ctx, "object exists", slog.Int64("object_size", info.Size))
-	span.AddEvent("object exists", trace.WithAttributes(attribute.Int64("object_size", info.Size)))
+	logger.InfoContext(ctx, "object exists", slog.Int64(constants.ObjectSize, info.Size))
+	span.AddEvent("object exists")
 
 	return info.Size > 0, nil
 }
@@ -171,20 +171,22 @@ func (s *MinIO) Download(ctx context.Context, object string) (io.ReadCloser, err
 		"blobstorage.MinIO.Download",
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
-			attribute.String("bucket", bucket),
-			attribute.String("object", object),
+			attribute.String(constants.Bucket, bucket),
+			attribute.String(constants.Object, object),
 		),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("bucket", bucket), slog.String("object", object))
+	logger := s.logger.With(
+		slog.String(constants.Bucket, bucket),
+		slog.String(constants.Object, object),
+	)
 
 	logger.DebugContext(ctx, "downloading object from minio")
 	span.AddEvent("downloading object from minio")
 	obj, err := s.client.GetObject(ctx, bucket, object, minio.GetObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("downloading object from minio: %w", err)
-		logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
+		err = fmt.Errorf("downloading object from minio: %v", err)
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
@@ -201,17 +203,17 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 		ctx,
 		"blobstorage.MinIO.CreateBucket",
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(attribute.String("bucket", bucket)),
+		trace.WithAttributes(attribute.String(constants.Bucket, bucket)),
 	)
 	defer span.End()
 
-	logger := s.logger.With(slog.String("bucket", bucket))
+	logger := s.logger.With(slog.String(constants.Bucket, bucket))
 
-	logger.DebugContext(ctx, "is bucket exists")
-	span.AddEvent("is bucket exists")
+	logger.DebugContext(ctx, "checking bucket exists")
+	span.AddEvent("checking bucket exists")
 	isExists, err := s.client.BucketExists(ctx, bucket)
 	if err != nil {
-		err = fmt.Errorf("minio is bucket exists: %w", err)
+		err = fmt.Errorf("minio is bucket exists: %v", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -219,7 +221,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 		logger.DebugContext(ctx, "bucket doesn't exist, creating bucket")
 		span.AddEvent("bucket doesn't exist, creating bucket")
 		if err := s.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-			err = fmt.Errorf("minio create bucket: %w", err)
+			err = fmt.Errorf("minio create bucket: %v", err)
 			telemetry.RecordError(span, err)
 			return err
 		}

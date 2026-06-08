@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/store"
 	"github.com/alturino/bloodhound/internal/telemetry"
@@ -67,9 +68,11 @@ func (w Stockbit) Process(ctx context.Context) error {
 
 	logger := w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.Process"))
 
+	span.AddEvent("processing market detector")
+
 	stockCodes, err := w.stockbitStore.StockCodes(ctx)
 	if err != nil {
-		err = fmt.Errorf("get stock codes: %w", err)
+		err = fmt.Errorf("get stock codes: %v", err)
 		return err
 	}
 
@@ -77,20 +80,23 @@ func (w Stockbit) Process(ctx context.Context) error {
 
 	if len(stockCodes) == 0 {
 		logger.InfoContext(ctx, "no stock codes found for market detector sync")
+		span.AddEvent("no stock codes found")
 		return nil
 	}
 
-	logger.InfoContext(ctx, "starting market detector sync", slog.Int("count", len(stockCodes)))
+	logger.InfoContext(ctx, "starting market detector sync", slog.Int(constants.Count, len(stockCodes)))
+	span.AddEvent("starting market detector sync")
 
 	for _, symbol := range stockCodes {
 		if err := w.syncMarketDetector(ctx, symbol); err != nil {
 			logger.ErrorContext(ctx, "sync market detector",
-				slog.String("symbol", symbol),
+				slog.String(constants.Symbol, symbol),
 				slog.Any("error", err))
 			continue
 		}
 	}
 
+	span.AddEvent("processed market detector")
 	return nil
 }
 
@@ -103,9 +109,9 @@ func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 	ctx, span := w.tracer.Start(ctx, "stockbit.WorkerStockbit.syncMarketDetector")
 	defer span.End()
 
-	dateStr := time.Now().Format("2006-01-02")
+	span.AddEvent("syncing market detector")
 
-	_ = w.logger.With(slog.String("tag", "stockbit.WorkerStockbit.syncMarketDetector"))
+	dateStr := time.Now().Format("2006-01-02")
 
 	resp, err := w.client.FetchMarketDetector(ctx, symbol, dateStr, dateStr)
 	if err != nil {
@@ -149,13 +155,14 @@ func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 	}
 
 	if err := w.stockbitStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
-		err = fmt.Errorf("upsert: %w", err)
+		err = fmt.Errorf("upsert: %v", err)
 		return err
 	}
 
 	w.metrics.SbSymbolsSynced.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("status", "success"),
+		attribute.String(constants.Status, "success"),
 	))
 
+	span.AddEvent("synced market detector")
 	return nil
 }

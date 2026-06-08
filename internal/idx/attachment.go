@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -23,7 +24,7 @@ type attachmentPool struct {
 	config      *config.WorkerPool
 	db          *sql.DB
 	logger      *slog.Logger
-	taskChan    chan AttachmentTask
+	taskChan    chan *AttachmentTask
 	workerCount int
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -54,7 +55,7 @@ func NewAttachmentPool(
 		tracer:      tracer,
 		metrics:     metrics,
 		store:       store,
-		taskChan:    make(chan AttachmentTask, workerCount*2),
+		taskChan:    make(chan *AttachmentTask, workerCount*2),
 		ctx:         ctx,
 		cancel:      cancel,
 		workerCount: config.AttachmentWorkers,
@@ -75,7 +76,7 @@ func (p *attachmentPool) poller() {
 	interval := 30 * time.Second
 	logger := p.logger.With(
 		slog.String("tag", "attachmentPool.poller"),
-		slog.Duration("interval", interval),
+		slog.Duration(constants.Interval, interval),
 	)
 
 	ticker := time.Tick(interval)
@@ -88,7 +89,7 @@ func (p *attachmentPool) poller() {
 			logger.DebugContext(
 				p.ctx,
 				"polling for unprocessed attachments",
-				slog.Time("executed_at", t),
+				slog.Time(constants.ExecutedAt, t),
 			)
 			p.pollAndSubmit(p.ctx)
 		}
@@ -103,6 +104,8 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 	)
 	defer span.End()
 
+	span.AddEvent("polling and submitting")
+
 	logger := p.logger.With(slog.String("tag", "attachmentPool.pollAndSubmit"))
 
 	attachments, err := p.store.UnprocessedAttachments(ctx)
@@ -112,9 +115,10 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 
 	p.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
 
-	ctx = slogctx.Append(ctx, slog.Int("unprocessed_attachments_count", len(attachments)))
+	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
 	if len(attachments) == 0 {
 		logger.InfoContext(ctx, "no unprocessed attachments")
+		span.AddEvent("no unprocessed attachments")
 		return
 	}
 
@@ -125,7 +129,6 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 
 	attachments, err = p.store.ClaimAttachments(ctx, ids...)
 	if err != nil {
-		logger.ErrorContext(ctx, "claiming attachments", slog.Any("error", err))
 		return
 	}
 
@@ -133,20 +136,21 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 		select {
 		case <-p.ctx.Done():
 			logger.InfoContext(ctx, "context done, stopping")
+			span.AddEvent("context done, stopping")
 			return
-		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: &att}:
-			logger.InfoContext(ctx, "submitted attachment", slog.Any("attachment", att))
+		case p.taskChan <- &AttachmentTask{Ctx: ctx, Attachment: att}:
 			continue
 		}
 	}
 
-	logger.InfoContext(ctx, "submitted attachments", slog.Int("count", len(attachments)))
+	logger.InfoContext(ctx, "submitted attachments", slog.Int(constants.Count, len(attachments)))
+	span.AddEvent("submitted attachments")
 }
 
 func (p *attachmentPool) workerLoop(id int) {
 	logger := p.logger.With(
 		slog.String("tag", "attachmentPool.workerLoop"),
-		slog.Int("worker_id", id),
+		slog.Int(constants.WorkerID, id),
 	)
 	for {
 		select {
@@ -156,8 +160,8 @@ func (p *attachmentPool) workerLoop(id int) {
 		case task, ok := <-p.taskChan:
 			ctx := slogctx.Append(
 				task.Ctx,
-				slog.String("attachment_id", task.Attachment.ID.String()),
-				slog.Int("worker_id", id),
+				slog.String(constants.AttachmentID, task.Attachment.ID.String()),
+				slog.Int(constants.WorkerID, id),
 			)
 			if !ok {
 				logger.WarnContext(ctx, "task channel closed")
@@ -168,17 +172,19 @@ func (p *attachmentPool) workerLoop(id int) {
 	}
 }
 
-func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentTask) {
+func (p *attachmentPool) processAttachment(ctx context.Context, task *AttachmentTask) {
 	ctx, span := p.tracer.Start(
 		ctx,
 		"idx.attachmentPool.processAttachment",
 		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(
-			attribute.String("attachment_id", task.Attachment.ID.String()),
-			attribute.String("idx_url", task.Attachment.IdxURL),
+			attribute.String(constants.AttachmentID, task.Attachment.ID.String()),
+			attribute.String(constants.IdxURL, task.Attachment.IdxURL),
 		),
 	)
 	defer span.End()
+
+	span.AddEvent("processing attachment")
 
 	logger := p.logger.With(slog.String("tag", "attachmentPool.processAttachment"))
 
@@ -186,7 +192,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 	if err != nil {
 		p.metrics.AttFailedDownload.Add(ctx, 1)
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
-		if err := p.store.UpdateAttachmentResult(ctx, *result.Attachment); err != nil {
+		if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 			logger.ErrorContext(ctx, "update attachment", slog.Any("error", err))
 			return
 		}
@@ -194,12 +200,13 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 	}
 
 	p.metrics.AttDownloaded.Add(ctx, 1)
-	if err := p.store.UpdateAttachmentResult(ctx, *result.Attachment); err != nil {
+	if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
 	}
 
 	logger.InfoContext(ctx, "attachment processed successfully")
+	span.AddEvent("attachment processed successfully")
 }
 
 func (p *attachmentPool) Shutdown() {

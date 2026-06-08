@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/models"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
@@ -77,9 +78,9 @@ func (c client) FetchMarketDetector(
 
 	logger := c.logger.With(
 		slog.String("tag", "stockbit.Client.FetchMarketDetector"),
-		slog.String("symbol", symbol),
-		slog.String("from", dateFrom),
-		slog.String("to", dateTo),
+		slog.String(constants.Symbol, symbol),
+		slog.String(constants.DateFrom, dateFrom),
+		slog.String(constants.DateTo, dateTo),
 	)
 
 	logger.DebugContext(ctx, "fetching stockbit market detector")
@@ -97,21 +98,23 @@ func (c client) FetchMarketDetector(
 		}).
 		Get("/marketdetectors/" + symbol)
 	if err != nil {
-		err = fmt.Errorf("fetching stockbit market detector: %w", err)
+		err = fmt.Errorf("fetching stockbit market detector: %v", err)
+		telemetry.RecordError(span, err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
 	if !resp.IsSuccessState() {
-		err := fmt.Errorf("fetching stockbit market detector msg: status code: %d", resp.StatusCode)
+		err = fmt.Errorf("fetching stockbit market detector msg: status code: %d", resp.StatusCode)
+		telemetry.RecordError(span, err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
-	span.AddEvent("fetched stockbit market detector")
 	logger.DebugContext(ctx, "fetched stockbit market detector")
+	span.AddEvent("fetched stockbit market detector")
 
 	logger.DebugContext(ctx, "unmarshaling response")
 	span.AddEvent("unmarshaling response")
 	var rawResp models.StockbitMarketDetectorResponse
 	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
-		err = fmt.Errorf("unmarshaling response: %w", err)
+		err = fmt.Errorf("unmarshaling response: %v", err)
 		telemetry.RecordError(span, err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}

@@ -11,6 +11,7 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/model"
 	. "github.com/alturino/bloodhound/internal/db/.gen/bloodhound/public/table"
 	"github.com/alturino/bloodhound/internal/models"
@@ -48,26 +49,25 @@ func (s *stockbitStore) UpsertMarketDetector(
 
 	logger := s.logger.With(slog.String("tag", "store.StockbitStore.UpsertMarketDetector"))
 
+	span.AddEvent("upserting market detector")
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		err = fmt.Errorf("StockbitStore.UpsertMarketDetector begin tx: %w", err)
+		err = fmt.Errorf("StockbitStore.UpsertMarketDetector begin tx: %v", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
 	defer func() {
 		if err := tx.Rollback(); err != nil {
-			err = fmt.Errorf("rollback: %w", err)
+			err = fmt.Errorf("rollback: %v", err)
 			if !errors.Is(err, sql.ErrTxDone) || !errors.Is(err, sql.ErrConnDone) {
-				logger.ErrorContext(ctx, err.Error())
 				telemetry.RecordError(span, err)
 				return
 			}
 			logger.DebugContext(ctx, "transaction already committed", slog.Any("error", err))
-			span.AddEvent("transaction already committed")
 			return
 		}
 		logger.InfoContext(ctx, "transaction rolled back")
-		span.AddEvent("transaction rolled back")
 	}()
 
 	var dbSummary model.MarketDetectorSummaries
@@ -98,7 +98,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 		)).
 		RETURNING(MarketDetectorSummaries.ID)
 	if err := stmt.QueryContext(ctx, tx, &dbSummary); err != nil {
-		err = fmt.Errorf("upsert summary: %w", err)
+		err = fmt.Errorf("upsert summary: %v", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -133,21 +133,21 @@ func (s *stockbitStore) UpsertMarketDetector(
 				BrokerTransactions.Frequency.SET(BrokerTransactions.EXCLUDED.Frequency),
 			))
 		if err := insStmt.QueryContext(ctx, tx, nil); err != nil {
-			err = fmt.Errorf("upsert broker transactions: %w", err)
+			err = fmt.Errorf("upsert broker transactions: %v", err)
 			telemetry.RecordError(span, err)
 			return err
 		}
 	}
 
-	logger.DebugContext(ctx, "commiting transaction")
-	span.AddEvent("commiting transaction")
+	logger.DebugContext(ctx, "committing transaction")
+	span.AddEvent("committing transaction")
 	if err := tx.Commit(); err != nil {
-		err = fmt.Errorf("commit: %w", err)
+		err = fmt.Errorf("commit: %v", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(ctx, "commited transaction")
-	span.AddEvent("commited transaction")
+	logger.InfoContext(ctx, "committed transaction")
+	span.AddEvent("committed transaction")
 
 	return nil
 }
@@ -170,7 +170,7 @@ func (s *stockbitStore) StockCodes(ctx context.Context) ([]string, error) {
 	)
 	rows, err := s.db.QueryContext(ctx, stmt, since)
 	if err != nil {
-		err = fmt.Errorf("get stock codes: %w", err)
+		err = fmt.Errorf("get stock codes: %v", err)
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (s *stockbitStore) StockCodes(ctx context.Context) ([]string, error) {
 		stockCodes = append(stockCodes, code)
 	}
 
-	logger.DebugContext(ctx, "fetched stock codes", slog.Int("count", len(stockCodes)))
+	logger.DebugContext(ctx, "fetched stock codes", slog.Int(constants.Count, len(stockCodes)))
 	span.AddEvent("fetched stock codes")
 
 	return stockCodes, nil

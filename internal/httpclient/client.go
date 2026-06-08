@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -64,12 +65,12 @@ func traceReq(tracer trace.Tracer) req.RoundTripWrapperFunc {
 				"httpclient",
 				trace.WithSpanKind(trace.SpanKindClient),
 				trace.WithAttributes(
-					attribute.String("http.url", req.URL.String()),
-					attribute.String("http.method", req.Method),
-					attribute.String("http.req.header", req.HeaderToString()),
-					attribute.String("http.req.body", string(req.Body)),
-					attribute.Int("http.req.retry_attempt", req.RetryAttempt),
-					attribute.String("http.req.start_time", req.StartTime.String()),
+					attribute.String(constants.HTTPURL, req.URL.String()),
+					attribute.String(constants.HTTPMethod, req.Method),
+					attribute.String(constants.HTTPReqHeader, req.HeaderToString()),
+					attribute.String(constants.HTTPReqBody, string(req.Body)),
+					attribute.Int(constants.HTTPReqRetry, req.RetryAttempt),
+					attribute.String(constants.HTTPReqStartTime, req.StartTime.String()),
 				),
 			)
 			defer span.End()
@@ -85,11 +86,11 @@ func traceReq(tracer trace.Tracer) req.RoundTripWrapperFunc {
 			if resp.Response != nil {
 				endTime := resp.Request.StartTime.Add(resp.TotalTime())
 				span.SetAttributes(
-					attribute.String("http.resp.duration", resp.TotalTime().String()),
-					attribute.Int("http.resp.status_code", resp.GetStatusCode()),
-					attribute.String("http.resp.headers", resp.HeaderToString()),
-					attribute.String("http.resp.end_time", endTime.String()),
-					attribute.String("http.resp.body", resp.String()),
+					attribute.String(constants.HTTPRespDuration, resp.TotalTime().String()),
+					attribute.Int(constants.HTTPRespStatus, resp.GetStatusCode()),
+					attribute.String(constants.HTTPRespHeaders, resp.HeaderToString()),
+					attribute.String(constants.HTTPRespEndTime, endTime.String()),
+					attribute.String(constants.HTTPRespBody, resp.String()),
 				)
 			}
 			return resp, err

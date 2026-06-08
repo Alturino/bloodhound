@@ -10,10 +10,10 @@ import (
 
 	"github.com/imroc/req/v3"
 	slogctx "github.com/veqryn/slog-context"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
@@ -81,22 +81,17 @@ func (c *client) FetchAnnouncements(
 		ctx,
 		"idx.client.FetchAnnouncements",
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(
-			attribute.String("date_from", dateFrom.String()),
-			attribute.String("date_to", now.String()),
-		),
 	)
 	defer span.End()
 
-	ctx = slogctx.Append(ctx, slog.Time("date_from", dateFrom), slog.Time("date_to", now))
+	ctx = slogctx.Append(ctx, slog.Time(constants.DateFrom, dateFrom), slog.Time(constants.DateTo, now))
 	logger := c.logger.With(slog.String("tag", "idx.client.FetchAnnouncements"))
 
 	if dateFrom.IsZero() {
 		dt, err := time.Parse("20060102", "19010101")
 		if err != nil {
-			err = fmt.Errorf("parsing default date: %w", err)
+			err = fmt.Errorf("parsing default date: %v", err)
 			telemetry.RecordError(span, err)
-			logger.ErrorContext(ctx, err.Error(), slog.Any("error", err))
 			return AnnouncementResponse{}, err
 		}
 		dateFrom = dt
@@ -117,25 +112,22 @@ func (c *client) FetchAnnouncements(
 		EnableDump().
 		Get("/primary/ListedCompany/GetAnnouncement")
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(slog.String("http_dump", resp.Dump()))
+		logger = logger.With(slog.String(constants.HTTPDump, resp.Dump()))
 	}
 	if err != nil {
-		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
+		err = fmt.Errorf("fetching announcements: %v", err)
 		telemetry.RecordError(span, err)
 		return AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
 		err = fmt.Errorf("unexpected status_code=%d", resp.StatusCode)
-		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
 		telemetry.RecordError(span, err)
 		return AnnouncementResponse{}, err
 	}
 	result := convertToModel(rawResp)
 	if len(result.Announcements) == 0 {
-		err := errors.New("announcements empty")
-		logger.ErrorContext(ctx, "fetching announcements", slog.Any("error", err))
-		telemetry.RecordError(span, err)
-		return AnnouncementResponse{}, err
+		telemetry.RecordError(span, errors.New("announcements empty"))
+		return AnnouncementResponse{}, errors.New("announcements empty")
 	}
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
@@ -149,31 +141,28 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		ctx,
 		"idx.client.DownloadFile",
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(attribute.String("url", url)),
 	)
 	defer span.End()
 
 	logger := c.logger.With(slog.String("tag", "idx.client.DownloadFile"))
 
-	span.AddEvent("downloading file")
 	logger.InfoContext(ctx, "downloading file")
+	span.AddEvent("downloading file")
 	resp, err := c.httpclient.R().
 		EnableDumpWithoutResponseBody().
 		SetContext(ctx).
 		Get(url)
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		logger = logger.With(slog.String("http_dump", resp.Dump()))
+		logger = logger.With(slog.String(constants.HTTPDump, resp.Dump()))
 	}
 	if err != nil {
-		err = fmt.Errorf("downloading file: %w", err)
+		err = fmt.Errorf("downloading file: %v", err)
 		telemetry.RecordError(span, err)
-		logger.ErrorContext(ctx, "downloading file", slog.Any("error", err))
 		return nil, "", err
 	}
 	if !resp.IsSuccessState() {
 		err := fmt.Errorf("unexpected status_code=%d, url=%s", resp.StatusCode, url)
 		telemetry.RecordError(span, err)
-		logger.ErrorContext(ctx, "downloading file", slog.Any("error", err))
 		return nil, "", err
 	}
 	logger.InfoContext(ctx, "downloaded file")
