@@ -151,7 +151,7 @@ func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser,
 
 	byte, err := os.ReadFile(filepath.Join(f.config.BloodhoundDir, filepath.Clean(object)))
 	if err != nil {
-		err = fmt.Errorf("reading local file: %w", err)
+		err = fmt.Errorf("reading local file: %v", err)
 		return nil, err
 	}
 
@@ -163,7 +163,7 @@ func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser,
 func (f *localFile) CreateBucket(ctx context.Context) error {
 	fp := filepath.Join(f.config.BloodhoundDir)
 	if err := os.MkdirAll(fp, os.FileMode(0o755)); err != nil {
-		err = fmt.Errorf("create dir: %w", err)
+		err = fmt.Errorf("create dir: %v", err)
 		return err
 	}
 	return nil

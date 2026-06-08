@@ -40,7 +40,7 @@ func errWrapper() req.ResponseMiddleware {
 	return req.ResponseMiddleware(func(client *req.Client, resp *req.Response) error {
 		if resp.Err != nil {
 			if dump := resp.Dump(); dump != "" {
-				resp.Err = fmt.Errorf("%w: raw_content=%s", resp.Err, dump)
+				resp.Err = fmt.Errorf("%v: raw_content=%s", resp.Err, dump)
 			}
 			return nil
 		}

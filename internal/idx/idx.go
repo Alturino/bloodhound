@@ -224,6 +224,7 @@ func (w *IDX) getAndSubmitPage(
 	logger.DebugContext(ctx, "semaphore acquire")
 	span.AddEvent("semaphore acquire")
 	if err := w.sem.Acquire(ctx, 1); err != nil {
+		err = fmt.Errorf("semaphore acquire: %v", err)
 		return err
 	}
 	defer w.sem.Release(1)

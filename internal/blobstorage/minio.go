@@ -48,7 +48,7 @@ func NewMinIO(
 		TrailingHeaders: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("NewMinIOStorage create minio client: %w", err)
+		return nil, fmt.Errorf("NewMinIOStorage create minio client: %v", err)
 	}
 
 	minio := &MinIO{
@@ -59,7 +59,7 @@ func NewMinIO(
 		config:  config,
 	}
 	if err := minio.CreateBucket(context.Background()); err != nil {
-		err = fmt.Errorf("create bucket: %w", err)
+		err = fmt.Errorf("create bucket: %v", err)
 		return nil, err
 	}
 

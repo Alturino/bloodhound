@@ -50,8 +50,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 	slog.InfoContext(ctx, "load config")
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		err = fmt.Errorf("load config: %w", err)
-		slog.ErrorContext(ctx, err.Error())
+		err = fmt.Errorf("load config: %v", err)
 		return err
 	}
 
@@ -65,8 +64,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 
 	tmt, err := telemetry.New(ctx, cfg)
 	if err != nil {
-		err = fmt.Errorf("initialize telemetry: %w", err)
-		logger.ErrorContext(ctx, err.Error())
+		err = fmt.Errorf("initialize telemetry: %v", err)
 		return err
 	}
 	defer func() {
@@ -80,21 +78,19 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 	logger.DebugContext(ctx, "initialize blobstorage")
 	stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	if err != nil {
-		err = fmt.Errorf("initialize storage: %w", err)
-		logger.ErrorContext(ctx, err.Error())
+		err = fmt.Errorf("initialize storage: %v", err)
 		return err
 	}
 	logger.InfoContext(ctx, "initialized blobstorage")
 
 	database, err := db.Get(ctx, &cfg.Database)
 	if err != nil {
-		err = fmt.Errorf("initialize database: %w", err)
-		logger.ErrorContext(ctx, err.Error())
+		err = fmt.Errorf("initialize database: %v", err)
 		return err
 	}
 	defer func() {
 		if err := database.Close(); err != nil {
-			err = fmt.Errorf("close database: %w", err)
+			err = fmt.Errorf("close database: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
@@ -149,12 +145,12 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 		if err := viper.MergeInConfig(); err != nil {
-			err = fmt.Errorf("merge config file: %w", err)
+			err = fmt.Errorf("merge config file: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
 		if err := viper.Unmarshal(cfg); err != nil {
-			err = fmt.Errorf("unmarshal config: %w", err)
+			err = fmt.Errorf("unmarshal config: %v", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
