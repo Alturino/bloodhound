@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-go/master/schema/compose-spec.json
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.139.0
+    image: otel/opentelemetry-collector-contrib:latest
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
       - ./observability/otel-collector.yaml:/etc/otel-collector.yaml
@@ -68,6 +68,7 @@ services:
       - --web.console.templates=/etc/prometheus/consoles
       - --web.enable-lifecycle
       - --web.enable-remote-write-receiver
+      - --web.enable-otlp-receiver
     volumes:
       - ./observability/prometheus.yaml:/etc/prometheus.yaml
     ports:
