@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"maps"
 	"slices"
@@ -195,6 +196,7 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 		}
 	}
 
+	logger.DebugContext(ctx, "processed announcements")
 	span.AddEvent("processed announcements")
 	return nil
 }
@@ -217,10 +219,14 @@ func (w *IDX) getAndSubmitPage(
 
 	logger := w.logger.With(slog.String("tag", "idx.IDX.getAndSubmitPage"))
 
+	logger.DebugContext(ctx, "semaphore acquire")
+	span.AddEvent("semaphore acquire")
 	if err := w.sem.Acquire(ctx, 1); err != nil {
 		return err
 	}
 	defer w.sem.Release(1)
+	logger.DebugContext(ctx, "semaphore acquired")
+	span.AddEvent("semaphore acquired")
 
 	fetchStart := time.Now()
 	resp, err := w.client.FetchAnnouncements(ctx, curr, since)
@@ -230,6 +236,9 @@ func (w *IDX) getAndSubmitPage(
 	w.metrics.IdxPageFetchDuration.Record(ctx, float64(time.Since(fetchStart).Milliseconds()))
 	w.metrics.IdxPagesFetched.Add(ctx, 1)
 	w.metrics.IdxAnnouncementsFetchedTotal.Record(ctx, int64(len(resp.Announcements)))
+
+	logger.DebugContext(ctx, "submitting page")
+	span.AddEvent("submitting page")
 	page := &Page{
 		Ctx:           ctx,
 		Index:         curr,
@@ -238,10 +247,10 @@ func (w *IDX) getAndSubmitPage(
 		Announcements: resp.Announcements,
 	}
 	ctx = slogctx.Append(ctx, slog.Any(constants.Page, page))
-	logger.InfoContext(ctx, "fetched announcements")
-	span.AddEvent("fetched announcements")
-
 	w.pageCh <- page
+	logger.InfoContext(ctx, "submitted page")
+	span.AddEvent("submitted page")
+
 	return nil
 }
 
@@ -253,7 +262,11 @@ func (w *IDX) worker(id int) {
 			logger.InfoContext(w.ctx, "context done, stopping worker")
 			return
 		case page, ok := <-w.pageCh:
-			ctx := slogctx.Append(page.Ctx, slog.Int(constants.WorkerID, id), slog.Any(constants.Page, page))
+			ctx := slogctx.Append(
+				page.Ctx,
+				slog.Int(constants.WorkerID, id),
+				slog.Any(constants.Page, page),
+			)
 			if !ok {
 				logger.InfoContext(ctx, "channel closed, stopping worker")
 				return
@@ -292,9 +305,7 @@ func (w *IDX) processPage(ctx context.Context, announcements []Announcement) err
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		keys := slices.Collect(maps.Keys(processedMap))
-		if len(keys) >= 2 {
-			ctx = slogctx.Append(ctx, slog.Any(constants.ProcessedID, slices.Clone(keys[:2])))
-		}
+		ctx = slogctx.Append(ctx, slog.Any(constants.ProcessedID, slices.Clone(keys[:2])))
 	}
 
 	if len(processedMap) == 0 {
@@ -316,23 +327,26 @@ func (w *IDX) processPage(ctx context.Context, announcements []Announcement) err
 		w.metrics.IdxAnnouncementsDuplicate.Add(ctx, 1)
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) {
-		up := slices.Clone(unprocessed[:5])
+		up := slices.Clone(unprocessed[:2])
 		ctx = slogctx.Append(ctx, slog.Any(constants.UnprocessedAnnouncements, up))
 	}
 	if len(unprocessed) == 0 {
 		logger.InfoContext(ctx, "no new announcements")
 		span.AddEvent("no new announcements")
-		span.AddEvent("processed page")
 		return nil
 	}
 
 	logger.DebugContext(ctx, "saving announcements")
 	span.AddEvent("saving announcements")
 	if err := w.saveAnnouncements(ctx, unprocessed); err != nil {
+		err = fmt.Errorf("saving announcements: %v", err)
 		return err
 	}
+	logger.DebugContext(ctx, "saved announcements")
+	span.AddEvent("saved announcements")
 
 	span.AddEvent("processed page")
+	logger.InfoContext(ctx, "processed page")
 	return nil
 }
 
