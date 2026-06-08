@@ -34,6 +34,7 @@ type attachmentPathCleaner struct {
 
 func (a *attachmentPathCleaner) Clean(ctx context.Context, task AttachmentTask) string {
 	originalname := a.replacer.Replace(task.Attachment.OriginalFilename)
+	originalname = strings.ToLower(originalname)
 	originalname = strings.TrimSpace(originalname)
 	originalname = filepath.Clean(originalname)
 
@@ -43,10 +44,11 @@ func (a *attachmentPathCleaner) Clean(ctx context.Context, task AttachmentTask) 
 	title := a.replacer.Replace(task.Attachment.Title)
 	title = filepath.Clean(title)
 	title = strings.TrimSpace(title)
+	title = strings.ToLower(title)
 	if len(title) > 64 {
 		title = title[:64]
 	}
-	title = fmt.Sprintf("%s_%s", date, strings.ToLower(title))
+	title = fmt.Sprintf("%s_%s", date, title)
 
 	filename := fmt.Sprintf("%s_%s", date, originalname)
 	filename = filepath.Clean(filename)
