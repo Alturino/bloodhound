@@ -24,7 +24,11 @@ type stubClient struct {
 	err         error
 }
 
-func (s *stubClient) FetchAnnouncements(context.Context, int, time.Time) (AnnouncementResponse, error) {
+func (s *stubClient) FetchAnnouncements(
+	context.Context,
+	int,
+	time.Time,
+) (AnnouncementResponse, error) {
 	return AnnouncementResponse{}, nil
 }
 
@@ -37,7 +41,13 @@ type stubStorage struct {
 	err    error
 }
 
-func (s *stubStorage) SaveReader(_ context.Context, filename string, _ io.Reader, _ int64, _ string) (blobstorage.SaveResult, error) {
+func (s *stubStorage) SaveReader(
+	_ context.Context,
+	filename string,
+	_ io.Reader,
+	_ int64,
+	_ string,
+) (blobstorage.SaveResult, error) {
 	if s.result.Key == "" {
 		s.result.Key = filename
 	}
@@ -70,7 +80,7 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 	date := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
 	task := AttachmentTask{
 		Ctx: context.Background(),
-		Attachment: &model.Attachments{
+		Attachment: model.Attachments{
 			ID:               uuid.New(),
 			OriginalFilename: "laporan.pdf",
 			Filename:         "laporan.pdf",
@@ -92,7 +102,7 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 		storage,
 	)
 
-	result, err := worker.Work(context.Background(), task)
+	result, err := worker.Work(context.Background(), &task)
 	if err != nil {
 		t.Fatalf("Work: unexpected error: %v", err)
 	}
@@ -119,7 +129,7 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 func TestAttachmentWork_LeavesStoragePathEmptyOnDownloadError(t *testing.T) {
 	task := AttachmentTask{
 		Ctx: context.Background(),
-		Attachment: &model.Attachments{
+		Attachment: model.Attachments{
 			ID:               uuid.New(),
 			OriginalFilename: "laporan.pdf",
 			Title:            "Judul",
@@ -140,7 +150,7 @@ func TestAttachmentWork_LeavesStoragePathEmptyOnDownloadError(t *testing.T) {
 		storage,
 	)
 
-	result, err := worker.Work(context.Background(), task)
+	result, err := worker.Work(context.Background(), &task)
 	if err == nil {
 		t.Fatal("Work: expected error, got nil")
 	}
