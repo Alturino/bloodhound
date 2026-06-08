@@ -1,8 +1,8 @@
 package config
 
 type Storage struct {
-	MinIO MinIO `mapstructure:"minio" json:"min_io"`
-	Local Local `mapstructure:"local" json:"local"`
+	MinIO *MinIO `mapstructure:"minio" json:"min_io"`
+	Local *Local `mapstructure:"local" json:"local"`
 }
 
 type Local struct {

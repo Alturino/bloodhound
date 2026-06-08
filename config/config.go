@@ -17,11 +17,10 @@ func init() {
 
 // Config holds all application configuration
 type Config struct {
-	Scheduler Scheduler `mapstructure:"scheduler" json:"scheduler"`
-	Telemetry Telemetry `mapstructure:"telemetry" json:"telemetry"`
-	Storage   Storage   `mapstructure:"storage"   json:"storage"`
-	Database  Database  `mapstructure:"database"  json:"database"`
-	App       App       `mapstructure:"app"       json:"app"`
+	Telemetry *Telemetry `mapstructure:"telemetry" json:"telemetry"`
+	Storage   *Storage   `mapstructure:"storage"   json:"storage"`
+	Database  *Database  `mapstructure:"database"  json:"database"`
+	App       *App       `mapstructure:"app"       json:"app"`
 }
 
 type App struct {

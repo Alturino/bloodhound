@@ -73,7 +73,7 @@ func (p *attachmentPool) Start() {
 }
 
 func (p *attachmentPool) poller() {
-	interval := 30 * time.Second
+	interval := p.config.Scheduler.Interval
 	logger := p.logger.With(
 		slog.String("tag", "attachmentPool.poller"),
 		slog.Duration(constants.Interval, interval),

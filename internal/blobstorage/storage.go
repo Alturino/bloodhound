@@ -55,12 +55,12 @@ type storage struct {
 func NewStorage(config *config.Storage, logger *slog.Logger, tracer trace.Tracer) (Storage, error) {
 	logger.Debug("initializing local file storage storage")
 	fsLogger := logger.With(slog.String("tag", "blobstorage.FileStorage"))
-	localFileStorage := NewLocalFile(&config.Local, fsLogger, tracer)
+	localFileStorage := NewLocalFile(config.Local, fsLogger, tracer)
 	logger.Info("initialized local file storage storage")
 
 	logger.Debug("initializing minio storage")
 	minioLogger := logger.With(slog.String("tag", "blobstorage.Minio"))
-	minioStorage, err := NewMinIO(&config.MinIO, localFileStorage, minioLogger, tracer)
+	minioStorage, err := NewMinIO(config.MinIO, localFileStorage, minioLogger, tracer)
 	if err != nil {
 		logger.Error("create minio client", slog.Any("error", err))
 		return nil, err

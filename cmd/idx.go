@@ -54,7 +54,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger := log.Get(&cfg.App)
+	logger := log.Get(cfg.App)
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("panic", slog.Any("panic", r))
@@ -76,14 +76,14 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 	}()
 
 	logger.DebugContext(ctx, "initialize blobstorage")
-	stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
+	stg, err := blobstorage.NewStorage(cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	if err != nil {
 		err = fmt.Errorf("initialize storage: %v", err)
 		return err
 	}
 	logger.InfoContext(ctx, "initialized blobstorage")
 
-	database, err := db.Get(ctx, &cfg.Database)
+	database, err := db.Get(ctx, cfg.Database)
 	if err != nil {
 		err = fmt.Errorf("initialize database: %v", err)
 		return err
@@ -107,7 +107,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 	)
 
 	attachmentWorker := idx.NewAttachmentWorker(
-		&cfg.Storage.MinIO,
+		cfg.Storage.MinIO,
 		logger.With(slog.String("tag", "idx.Processor")),
 		telemetry.AppTelemetry.Tracer,
 		telemetry.AppTelemetry.Metrics,
@@ -117,7 +117,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 	attachmentPool := idx.NewAttachmentPool(
 		ctx,
 		database,
-		&cfg.App.IDX.WorkerPool,
+		cfg.App.IDX.WorkerPool,
 		logger.With(slog.String("tag", "attachment.Pool")),
 		telemetry.AppTelemetry.Tracer,
 		telemetry.AppTelemetry.Metrics,
@@ -128,7 +128,7 @@ func idxWorker(cmd *cobra.Command, args []string) error {
 
 	idxWorker := idx.NewWorkerIdx(
 		ctx,
-		cfg,
+		&cfg.App.IDX,
 		logger.With(slog.String("tag", "idx.Worker")),
 		telemetry.AppTelemetry.Tracer,
 		telemetry.AppTelemetry.Metrics,

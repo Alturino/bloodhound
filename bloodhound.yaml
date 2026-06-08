@@ -1,14 +1,17 @@
 app:
   name: bloodhound
-  environment: development
-  log_level: -4
+  environment: production
+  log_level: 0
   log_dir: ./logs/
   idx:
     base_url: https://idx.co.id
     page_size: 1000
     worker_pool:
       announcement_workers: 3
-      attachment_workers: 5
+      attachment_workers: 10
+      scheduler:
+        interval: 15m
+        cron_expr: "*/15 * * * *"
   stockbit:
     base_url: https://exodus.stockbit.com
     token: ""
@@ -16,9 +19,9 @@ app:
 database:
   host: localhost
   port: 5432
-  user: "postgres"
-  password: "postgres"
-  dbname: "bloodhound"
+  user: bloodhound
+  password: bloodhound
+  dbname: bloodhound
   sslmode: disable
   migration_path: file://migrations
 
@@ -32,10 +35,6 @@ storage:
     secret_key: minioadmin
     bucket: bloodhound
     use_ssl: false
-
-scheduler:
-  interval: 5s
-  cron_expr: "*/15 * * * *"
 
 telemetry:
   enabled: true

@@ -26,7 +26,7 @@ import (
 )
 
 type IDX struct {
-	config            *config.Config
+	config            *config.IDX
 	logger            *slog.Logger
 	ctx               context.Context
 	cancel            context.CancelFunc
@@ -43,7 +43,7 @@ type IDX struct {
 
 func NewWorkerIdx(
 	ctx context.Context,
-	config *config.Config,
+	config *config.IDX,
 	logger *slog.Logger,
 	tracer trace.Tracer,
 	metrics *telemetry.Metrics,
@@ -54,7 +54,7 @@ func NewWorkerIdx(
 	storage blobstorage.Storage,
 ) *IDX {
 	ctx, cancel := context.WithCancel(ctx)
-	worker := config.App.IDX.WorkerPool.AnnouncementWorkers
+	worker := config.WorkerPool.AnnouncementWorkers
 	idx := &IDX{
 		ctx:               ctx,
 		cancel:            cancel,
@@ -82,24 +82,28 @@ func (w *IDX) Start() {
 	}
 
 	logger.DebugContext(w.ctx, "starting")
-	for i := range w.config.App.IDX.WorkerPool.AnnouncementWorkers {
+	for i := range w.config.WorkerPool.AnnouncementWorkers {
 		go w.worker(i)
 	}
-	go w.schedule(w.ctx, w.process)
+	go w.schedule(w.process)
 	logger.InfoContext(w.ctx, "started")
 }
 
-func (w *IDX) schedule(ctx context.Context, onTick func(ctx context.Context) error) {
-	interval := w.config.Scheduler.Interval
-	logger := w.logger.With(slog.String("tag", "idx.IDX.tick"))
+func (w *IDX) schedule(onTick func(ctx context.Context) error) {
+	interval := w.config.WorkerPool.Scheduler.Interval
+	logger := w.logger.With(slog.String("tag", "idx.IDX.schedule"))
 	ticker := time.Tick(interval)
 	for {
 		select {
-		case <-ctx.Done():
-			logger.InfoContext(ctx, "received context done, stopping", slog.Any("error", ctx.Err()))
+		case <-w.ctx.Done():
+			logger.InfoContext(
+				w.ctx,
+				"received context done, stopping",
+				slog.Any("error", w.ctx.Err()),
+			)
 			return
 		case t := <-ticker:
-			ctx := slogctx.Append(ctx, slog.Time(constants.ExecutedAt, t))
+			ctx := slogctx.Append(w.ctx, slog.Time(constants.ExecutedAt, t))
 			logger.DebugContext(ctx, "scheduler executing")
 			if err := onTick(ctx); err != nil {
 				logger.ErrorContext(ctx, "scheduler executing", slog.Any("error", err))
@@ -159,8 +163,7 @@ func (w *IDX) processAnnouncements(ctx context.Context, since time.Time) error {
 	if err != nil {
 		return err
 	}
-
-	totalAnnouncements, pageSize := resp.ResultCount, w.config.App.IDX.PageSize
+	totalAnnouncements, pageSize := resp.ResultCount, w.config.PageSize
 	pageTotal := totalAnnouncements / pageSize
 	ctx = slogctx.Append(
 		ctx,
@@ -360,16 +363,7 @@ func (w *IDX) saveAnnouncements(ctx context.Context, announcements []Announcemen
 	)
 	defer span.End()
 
-	m, _ := baggage.NewMember(constants.Count, strconv.Itoa(len(announcements)))
-	bag, _ := baggage.FromContext(ctx).SetMember(m)
-	ctx = baggage.ContextWithBaggage(ctx, bag)
-
-	span.AddEvent("saving announcements")
-
-	logger := w.logger.With(
-		slog.String("tag", "idx.IDX.saveAnnouncements"),
-		slog.Int(constants.AnnouncementsCount, len(announcements)),
-	)
+	logger := w.logger.With(slog.String("tag", "idx.IDX.saveAnnouncements"))
 
 	modelAnnouncements := make([]model.Announcements, len(announcements))
 	allAttachments := make([]model.Attachments, 0, len(announcements))
