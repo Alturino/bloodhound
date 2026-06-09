@@ -22,6 +22,7 @@ type Config struct {
 	Storage   *Storage   `mapstructure:"storage"   json:"storage"`
 	Database  *Database  `mapstructure:"database"  json:"database"`
 	App       *App       `mapstructure:"app"       json:"app"`
+	Scheduler *Scheduler `mapstructure:"scheduler" json:"scheduler"`
 }
 
 type App struct {
