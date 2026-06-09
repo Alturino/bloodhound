@@ -78,16 +78,17 @@ func newTestMetrics(t *testing.T) *telemetry.Metrics {
 
 func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 	date := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	att := model.Attachments{
+		ID:               uuid.New(),
+		OriginalFilename: "laporan.pdf",
+		Filename:         "laporan.pdf",
+		Title:            "Judul Pengumuman",
+		StockCode:        "BBCA",
+		Date:             date,
+	}
 	task := AttachmentTask{
-		Ctx: context.Background(),
-		Attachment: model.Attachments{
-			ID:               uuid.New(),
-			OriginalFilename: "laporan.pdf",
-			Filename:         "laporan.pdf",
-			Title:            "Judul Pengumuman",
-			StockCode:        "BBCA",
-			Date:             date,
-		},
+		Ctx:        context.Background(),
+		Attachment: &att,
 	}
 
 	client := &stubClient{data: []byte("pdf-bytes"), contentType: "application/pdf"}
@@ -127,15 +128,16 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 }
 
 func TestAttachmentWork_LeavesStoragePathEmptyOnDownloadError(t *testing.T) {
+	att := model.Attachments{
+		ID:               uuid.New(),
+		OriginalFilename: "laporan.pdf",
+		Title:            "Judul",
+		StockCode:        "BBCA",
+		Date:             time.Now(),
+	}
 	task := AttachmentTask{
-		Ctx: context.Background(),
-		Attachment: model.Attachments{
-			ID:               uuid.New(),
-			OriginalFilename: "laporan.pdf",
-			Title:            "Judul",
-			StockCode:        "BBCA",
-			Date:             time.Now(),
-		},
+		Ctx:        context.Background(),
+		Attachment: &att,
 	}
 
 	client := &stubClient{err: errors.New("boom")}

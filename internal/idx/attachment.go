@@ -140,7 +140,7 @@ func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
 			logger.InfoContext(ctx, "context done, stopping")
 			span.AddEvent("context done, stopping")
 			return
-		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: att}:
+		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: &att}:
 			continue
 		}
 	}

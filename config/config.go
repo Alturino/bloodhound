@@ -12,6 +12,7 @@ import (
 var cfg Config
 
 func init() {
+	cfg.App = &App{}
 	cfg.App.LogLevelVar = &slog.LevelVar{}
 }
 

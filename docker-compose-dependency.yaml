@@ -12,12 +12,13 @@ services:
     healthcheck:
       test:
         ["CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
+      interval: 25s
+      timeout: 15s
       retries: 5
-      start_period: 20s
+      start_period: 10s
     volumes:
-      - postgres:/var/lib/postgresql/
+      # - postgres:/var/lib/postgresql/
+      - /run/media/onirutla/External/bloodhound/postgresql:/var/lib/postgresql/
       - ./db_init:/docker-entrypoint-initdb.d:ro
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.19.0
@@ -42,7 +43,7 @@ services:
     command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       # - minio:/data
-      - /run/media/onirutla/Backup/bloodhound/minio:/data
+      - /run/media/onirutla/External/bloodhound/minio/:/data/
     healthcheck:
       test:
         [
@@ -89,8 +90,3 @@ services:
   #     - "${VALKEY_PASSWORD}"
   #   ports:
   #     - 9121:9121
-
-volumes:
-  postgres:
-    name: bloodhound-postgres
-  minio:

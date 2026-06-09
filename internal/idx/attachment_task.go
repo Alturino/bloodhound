@@ -8,5 +8,5 @@ import (
 
 type AttachmentTask struct {
 	Ctx        context.Context
-	Attachment model.Attachments `json:"attachment"`
+	Attachment *model.Attachments `json:"attachment"`
 }

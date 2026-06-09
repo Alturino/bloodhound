@@ -10,14 +10,14 @@ psql -v ON_ERROR_STOP=1 \
   -v analyzer_password="$POSTGRES_BLOODHOUND_PDF_ANALYZER_PASSWORD" <<EOSQL
 
   -- pdf_extractor
-  CREATE USER :extractor_user WITH PASSWORD ':extractor_password';
+  CREATE USER :extractor_user WITH PASSWORD :'extractor_password';
   GRANT CONNECT ON DATABASE bloodhound TO :extractor_user;
   GRANT USAGE ON SCHEMA public TO :extractor_user;
   GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO :extractor_user;
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE ON TABLES TO :extractor_user;
 
   -- analyzer
-  CREATE USER :analyzer_user WITH PASSWORD ':analyzer_password';
+  CREATE USER :analyzer_user WITH PASSWORD :'analyzer_password';
   GRANT CONNECT ON DATABASE bloodhound TO :analyzer_user;
   GRANT USAGE ON SCHEMA public TO :analyzer_user;
   GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO :analyzer_user;
