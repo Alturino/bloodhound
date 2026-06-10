@@ -165,22 +165,25 @@ func (s *stockbitStore) StockCodes(ctx context.Context) ([]string, error) {
 
 	var stockCodes []string
 	since := time.Now().Add(-24 * time.Hour)
-	stmt := fmt.Sprintf(
-		"SELECT stock_code FROM announcements WHERE created_at > $1 GROUP BY stock_code ORDER BY stock_code ASC",
-	)
-	rows, err := s.db.QueryContext(ctx, stmt, since)
+
+	stmt := SELECT(Announcements.StockCode).
+		FROM(Announcements).
+		WHERE(Announcements.CreatedAt.GT(TimestampzT(since))).
+		GROUP_BY(Announcements.StockCode).
+		ORDER_BY(Announcements.StockCode.ASC())
+
+	var results []struct {
+		StockCode string
+	}
+	err := stmt.QueryContext(ctx, s.db, &results)
 	if err != nil {
 		err = fmt.Errorf("get stock codes: %v", err)
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var code string
-		if err := rows.Scan(&code); err != nil {
-			continue
-		}
-		stockCodes = append(stockCodes, code)
+
+	for _, r := range results {
+		stockCodes = append(stockCodes, r.StockCode)
 	}
 
 	logger.DebugContext(ctx, "fetched stock codes", slog.Int(constants.Count, len(stockCodes)))

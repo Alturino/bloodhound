@@ -6,12 +6,12 @@ app:
   idx:
     base_url: https://idx.co.id
     page_size: 1000
+    scheduler:
+      interval: 30s
+      cron_expr: "*/15 * * * *"
     worker_pool:
-      announcement_workers: 3
-      attachment_workers: 10
-      scheduler:
-        interval: 15m
-        cron_expr: "*/15 * * * *"
+      announcement_workers: 5
+      attachment_workers: 15
   stockbit:
     base_url: https://exodus.stockbit.com
     token: ""
@@ -28,7 +28,7 @@ database:
 storage:
   local:
     enabled: true
-    bloodhound_dir: /run/media/onirutla/Backup/bloodhound/local/
+    bloodhound_dir: /run/media/onirutla/External1/bloodhound/local
   minio:
     endpoint: localhost:9000
     access_key: minioadmin

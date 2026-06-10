@@ -24,7 +24,7 @@ type AttachmentStore interface {
 	Attachment(ctx context.Context, db qrm.DB, id ...uuid.UUID) (model.Attachments, error)
 	UnprocessedAttachments(ctx context.Context) ([]model.Attachments, error)
 	ClaimAttachments(ctx context.Context, id ...uuid.UUID) ([]model.Attachments, error)
-	UpdateAttachmentResult(ctx context.Context, attachment model.Attachments) error
+	UpdateAttachmentResult(ctx context.Context, attachment *model.Attachments) error
 }
 
 type AttachmentStoreTask struct {
@@ -169,10 +169,8 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 		WHERE(
 			Attachments.IsDownloaded.IS_FALSE().
 				AND(Attachments.IsProcessing.IS_FALSE()).
-				AND(
-					Attachments.StoragePath.EQ(String("")).OR(Attachments.Checksum.EQ(String(""))).
-						AND(Attachments.Error.NOT_EQ(String(""))),
-				),
+				AND(Attachments.StoragePath.EQ(String("")).OR(Attachments.Checksum.EQ(String("")))).
+				AND(Attachments.Error.NOT_LIKE(String("%status_code=4%"))),
 		).ORDER_BY(Attachments.Date.ASC()).
 		LIMIT(5000) // limiting to 50k postgres only supports 16bit(65535) parameters
 	if logger.Enabled(ctx, slog.LevelDebug) {
@@ -238,8 +236,10 @@ func (s *attachmentStore) ClaimAttachments(
 	stmt := Attachments.UPDATE(Attachments.IsProcessing).
 		WHERE(
 			Attachments.ID.EQ(ANY(ARRAY(uuids...))).
+				AND(Attachments.IsDownloaded.IS_FALSE()).
 				AND(Attachments.IsProcessing.IS_FALSE()).
-				AND(Attachments.IsDownloaded.IS_FALSE()),
+				AND(Attachments.StoragePath.EQ(String("")).OR(Attachments.Checksum.EQ(String("")))).
+				AND(Attachments.Error.NOT_LIKE(String("%status_code=4%"))),
 		).
 		SET(Attachments.IsProcessing.SET(Bool(true))).
 		RETURNING(Attachments.AllColumns)
@@ -257,7 +257,7 @@ func (s *attachmentStore) ClaimAttachments(
 
 func (s *attachmentStore) UpdateAttachmentResult(
 	ctx context.Context,
-	attachment model.Attachments,
+	attachment *model.Attachments,
 ) error {
 	ctx, span := s.tracer.Start(
 		ctx,
@@ -274,7 +274,7 @@ func (s *attachmentStore) UpdateAttachmentResult(
 
 	span.AddEvent("updating attachment result")
 
-	stmt := Attachments.UPDATE(Attachments.MutableColumns.Except(Attachments.ID, Attachments.StoragePath)).
+	stmt := Attachments.UPDATE(Attachments.MutableColumns.Except(Attachments.ID)).
 		WHERE(Attachments.ID.EQ(UUID(attachment.ID))).
 		SET(
 			Attachments.IsDownloaded.SET(Bool(attachment.IsDownloaded)),
@@ -286,7 +286,7 @@ func (s *attachmentStore) UpdateAttachmentResult(
 		).
 		RETURNING(Attachments.AllColumns)
 
-	var updated []model.Attachments
+	var updated model.Attachments
 	if err := stmt.QueryContext(ctx, s.db, &updated); err != nil {
 		err = fmt.Errorf("updating attachment result: %v", err)
 		telemetry.RecordError(span, err)
