@@ -82,30 +82,47 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 		deps.stg,
 	)
 	attachmentPool := idx.NewAttachmentPool(
-		ctx,
-		deps.db,
 		cfg.App.IDX.WorkerPool,
-		logger.With(slog.String("tag", "attachment.Pool")),
+		logger.With(slog.String("tag", "idx.attachmentPool")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
 		attachmentWorker,
 		deps.attStore,
 	)
-	defer attachmentPool.Shutdown()
-
-	idxWorker := idx.NewWorkerIdx(
+	attachmentScheduler := idx.NewAttachmentScheduler(
 		ctx,
-		&cfg.App.IDX,
-		logger.With(slog.String("tag", "idx.Worker")),
+		cfg.Scheduler,
+		logger.With(slog.String("tag", "attachment.Scheduler")),
+		deps.tmt.Tracer,
+		deps.tmt.Metrics,
+		deps.attStore,
+		attachmentPool,
+	)
+	attachmentScheduler.Start()
+	defer attachmentScheduler.Shutdown()
+
+	announcementPool := idx.NewAnnouncementPool(
+		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
+		logger.With(slog.String("tag", "idx.announcementPool")),
+		deps.tmt.Tracer,
+		deps.tmt.Metrics,
+		deps.annStore,
+		deps.attStore,
+	)
+	announcementScheduler := idx.NewAnnouncementScheduler(
+		ctx,
+		cfg.Scheduler,
+		cfg.App.IDX.PageSize,
+		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
+		logger.With(slog.String("tag", "idx.AnnouncementScheduler")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
 		deps.annStore,
 		deps.attStore,
 		deps.client,
-		deps.db,
-		deps.stg,
+		announcementPool,
 	)
-	defer idxWorker.Shutdown()
+	defer announcementScheduler.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {
@@ -123,7 +140,7 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	})
 
 	<-ctx.Done()
-	logger.InfoContext(ctx, "received context done, stopping")
+	logger.InfoContext(ctx, "context done, stopping")
 
 	return nil
 }

@@ -78,19 +78,28 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	idxWorker := idx.NewWorkerIdx(
+	announcementPool := idx.NewAnnouncementPool(
+		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
+		deps.logger.With(slog.String("tag", "idx.announcementPool")),
+		deps.tmt.Tracer,
+		deps.tmt.Metrics,
+		deps.annStore,
+		deps.attStore,
+	)
+	announcementScheduler := idx.NewAnnouncementScheduler(
 		ctx,
-		&cfg.App.IDX,
-		deps.logger.With(slog.String("tag", "idx.Worker")),
+		cfg.Scheduler,
+		cfg.App.IDX.PageSize,
+		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
+		deps.logger.With(slog.String("tag", "idx.AnnouncementScheduler")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
 		deps.annStore,
 		deps.attStore,
 		deps.client,
-		deps.db,
-		deps.stg,
+		announcementPool,
 	)
-	defer idxWorker.Shutdown()
+	defer announcementScheduler.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {
@@ -110,7 +119,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 	})
 
 	<-ctx.Done()
-	logger.InfoContext(ctx, "received context done, stopping")
+	logger.InfoContext(ctx, "context done, stopping")
 
 	return nil
 }

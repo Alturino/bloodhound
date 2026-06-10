@@ -87,16 +87,24 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 		deps.stg,
 	)
 	attachmentPool := idx.NewAttachmentPool(
-		ctx,
-		deps.db,
 		cfg.App.IDX.WorkerPool,
-		deps.logger.With(slog.String("tag", "attachment.Pool")),
+		deps.logger.With(slog.String("tag", "idx.attachmentPool")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
 		attachmentWorker,
 		deps.attStore,
 	)
-	defer attachmentPool.Shutdown()
+	attachmentScheduler := idx.NewAttachmentScheduler(
+		ctx,
+		cfg.Scheduler,
+		deps.logger.With(slog.String("tag", "attachment.Scheduler")),
+		deps.tmt.Tracer,
+		deps.tmt.Metrics,
+		deps.attStore,
+		attachmentPool,
+	)
+	attachmentScheduler.Start()
+	defer attachmentScheduler.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {
@@ -116,7 +124,7 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 	})
 
 	<-ctx.Done()
-	logger.InfoContext(ctx, "received context done, stopping")
+	logger.InfoContext(ctx, "context done, stopping")
 
 	return nil
 }

@@ -2,11 +2,8 @@ package idx
 
 import (
 	"context"
-	"database/sql"
 	"log/slog"
-	"time"
 
-	"github.com/google/uuid"
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -16,13 +13,7 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-type AttachmentPool interface {
-	Shutdown()
-}
-
 type attachmentPool struct {
-	config      *config.WorkerPool
-	db          *sql.DB
 	logger      *slog.Logger
 	taskChan    chan AttachmentTask
 	workerCount int
@@ -35,118 +26,40 @@ type attachmentPool struct {
 }
 
 func NewAttachmentPool(
-	ctx context.Context,
-	db *sql.DB,
-	config *config.WorkerPool,
+	cfg *config.WorkerPool,
 	logger *slog.Logger,
 	tracer trace.Tracer,
 	metrics *telemetry.Metrics,
 	worker AttachmentWorker,
 	store AttachmentStore,
-) AttachmentPool {
-	workerCount := config.AttachmentWorkers
-	ctx, cancel := context.WithCancel(ctx)
+) *attachmentPool {
+	ctx, cancel := context.WithCancel(context.Background())
 
-	pool := &attachmentPool{
-		config:      config,
-		db:          db,
+	return &attachmentPool{
 		worker:      worker,
 		logger:      logger,
 		tracer:      tracer,
 		metrics:     metrics,
 		store:       store,
-		taskChan:    make(chan AttachmentTask, workerCount*2),
+		taskChan:    make(chan AttachmentTask, cfg.AttachmentWorkers*2),
 		ctx:         ctx,
 		cancel:      cancel,
-		workerCount: config.AttachmentWorkers,
+		workerCount: cfg.AttachmentWorkers,
 	}
-
-	pool.Start()
-	return pool
 }
 
 func (p *attachmentPool) Start() {
 	for i := 1; i <= p.workerCount; i++ {
 		go p.workerLoop(i)
 	}
-	go p.poller()
 }
 
-func (p *attachmentPool) poller() {
-	interval := p.config.Scheduler.Interval
-	logger := p.logger.With(
-		slog.String("tag", "idx.attachmentPool.poller"),
-		slog.Duration(constants.Interval, interval),
-	)
-
-	ticker := time.Tick(interval)
-	for {
-		select {
-		case <-p.ctx.Done():
-			logger.InfoContext(p.ctx, "context done, stopping poller")
-			return
-		case t := <-ticker:
-			logger.DebugContext(
-				p.ctx,
-				"polling for unprocessed attachments",
-				slog.Time(constants.ExecutedAt, t),
-			)
-			p.pollAndSubmit(p.ctx)
-		}
-	}
-}
-
-func (p *attachmentPool) pollAndSubmit(ctx context.Context) {
-	ctx, span := p.tracer.Start(
-		ctx,
-		"idx.attachmentPool.pollAndSubmit",
-		trace.WithSpanKind(trace.SpanKindInternal),
-	)
-	defer span.End()
-
-	span.AddEvent("polling and submitting")
-
-	logger := p.logger.With(slog.String("tag", "idx.attachmentPool.pollAndSubmit"))
-
-	attachments, err := p.store.UnprocessedAttachments(ctx)
-	if err != nil {
+func (p *attachmentPool) Submit(task AttachmentTask) {
+	select {
+	case <-p.ctx.Done():
 		return
+	case p.taskChan <- task:
 	}
-	if len(attachments) == 0 {
-		return
-	}
-	p.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
-
-	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
-	if len(attachments) == 0 {
-		logger.InfoContext(ctx, "no unprocessed attachments")
-		span.AddEvent("no unprocessed attachments")
-		return
-	}
-
-	ids := make([]uuid.UUID, len(attachments))
-	for i, att := range attachments {
-		ids[i] = att.ID
-	}
-
-	attachments, err = p.store.ClaimAttachments(ctx, ids...)
-	if err != nil {
-		return
-	}
-
-	for _, att := range attachments {
-		select {
-		case <-p.ctx.Done():
-			logger.InfoContext(ctx, "context done, stopping")
-			span.AddEvent("context done, stopping")
-			return
-		case p.taskChan <- AttachmentTask{Ctx: ctx, Attachment: &att}:
-			continue
-		}
-	}
-
-	logger.InfoContext(ctx, "submitted attachments", slog.Int(constants.Count, len(attachments)))
-	span.AddEvent("submitted attachments")
 }
 
 func (p *attachmentPool) workerLoop(id int) {
