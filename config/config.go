@@ -55,6 +55,7 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("database.dbname", "idx_fetcher")
 	v.SetDefault("database.sslmode", "require")
 
+	v.SetDefault("minio.enabled", true)
 	v.SetDefault("minio.endpoint", "localhost:9000")
 	v.SetDefault("minio.access_key", "")
 	v.SetDefault("minio.secret_key", "")

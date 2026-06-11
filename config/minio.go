@@ -1,6 +1,7 @@
 package config
 
 type MinIO struct {
+	Enabled   bool   `mapstructure:"enabled"   json:"enabled"`
 	UseSSL    bool   `mapstructure:"use_ssl"    json:"use_ssl"`
 	Endpoint  string `mapstructure:"endpoint"   json:"endpoint"`
 	AccessKey string `mapstructure:"access_key" json:"access_key"`
