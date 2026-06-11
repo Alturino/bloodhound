@@ -1,7 +1,6 @@
 package blobstorage
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -20,22 +19,26 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-// MinIO implements Storage interface for MinIO
+// MinIO implements Storage interface for MinIO.
+// It only handles remote MinIO operations. The storage wrapper
+// handles fan-out to multiple backends including local storage.
 type MinIO struct {
-	config  *config.MinIO
-	client  *minio.Client
-	storage Storage
-	logger  *slog.Logger
-	tracer  trace.Tracer
+	config *config.MinIO
+	client *minio.Client
+	logger *slog.Logger
+	tracer trace.Tracer
 }
 
-// NewMinIO creates a new MinIO storage instance
+// NewMinIO creates a new MinIO storage instance.
+// Returns noopMinIO if config is nil or disabled.
 func NewMinIO(
 	config *config.MinIO,
-	storage Storage,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-) (*MinIO, error) {
+) (Storage, error) {
+	if config == nil || !config.Enabled {
+		return &noopMinIO{}, nil
+	}
 	if logger == nil {
 		logger = slog.Default().With(slog.String("tag", "blobstorage.MinIO"))
 	}
@@ -48,15 +51,15 @@ func NewMinIO(
 		TrailingHeaders: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("NewMinIOStorage create minio client: %v", err)
+		err = fmt.Errorf("creating minio client: %v", err)
+		return nil, err
 	}
 
 	minio := &MinIO{
-		client:  client,
-		storage: storage,
-		logger:  logger,
-		tracer:  tracer,
-		config:  config,
+		client: client,
+		logger: logger,
+		tracer: tracer,
+		config: config,
 	}
 	if err := minio.CreateBucket(context.Background()); err != nil {
 		err = fmt.Errorf("create bucket: %v", err)
@@ -66,7 +69,9 @@ func NewMinIO(
 	return minio, nil
 }
 
-// Upload uploads a file to MinIO
+// SaveReader uploads a file to MinIO.
+// Content is passed directly to PutObject without buffering —
+// the storage wrapper handles fan-out and local storage writes.
 func (s *MinIO) SaveReader(
 	ctx context.Context,
 	filename string,
@@ -94,13 +99,11 @@ func (s *MinIO) SaveReader(
 
 	logger.DebugContext(ctx, "uploading file to minio")
 	span.AddEvent("uploading file to minio")
-	var buf bytes.Buffer
-	tee := io.TeeReader(content, &buf)
 	info, err := s.client.PutObject(
 		ctx,
 		bucket,
 		filename,
-		tee,
+		content,
 		contentSize,
 		minio.PutObjectOptions{
 			AutoChecksum: minio.ChecksumSHA256,
@@ -116,13 +119,6 @@ func (s *MinIO) SaveReader(
 	ctx = slogctx.Append(ctx, slog.Any(constants.MinIOResult, info))
 	logger.InfoContext(ctx, "uploaded file to minio")
 	span.AddEvent("uploaded file to minio")
-
-	_, err = s.storage.SaveReader(ctx, filename, &buf, contentSize, contentType)
-	if err != nil {
-		err = fmt.Errorf("save file locally: %v", err)
-		telemetry.RecordError(span, err)
-		return SaveResult{UploadInfo: info}, nil
-	}
 
 	return SaveResult{UploadInfo: info}, nil
 }
