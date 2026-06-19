@@ -30,6 +30,7 @@ storage:
     enabled: true
     bloodhound_dir: /run/media/onirutla/External1/bloodhound/local
   minio:
+    enabled: false
     endpoint: localhost:9000
     access_key: minioadmin
     secret_key: minioadmin

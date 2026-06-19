@@ -34,30 +34,30 @@ services:
         condition: service_healthy
     ports:
       - 9187:9187
-  minio:
-    image: minio/minio:latest
-    restart: always
-    env_file:
-      - .env
-    ports:
-      - "${MINIO_UI_PORT:-9000}:${MINIO_UI_PORT:-9000}"
-      - "${MINIO_CONSOLE_PORT:-9001}:${MINIO_CONSOLE_PORT:-9001}"
-    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
-    volumes:
-      # - minio:/data
-      - /run/media/onirutla/External1/bloodhound/minio/:/data/
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-f",
-          "http://localhost:${MINIO_CONSOLE_PORT}/minio/health/live",
-        ]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-      start_period: 60s
+  # minio:
+  #   image: minio/minio:latest
+  #   restart: always
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "${MINIO_UI_PORT:-9000}:${MINIO_UI_PORT:-9000}"
+  #     - "${MINIO_CONSOLE_PORT:-9001}:${MINIO_CONSOLE_PORT:-9001}"
+  #   command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
+  #   # volumes:
+  #   #   # - minio:/data
+  #   #   - /run/media/onirutla/External1/bloodhound/minio/:/data/
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD",
+  #         "curl",
+  #         "-f",
+  #         "http://localhost:${MINIO_CONSOLE_PORT}/minio/health/live",
+  #       ]
+  #     interval: 30s
+  #     timeout: 20s
+  #     retries: 3
+  #     start_period: 60s
   # valkey:
   #   image: valkey/valkey:8.1-alpine
   #   restart: always
