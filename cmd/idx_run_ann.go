@@ -89,7 +89,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 	)
 	announcementScheduler := idx.NewAnnouncementScheduler(
 		ctx,
-		cfg.Scheduler,
+		cfg.App.IDX.Scheduler,
 		cfg.App.IDX.PageSize,
 		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
 		deps.logger.With(slog.String("tag", "idx.AnnouncementScheduler")),

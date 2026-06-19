@@ -108,7 +108,7 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 	logger.DebugContext(ctx, "initializing attachment scheduler")
 	attachmentScheduler := idx.NewAttachmentScheduler(
 		ctx,
-		cfg.Scheduler,
+		cfg.App.IDX.Scheduler,
 		deps.logger.With(slog.String("tag", "idx.AttachmentScheduler")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,

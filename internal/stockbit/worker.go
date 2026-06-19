@@ -27,7 +27,7 @@ type Stockbit struct {
 }
 
 func (w Stockbit) Start(ctx context.Context) error {
-	interval := w.config.Scheduler.Interval
+	interval := w.config.App.IDX.Scheduler.Interval
 
 	logger := w.logger.With(
 		slog.String("tag", "stockbit.WorkerStockbit.Start"),

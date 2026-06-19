@@ -92,7 +92,7 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	)
 	attachmentScheduler := idx.NewAttachmentScheduler(
 		ctx,
-		cfg.Scheduler,
+		cfg.App.IDX.Scheduler,
 		logger.With(slog.String("tag", "attachment.Scheduler")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
@@ -112,7 +112,7 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	)
 	announcementScheduler := idx.NewAnnouncementScheduler(
 		ctx,
-		cfg.Scheduler,
+		cfg.App.IDX.Scheduler,
 		cfg.App.IDX.PageSize,
 		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
 		logger.With(slog.String("tag", "idx.AnnouncementScheduler")),
