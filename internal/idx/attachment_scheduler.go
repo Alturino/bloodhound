@@ -134,7 +134,7 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 			span.AddEvent("context done, stopping submission")
 			return
 		default:
-			s.pool.Submit(AttachmentTask{Ctx: ctx, Attachment: &claimed[i]})
+			s.pool.Submit(&AttachmentTask{Ctx: ctx, Attachment: claimed[i]})
 		}
 	}
 

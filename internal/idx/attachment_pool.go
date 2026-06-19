@@ -16,7 +16,7 @@ import (
 
 type attachmentPool struct {
 	logger       *slog.Logger
-	taskChan     chan AttachmentTask
+	taskChan     chan *AttachmentTask
 	workerCount  int
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -44,7 +44,7 @@ func NewAttachmentPool(
 		tracer:      tracer,
 		metrics:     metrics,
 		store:       store,
-		taskChan:    make(chan AttachmentTask, cfg.AttachmentWorkers*2),
+		taskChan:    make(chan *AttachmentTask, cfg.AttachmentWorkers*2),
 		ctx:         ctx,
 		cancel:      cancel,
 		workerCount: cfg.AttachmentWorkers,
@@ -59,7 +59,7 @@ func (p *attachmentPool) Start() {
 	}
 }
 
-func (p *attachmentPool) Submit(task AttachmentTask) {
+func (p *attachmentPool) Submit(task *AttachmentTask) {
 	select {
 	case <-p.ctx.Done():
 		return
@@ -92,7 +92,7 @@ func (p *attachmentPool) workerLoop(id int) {
 	}
 }
 
-func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentTask) {
+func (p *attachmentPool) processAttachment(ctx context.Context, task *AttachmentTask) {
 	ctx, span := p.tracer.Start(
 		ctx,
 		"idx.attachmentPool.processAttachment",
@@ -108,11 +108,11 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 
 	logger.DebugContext(ctx, "processing attachment")
 	span.AddEvent("processing attachment")
-	result, err := p.worker.Work(ctx, &task)
+	result, err := p.worker.Work(ctx, task)
 	if err != nil {
 		p.metrics.AttFailedDownload.Add(ctx, 1)
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
-		if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
+		if err := p.store.UpdateAttachmentResult(ctx, &result.Attachment); err != nil {
 			logger.ErrorContext(ctx, "update attachment", slog.Any("error", err))
 			return
 		}
@@ -120,7 +120,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 	}
 	p.metrics.AttDownloaded.Add(ctx, 1)
 
-	if err := p.store.UpdateAttachmentResult(ctx, result.Attachment); err != nil {
+	if err := p.store.UpdateAttachmentResult(ctx, &result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
 	}
