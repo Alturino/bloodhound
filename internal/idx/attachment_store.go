@@ -95,11 +95,8 @@ func (s *attachmentStore) InsertAttachment(
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(
-		ctx,
-		"inserted attachments",
-		slog.Int(constants.InsertedCount, len(attachments)),
-	)
+	logger = logger.With(slog.Int(constants.InsertedCount, len(attachments)))
+	logger.InfoContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
 
 	return nil
