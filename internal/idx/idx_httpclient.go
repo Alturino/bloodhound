@@ -48,18 +48,17 @@ func NewClient(
 	if tracer == nil {
 		tracer = telemetry.AppTelemetry.Tracer
 	}
-	idxhttpclient := httpclient.Clone().
-		SetCommonHeaders(map[string]string{
-			"Connection":         "keep-alive",
-			"Accept-Encoding":    "gzip",
-			"Host":               "idx.co.id",
-			"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
-			"Sec-Fetch-Dest":     "document",
-			"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
-			"Sec-Fetch-Mode":     "navigate",
-			"Sec-Fetch-Site":     "none",
-			"sec-ch-ua-platform": `"Linux"`,
-		}).
+	idxhttpclient := httpclient.SetCommonHeaders(map[string]string{
+		"Connection":         "keep-alive",
+		"Accept-Encoding":    "gzip",
+		"Host":               "idx.co.id",
+		"Referer":            "https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/",
+		"Sec-Fetch-Dest":     "document",
+		"Sec-Ch-Ua":          `"Chromium";v="139", "Not;A=Brand";v="99"`,
+		"Sec-Fetch-Mode":     "navigate",
+		"Sec-Fetch-Site":     "none",
+		"sec-ch-ua-platform": `"Linux"`,
+	}).
 		SetBaseURL(config.BaseURL)
 
 	return &client{
