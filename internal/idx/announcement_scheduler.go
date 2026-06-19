@@ -157,6 +157,7 @@ func (s *AnnouncementScheduler) process(ctx context.Context) error {
 	logger.DebugContext(ctx, "processing announcements")
 	span.AddEvent("processing announcements")
 	if err := s.processAnnouncements(ctx, latestAnnouncement.Date); err != nil {
+		err = fmt.Errorf("processing announcements: %v")
 		return err
 	}
 	logger.InfoContext(ctx, "processed announcements")
@@ -193,6 +194,8 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 		return nil
 	}
 
+	// TODO: find a way to handle if the announcement / pageSize is equal to 0
+	var wg sync.WaitGroup
 	for curr := pageTotal - 1; curr >= 0; curr-- {
 		ctx := slogctx.Append(ctx, slog.Int(constants.PageIdx, curr))
 		select {
@@ -203,23 +206,19 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 		default:
 			logger.DebugContext(ctx, "get and submit announcements")
 			span.AddEvent("get and submit announcements")
-			go func(ctx context.Context, curr, pageTotal int, since time.Time, resp AnnouncementResponse) {
+			wg.Go(func() {
+				logger.DebugContext(ctx, "working on page")
 				if err := s.getAndSubmitPage(ctx, curr, pageTotal, since, resp); err != nil {
 					logger.ErrorContext(ctx, "getAndSubmitPage", slog.Any("error", err))
 					return
 				}
-			}(
-				ctx,
-				curr,
-				pageTotal,
-				since,
-				resp,
-			)
+			})
 		}
 	}
+	logger.DebugContext(ctx, "wait")
+	wg.Wait()
+	logger.DebugContext(ctx, "finished waiting")
 
-	logger.DebugContext(ctx, "processed announcements")
-	span.AddEvent("processed announcements")
 	return nil
 }
 
@@ -246,7 +245,7 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return fmt.Errorf("semaphore acquire: %w", err)
 	}
-	defer s.sem.Release(1)
+	s.sem.Release(1)
 	logger.DebugContext(ctx, "semaphore acquired")
 	span.AddEvent("semaphore acquired")
 
