@@ -28,23 +28,33 @@ type idxDependencies struct {
 func initIDXDeps(ctx context.Context, cfg *config.Config) (*idxDependencies, error) {
 	logger := log.Get(cfg.App)
 
+	logger.DebugContext(ctx, "initializing telemetry")
 	tmt, err := telemetry.New(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize telemetry: %w", err)
 	}
+	logger.InfoContext(ctx, "initialized telemetry")
 
+	logger.DebugContext(ctx, "initializing blobstorage")
 	stg, err := blobstorage.NewStorage(cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
 	if err != nil {
 		return nil, fmt.Errorf("initialize blobstorage: %w", err)
 	}
+	logger.InfoContext(ctx, "initialized blobstorage")
 
+	logger.DebugContext(ctx, "initializing database")
 	database, err := db.Get(ctx, cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("initialize database: %w", err)
 	}
 
+	logger.DebugContext(ctx, "initializing AnnouncementStore")
 	annStore := idx.NewAnnouncementStore(database, logger, telemetry.AppTelemetry.Tracer)
+	logger.DebugContext(ctx, "initialized AnnouncementStore")
+
+	logger.DebugContext(ctx, "initializing AttachmentStore")
 	attStore := idx.NewAttachmentStore(database, logger, telemetry.AppTelemetry.Tracer)
+	logger.DebugContext(ctx, "initialized AttachmentStore")
 
 	httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
 	client := idx.NewClient(

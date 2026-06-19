@@ -79,6 +79,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 	}()
 
 	announcementPool := idx.NewAnnouncementPool(
+		ctx,
 		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
 		deps.logger.With(slog.String("tag", "idx.announcementPool")),
 		deps.tmt.Tracer,
@@ -99,6 +100,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 		deps.client,
 		announcementPool,
 	)
+	announcementScheduler.Start()
 	defer announcementScheduler.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {

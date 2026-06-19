@@ -8,7 +8,7 @@ var IDXWorker = &cobra.Command{
 	Use:          "idx",
 	Short:        "IDX announcement fetcher",
 	SilenceUsage: true,
-	Aliases:      []string{"ir"},
+	Aliases:      []string{"i"},
 }
 
 func init() {

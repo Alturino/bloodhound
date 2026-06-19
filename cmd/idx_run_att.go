@@ -43,12 +43,13 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 	}
 	ctx = slogctx.Append(ctx, slog.String("config_path", configPath))
 
-	slog.InfoContext(ctx, "load config")
+	slog.DebugContext(ctx, "loading config")
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		err = fmt.Errorf("load config: %v", err)
 		return err
 	}
+	slog.InfoContext(ctx, "loaded config")
 
 	logger := log.Get(cfg.App)
 	defer func() {
@@ -58,6 +59,7 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
+	logger.DebugContext(ctx, "initializing idx dependencies")
 	deps, err := initIDXDeps(ctx, cfg)
 	if err != nil {
 		err = fmt.Errorf("init idx deps: %v", err)
@@ -77,16 +79,22 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
+	logger.InfoContext(ctx, "initialized idx dependencies")
 
+	logger.DebugContext(ctx, "initializing attachment worker")
 	attachmentWorker := idx.NewAttachmentWorker(
 		cfg.Storage.MinIO,
-		deps.logger.With(slog.String("tag", "idx.Processor")),
+		deps.logger.With(slog.String("tag", "idx.AttachmentWorker")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
 		deps.client,
 		deps.stg,
 	)
+	logger.InfoContext(ctx, "initialized attachment worker")
+
+	logger.DebugContext(ctx, "initializing attachment pool")
 	attachmentPool := idx.NewAttachmentPool(
+		ctx,
 		cfg.App.IDX.WorkerPool,
 		deps.logger.With(slog.String("tag", "idx.attachmentPool")),
 		deps.tmt.Tracer,
@@ -94,17 +102,21 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 		attachmentWorker,
 		deps.attStore,
 	)
+	defer attachmentPool.Shutdown()
+	logger.InfoContext(ctx, "initialized attachment pool")
+
+	logger.DebugContext(ctx, "initializing attachment scheduler")
 	attachmentScheduler := idx.NewAttachmentScheduler(
 		ctx,
 		cfg.Scheduler,
-		deps.logger.With(slog.String("tag", "attachment.Scheduler")),
+		deps.logger.With(slog.String("tag", "idx.AttachmentScheduler")),
 		deps.tmt.Tracer,
 		deps.tmt.Metrics,
 		deps.attStore,
 		attachmentPool,
 	)
-	attachmentScheduler.Start()
 	defer attachmentScheduler.Shutdown()
+	logger.InfoContext(ctx, "initialized attachment scheduler")
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {

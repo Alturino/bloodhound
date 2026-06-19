@@ -82,6 +82,7 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 		deps.stg,
 	)
 	attachmentPool := idx.NewAttachmentPool(
+		ctx,
 		cfg.App.IDX.WorkerPool,
 		logger.With(slog.String("tag", "idx.attachmentPool")),
 		deps.tmt.Tracer,
@@ -98,10 +99,10 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 		deps.attStore,
 		attachmentPool,
 	)
-	attachmentScheduler.Start()
 	defer attachmentScheduler.Shutdown()
 
 	announcementPool := idx.NewAnnouncementPool(
+		ctx,
 		cfg.App.IDX.WorkerPool.AnnouncementWorkers,
 		logger.With(slog.String("tag", "idx.announcementPool")),
 		deps.tmt.Tracer,
@@ -122,6 +123,7 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 		deps.client,
 		announcementPool,
 	)
+	announcementScheduler.Start()
 	defer announcementScheduler.Shutdown()
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
