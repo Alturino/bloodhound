@@ -27,6 +27,7 @@ type AttachmentScheduler struct {
 	pool    *attachmentPool
 	ctx     context.Context
 	cancel  context.CancelFunc
+	ticker  *time.Ticker
 }
 
 // NewAttachmentScheduler creates a new AttachmentScheduler with the given
@@ -42,7 +43,7 @@ func NewAttachmentScheduler(
 ) *AttachmentScheduler {
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &AttachmentScheduler{
+	scheduler := &AttachmentScheduler{
 		config:  cfg,
 		logger:  logger,
 		tracer:  tracer,
@@ -52,12 +53,13 @@ func NewAttachmentScheduler(
 		ctx:     ctx,
 		cancel:  cancel,
 	}
+	scheduler.Start()
+	return scheduler
 }
 
 // Start starts the internal worker pool and launches the schedule goroutine
 // that polls for unprocessed attachments on a configurable interval.
 func (s *AttachmentScheduler) Start() {
-	s.pool.Start()
 	go s.schedule()
 }
 
@@ -68,13 +70,15 @@ func (s *AttachmentScheduler) schedule() {
 		slog.Duration(constants.Interval, interval),
 	)
 
-	ticker := time.Tick(interval)
+	logger.InfoContext(s.ctx, "starting scheduler", slog.Duration(constants.Interval, interval))
+	s.ticker = time.NewTicker(interval)
+	defer s.ticker.Stop()
 	for {
 		select {
 		case <-s.ctx.Done():
 			logger.InfoContext(s.ctx, "context done, stopping", slog.Any("error", s.ctx.Err()))
 			return
-		case t := <-ticker:
+		case t := <-s.ticker.C:
 			ctx := slogctx.Append(s.ctx, slog.Time(constants.ExecutedAt, t))
 			logger.DebugContext(ctx, "scheduler executing")
 			s.pollAndSubmit(ctx)

@@ -3,6 +3,7 @@ package idx
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
@@ -14,18 +15,20 @@ import (
 )
 
 type attachmentPool struct {
-	logger      *slog.Logger
-	taskChan    chan AttachmentTask
-	workerCount int
-	ctx         context.Context
-	cancel      context.CancelFunc
-	tracer      trace.Tracer
-	metrics     *telemetry.Metrics
-	worker      AttachmentWorker
-	store       AttachmentStore
+	logger       *slog.Logger
+	taskChan     chan AttachmentTask
+	workerCount  int
+	ctx          context.Context
+	cancel       context.CancelFunc
+	tracer       trace.Tracer
+	metrics      *telemetry.Metrics
+	worker       AttachmentWorker
+	store        AttachmentStore
+	shutdownOnce sync.Once
 }
 
 func NewAttachmentPool(
+	ctx context.Context,
 	cfg *config.WorkerPool,
 	logger *slog.Logger,
 	tracer trace.Tracer,
@@ -33,9 +36,9 @@ func NewAttachmentPool(
 	worker AttachmentWorker,
 	store AttachmentStore,
 ) *attachmentPool {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
-	return &attachmentPool{
+	pool := &attachmentPool{
 		worker:      worker,
 		logger:      logger,
 		tracer:      tracer,
@@ -46,6 +49,8 @@ func NewAttachmentPool(
 		cancel:      cancel,
 		workerCount: cfg.AttachmentWorkers,
 	}
+	pool.Start()
+	return pool
 }
 
 func (p *attachmentPool) Start() {
@@ -125,7 +130,9 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task AttachmentT
 }
 
 func (p *attachmentPool) Shutdown() {
-	p.cancel()
-	close(p.taskChan)
-	p.logger.Info("shutdown attachment pool")
+	p.shutdownOnce.Do(func() {
+		p.cancel()
+		close(p.taskChan)
+		p.logger.Info("shutdown attachment pool")
+	})
 }

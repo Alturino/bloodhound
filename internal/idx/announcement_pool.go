@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sync"
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/trace"
@@ -17,17 +18,20 @@ import (
 
 type announcementPool struct {
 	logger            *slog.Logger
-	tracer            trace.Tracer
 	metrics           *telemetry.Metrics
 	taskChan          chan *Page
 	workerCount       int
-	ctx               context.Context
 	cancel            context.CancelFunc
+	shutdownOnce      func()
+	startOnce         func()
+	tracer            trace.Tracer
+	ctx               context.Context
 	announcementStore AnnouncementStore
 	attachmentStore   AttachmentStore
 }
 
 func NewAnnouncementPool(
+	ctx context.Context,
 	workerCount int,
 	logger *slog.Logger,
 	tracer trace.Tracer,
@@ -35,8 +39,8 @@ func NewAnnouncementPool(
 	announcementStore AnnouncementStore,
 	attachmentStore AttachmentStore,
 ) *announcementPool {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &announcementPool{
+	ctx, cancel := context.WithCancel(ctx)
+	p := &announcementPool{
 		logger:            logger,
 		tracer:            tracer,
 		metrics:           metrics,
@@ -47,9 +51,21 @@ func NewAnnouncementPool(
 		cancel:            cancel,
 		workerCount:       workerCount,
 	}
+	p.startOnce = sync.OnceFunc(func() {
+		p.start()
+	})
+	p.shutdownOnce = sync.OnceFunc(func() {
+		p.shutdown()
+	})
+	p.Start()
+	return p
 }
 
 func (p *announcementPool) Start() {
+	p.startOnce()
+}
+
+func (p *announcementPool) start() {
 	for i := range p.workerCount {
 		go p.workerLoop(i)
 	}
@@ -64,7 +80,11 @@ func (p *announcementPool) Submit(page *Page) {
 }
 
 func (p *announcementPool) Shutdown() {
-	p.cancel()
+	p.shutdownOnce()
+}
+
+func (p *announcementPool) shutdown() {
+	defer p.cancel()
 	close(p.taskChan)
 	p.logger.Info("shutdown announcement pool")
 }

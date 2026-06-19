@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	slogctx "github.com/veqryn/slog-context"
@@ -20,16 +21,19 @@ import (
 type AnnouncementScheduler struct {
 	config            *config.Scheduler
 	logger            *slog.Logger
-	ctx               context.Context
+	startOnce         func()
+	shutdownOnce      func()
 	cancel            context.CancelFunc
-	tracer            trace.Tracer
 	metrics           *telemetry.Metrics
-	client            Client
-	sem               *semaphore.Weighted
 	pageSize          int
+	pool              *announcementPool
+	ticker            *time.Ticker
+	sem               *semaphore.Weighted
+	ctx               context.Context
+	tracer            trace.Tracer
+	client            Client
 	announcementStore AnnouncementStore
 	attachmentStore   AttachmentStore
-	pool              *announcementPool
 }
 
 func NewAnnouncementScheduler(
@@ -47,7 +51,7 @@ func NewAnnouncementScheduler(
 ) *AnnouncementScheduler {
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &AnnouncementScheduler{
+	as := &AnnouncementScheduler{
 		ctx:               ctx,
 		cancel:            cancel,
 		config:            cfg,
@@ -61,9 +65,20 @@ func NewAnnouncementScheduler(
 		attachmentStore:   attachmentStore,
 		pool:              pool,
 	}
+	as.startOnce = sync.OnceFunc(func() {
+		as.start()
+	})
+	as.shutdownOnce = sync.OnceFunc(func() {
+		as.shutdown()
+	})
+	return as
 }
 
 func (s *AnnouncementScheduler) Start() {
+	s.startOnce()
+}
+
+func (s *AnnouncementScheduler) start() {
 	logger := s.logger.With(slog.String("tag", "idx.AnnouncementScheduler.Start"))
 
 	if err := s.process(s.ctx); err != nil {
@@ -77,7 +92,11 @@ func (s *AnnouncementScheduler) Start() {
 }
 
 func (s *AnnouncementScheduler) Shutdown() {
-	s.cancel()
+	s.shutdownOnce()
+}
+
+func (s *AnnouncementScheduler) shutdown() {
+	defer s.cancel()
 	s.pool.Shutdown()
 	s.logger.Info("shutdown announcement scheduler")
 }
@@ -89,13 +108,14 @@ func (s *AnnouncementScheduler) schedule() {
 		slog.Duration(constants.Interval, interval),
 	)
 
-	ticker := time.Tick(interval)
+	s.ticker = time.NewTicker(interval)
+	defer s.ticker.Stop()
 	for {
 		select {
 		case <-s.ctx.Done():
-			logger.InfoContext(s.ctx, "context done, stopping")
+			logger.InfoContext(s.ctx, "context done, stopping", slog.Any("error", s.ctx.Err()))
 			return
-		case t := <-ticker:
+		case t := <-s.ticker.C:
 			ctx := slogctx.Append(s.ctx, slog.Time(constants.ExecutedAt, t))
 			logger.DebugContext(ctx, "scheduler executing")
 			if err := s.process(ctx); err != nil {
