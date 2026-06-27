@@ -27,7 +27,7 @@ type AnnouncementScheduler struct {
 	metrics           *telemetry.Metrics
 	pageSize          int
 	pool              *announcementPool
-	ticker            *time.Ticker
+	ticker            <-chan time.Time
 	sem               *semaphore.Weighted
 	ctx               context.Context
 	tracer            trace.Tracer
@@ -64,6 +64,7 @@ func NewAnnouncementScheduler(
 		announcementStore: announcementStore,
 		attachmentStore:   attachmentStore,
 		pool:              pool,
+		ticker:            time.Tick(cfg.Interval),
 	}
 	as.startOnce = sync.OnceFunc(func() {
 		as.start()
@@ -108,14 +109,12 @@ func (s *AnnouncementScheduler) schedule() {
 		slog.Duration(constants.Interval, interval),
 	)
 
-	s.ticker = time.NewTicker(interval)
-	defer s.ticker.Stop()
 	for {
 		select {
 		case <-s.ctx.Done():
 			logger.InfoContext(s.ctx, "context done, stopping", slog.Any("error", s.ctx.Err()))
 			return
-		case t := <-s.ticker.C:
+		case t := <-s.ticker:
 			ctx := slogctx.Append(s.ctx, slog.Time(constants.ExecutedAt, t))
 			logger.DebugContext(ctx, "scheduler executing")
 			if err := s.process(ctx); err != nil {
