@@ -19,19 +19,12 @@ parsers:
 pipeline:
   inputs:
     - name: tail
-      path: /var/logs/bloodhound/bloodhound.log
+      path: /var/logs/bloodhound/bloodhound*.log
       tag: app.bloodhound
       parser: json
       buffer_chunk_size: 100M
       buffer_max_size: 100M
       db: bloodhound
-    - name: tail
-      path: /var/logs/bloodhound/bloodhound-dev.log
-      tag: app.bloodhound
-      parser: json
-      buffer_chunk_size: 100M
-      buffer_max_size: 100M
-      db: bloodhound-dev
     - name: forward
       listen: 0.0.0.0
       port: 24224
