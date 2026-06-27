@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/contrib/processors/baggagecopy"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/prometheus"
+	otelExportProm "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
@@ -73,7 +74,6 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	// 1. Initialize Traces
 	tp, err := initTracer(ctx, cfg, res)
 	if err != nil {
@@ -84,11 +84,6 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 	mp, err := initMeter(ctx, cfg, res)
 	if err != nil {
 		return nil, err
-	}
-
-	// 3. Start Prometheus metrics server
-	if cfg.Telemetry.PrometheusEndpoint != "" {
-		initPrometheusServer(cfg.Telemetry.PrometheusEndpoint)
 	}
 
 	mtr := mp.Meter(cfg.Telemetry.ServiceName)
@@ -155,30 +150,40 @@ func initMeter(
 	res *resource.Resource,
 ) (*sdkmetric.MeterProvider, error) {
 	// OTLP HTTP exporter for forwarding metrics to the OTel Collector
-	otlpExporter, err := otlpmetrichttp.New(
+	otlpExporter, err := otlpmetricgrpc.New(
 		ctx,
-		otlpmetrichttp.WithEndpoint(cfg.Telemetry.OTLPMetricsEndpoint),
-		otlpmetrichttp.WithInsecure(),
-		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+		otlpmetricgrpc.WithEndpoint(cfg.Telemetry.OTLPMetricsEndpoint),
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithCompressor("gzip"),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	// Prometheus exporter for direct /metrics scraping
-	promExporter, err := prometheus.New()
+	promExporter, err := otelExportProm.New()
 	if err != nil {
 		return nil, err
 	}
+	initPrometheusServer(cfg.Telemetry.PrometheusEndpoint)
 
+	otlpReader := sdkmetric.WithReader(
+		sdkmetric.NewPeriodicReader(otlpExporter, sdkmetric.WithInterval(time.Second*5)),
+	)
+	promReader := sdkmetric.WithReader(promExporter)
+	runtimeReader := sdkmetric.WithReader(
+		sdkmetric.NewManualReader(sdkmetric.WithProducer(runtime.NewProducer())),
+	)
 	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(otlpExporter, sdkmetric.WithInterval(time.Second*5)),
-		),
-		sdkmetric.WithReader(promExporter),
+		otlpReader,
+		promReader,
+		runtimeReader,
 		sdkmetric.WithResource(res),
 	)
 	otel.SetMeterProvider(mp)
+	if err := runtime.Start(runtime.WithMeterProvider(mp)); err != nil {
+		return nil, err
+	}
 
 	return mp, nil
 }
