@@ -2,6 +2,7 @@
 services:
   postgres:
     image: postgres:18.4-trixie
+    restart: always
     environment:
       TZ: "Asia/Jakarta"
       PGTZ: "Asia/Jakarta"
@@ -19,8 +20,8 @@ services:
     volumes:
       # - postgres:/var/lib/postgresql/
       - /run/media/onirutla/External1/bloodhound/postgresql:/var/lib/postgresql/
-      - ./pg_conf/pg_hba.conf:/var/lib/postgresql/18/docker/pg_hba.conf
-      - ./pg_conf/postgresql.conf:/var/lib/postgresql/18/docker/postgresql.conf
+      # - ./pg_conf/pg_hba.conf:/var/lib/postgresql/18/docker/pg_hba.conf
+      # - ./pg_conf/postgresql.conf:/var/lib/postgresql/18/docker/postgresql.conf
       - ./db_init:/docker-entrypoint-initdb.d:ro
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.19.0
