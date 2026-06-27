@@ -177,6 +177,7 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 
 	resp, err := s.client.FetchAnnouncements(ctx, 0, since)
 	if err != nil {
+		err = fmt.Errorf("processing announcements: %v", err)
 		return err
 	}
 	totalAnnouncements, pageSize := resp.ResultCount, s.pageSize
@@ -252,6 +253,7 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 	fetchStart := time.Now()
 	resp, err := s.client.FetchAnnouncements(ctx, curr, since)
 	if err != nil {
+		err = fmt.Errorf("get page: %v", err)
 		return err
 	}
 	s.metrics.IdxPageFetchDuration.Record(ctx, float64(time.Since(fetchStart).Milliseconds()))

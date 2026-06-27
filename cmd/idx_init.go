@@ -26,7 +26,10 @@ type idxDependencies struct {
 }
 
 func initIDXDeps(ctx context.Context, cfg *config.Config) (*idxDependencies, error) {
-	logger := log.Get(cfg.App)
+	logger, err := log.Get(cfg.App)
+	if err != nil {
+		return nil, fmt.Errorf("initialize logger: %w", err)
+	}
 
 	logger.DebugContext(ctx, "initializing telemetry")
 	tmt, err := telemetry.New(ctx, cfg)

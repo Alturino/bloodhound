@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -123,7 +124,7 @@ func (c *client) FetchAnnouncements(
 		return AnnouncementResponse{}, err
 	}
 	if !resp.IsSuccessState() {
-		err = fmt.Errorf("unexpected status_code=%d", resp.StatusCode)
+		err = fmt.Errorf("fetching announcements: unexpected status_code=%d", resp.StatusCode)
 		telemetry.RecordError(span, err)
 		return AnnouncementResponse{}, err
 	}
@@ -132,6 +133,7 @@ func (c *client) FetchAnnouncements(
 		telemetry.RecordError(span, errors.New("announcements empty"))
 		return AnnouncementResponse{}, errors.New("announcements empty")
 	}
+	logger = logger.With(slog.Int(constants.AnnouncementsCount, len(result.Announcements)))
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
 
@@ -209,7 +211,6 @@ func convertToModel(raw rawAnnouncementResponse) AnnouncementResponse {
 			IsStock:           r.Pengumuman.EfekEmiten_Saham,
 			Attachments:       make([]Attachment, 0, len(r.Attachments)),
 		}
-
 		for _, attachment := range r.Attachments {
 			candidate := Attachment{
 				PDFFilename:      attachment.PDFFilename,
@@ -221,7 +222,7 @@ func convertToModel(raw rawAnnouncementResponse) AnnouncementResponse {
 			}
 			announcement.Attachments = append(announcement.Attachments, candidate)
 		}
-
+		announcement.Attachments = slices.Clip(announcement.Attachments)
 		result.Announcements[i] = announcement
 	}
 

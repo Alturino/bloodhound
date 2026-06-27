@@ -2,6 +2,8 @@ package log
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -15,9 +17,18 @@ import (
 	"github.com/alturino/bloodhound/config"
 )
 
-func Get(config *config.App) *slog.Logger {
+func Get(config *config.App) (*slog.Logger, error) {
+	logFilename := fmt.Sprintf("%s_%s.log", config.Name, config.Environment)
+	logPath := filepath.Join(config.LogDir, logFilename)
+	if _, err := os.Stat(logPath); err != nil {
+		if os.IsNotExist(err) {
+			if _, fileErr := os.Create(logPath); fileErr != nil {
+				return nil, errors.Join(err, fileErr)
+			}
+		}
+	}
 	logfile := &lumberjack.Logger{
-		Filename:  filepath.Join(config.LogDir, "bloodhound.log"),
+		Filename:  logPath,
 		MaxSize:   1000, // megabytes
 		MaxAge:    30,
 		Compress:  true,
@@ -29,12 +40,7 @@ func Get(config *config.App) *slog.Logger {
 		Level:     config.LogLevelVar,
 		AddSource: true,
 	}
-	var sinkHandler slog.Handler = slog.NewJSONHandler(logDestination, sinkHandlerOption)
-	if config.Environment != "production" {
-		logfile.Filename = filepath.Join(config.LogDir, "bloodhound-dev.log")
-		// sinkHandler = slog.NewTextHandler(logDestination, sinkHandlerOption)
-	}
-
+	sinkHandler := slog.NewJSONHandler(logDestination, sinkHandlerOption)
 	slogctxHandler := slogctx.NewHandler(sinkHandler, &slogctx.HandlerOptions{})
 	pipe := slogmulti.Pipe(
 		slogmulti.NewHandleInlineMiddleware(
@@ -60,5 +66,5 @@ func Get(config *config.App) *slog.Logger {
 	logger := slog.New(pipe)
 	slog.SetDefault(logger)
 
-	return logger
+	return logger, nil
 }

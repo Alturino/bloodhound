@@ -40,7 +40,12 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger := log.Get(cfg.App)
+	var logger *slog.Logger
+	logger, err = log.Get(cfg.App)
+	if err != nil {
+		err = fmt.Errorf("initialize logger: %w", err)
+		return err
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("panic", slog.Any("panic", r))
