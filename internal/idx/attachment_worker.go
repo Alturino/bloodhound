@@ -59,8 +59,6 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	)
 	defer span.End()
 
-	span.AddEvent("processing attachment work")
-
 	start := time.Now()
 
 	filePath := a.cleaner.Clean(ctx, *task)

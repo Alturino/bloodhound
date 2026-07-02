@@ -150,18 +150,20 @@ func (p *announcementPool) processPage(
 		ctx = slogctx.Append(ctx, slog.Any(constants.ProcessedID, keys[:min(2, len(keys))]))
 	}
 	if len(processedMap) == 0 {
-		logger.InfoContext(ctx, "no processed announcements")
+		logger.InfoContext(ctx, "no processed announcements, saving all")
 		span.AddEvent("no processed announcements, saving all")
 		if err := p.saveAnnouncements(ctx, announcements); err != nil {
 			return fmt.Errorf("saving all announcements: %w", err)
 		}
-		span.AddEvent("processed page")
+		logger.InfoContext(ctx, "processed announcements, saved all")
+		span.AddEvent("processed announcements, saved all")
 		return nil
 	}
-
 	logger.DebugContext(ctx, "found processed announcements")
 	span.AddEvent("found processed announcements")
 
+	logger.DebugContext(ctx, "filtering processed announcements")
+	span.AddEvent("filtering processed announcements")
 	unprocessed := make([]Announcement, 0, len(announcements))
 	for _, ann := range announcements {
 		if !processedMap[ann.ID] {
@@ -181,14 +183,18 @@ func (p *announcementPool) processPage(
 		span.AddEvent("no new announcements")
 		return nil
 	}
+	logger.DebugContext(ctx, "filtered processed announcements")
+	span.AddEvent("filtered processed announcements")
 
 	logger.DebugContext(ctx, "saving announcements")
 	span.AddEvent("saving announcements")
 	if err := p.saveAnnouncements(ctx, unprocessed); err != nil {
-		return fmt.Errorf("saving announcements: %w", err)
+		err = fmt.Errorf("saving announcements: %w", err)
+		return err
 	}
-	logger.InfoContext(ctx, "saved announcements")
+	logger.DebugContext(ctx, "saved announcements")
 	span.AddEvent("saved announcements")
+
 	span.AddEvent("processed page")
 	logger.InfoContext(ctx, "processed page")
 	return nil
@@ -240,7 +246,7 @@ func (p *announcementPool) saveAnnouncements(
 	if err := errors.Join(errs...); err != nil {
 		return err
 	}
-	logger.DebugContext(ctx, "inserted attachments")
+	logger.InfoContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
 
 	return nil

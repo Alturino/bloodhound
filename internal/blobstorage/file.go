@@ -82,6 +82,8 @@ func (f *localFile) SaveReader(
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
+	logger.DebugContext(ctx, "created dir")
+	span.AddEvent("created dir")
 
 	logger.DebugContext(ctx, "creating file")
 	span.AddEvent("creating file")

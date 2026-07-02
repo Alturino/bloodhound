@@ -188,14 +188,8 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
+	logger = logger.With(slog.Int(constants.Count, len(attachments)))
 	logger.DebugContext(ctx, "got unprocessed attachments")
-	span.AddEvent("got unprocessed attachments")
-
-	logger.InfoContext(
-		ctx,
-		"got unprocessed attachments",
-		slog.Int(constants.Count, len(attachments)),
-	)
 	span.AddEvent("got unprocessed attachments")
 
 	return attachments, nil
