@@ -61,7 +61,7 @@ func (a Announcement) LogValue() slog.Value {
 func (a Announcement) ToAttachments() []model.Attachments {
 	attachments := make([]model.Attachments, 0, len(a.Attachments))
 	for _, att := range a.Attachments {
-		if !isPDF(att) {
+		if !att.isPDF() {
 			continue
 		}
 		attachments = append(attachments, att.ToAttachments(a.ToAnnouncement()))

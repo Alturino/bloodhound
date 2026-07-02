@@ -217,7 +217,7 @@ func convertToModel(raw rawAnnouncementResponse) AnnouncementResponse {
 				FullSavePath:     attachment.FullSavePath,
 				OriginalFilename: attachment.OriginalFilename,
 			}
-			if !isPDF(candidate) {
+			if !candidate.isPDF() {
 				continue
 			}
 			announcement.Attachments = append(announcement.Attachments, candidate)

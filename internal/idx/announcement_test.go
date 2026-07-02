@@ -71,7 +71,7 @@ func TestIsPDF(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := isPDF(tc.att); got != tc.want {
+			if got := tc.att.isPDF(); got != tc.want {
 				t.Errorf("isPDF(%+v) = %v, want %v", tc.att, got, tc.want)
 			}
 		})

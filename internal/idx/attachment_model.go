@@ -26,9 +26,9 @@ func (a Attachment) ToAttachments(ann model.Announcements) model.Attachments {
 	}
 }
 
-func isPDF(att Attachment) bool {
-	return strings.EqualFold(filepath.Ext(att.OriginalFilename), ".pdf") ||
-		strings.EqualFold(filepath.Ext(att.PDFFilename), ".pdf")
+func (a Attachment) isPDF() bool {
+	return strings.EqualFold(filepath.Ext(a.OriginalFilename), ".pdf") ||
+		strings.EqualFold(filepath.Ext(a.PDFFilename), ".pdf")
 }
 
 func (a Attachment) LogValue() slog.Value {
