@@ -198,7 +198,7 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 
 	// TODO: find a way to handle if the announcement / pageSize is equal to 0
 	var wg sync.WaitGroup
-	for curr := pageTotal - 1; curr >= 0; curr-- {
+	for curr := pageTotal; curr >= 0; curr-- {
 		ctx := slogctx.Append(ctx, slog.Int(constants.PageIdx, curr))
 		select {
 		case <-ctx.Done():
@@ -247,7 +247,7 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return fmt.Errorf("semaphore acquire: %w", err)
 	}
-	s.sem.Release(1)
+	defer s.sem.Release(1)
 	logger.DebugContext(ctx, "semaphore acquired")
 	span.AddEvent("semaphore acquired")
 
