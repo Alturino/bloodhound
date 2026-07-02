@@ -28,10 +28,15 @@ type App struct {
 	LogLevel    slog.Level     `mapstructure:"log_level"   json:"log_level"` // debug, info, warn, error
 	LogLevelVar *slog.LevelVar `mapstructure:"-"           json:"-"`
 	Name        string         `mapstructure:"name"        json:"name"`
+	Hostname    string         `mapstructure:"hostname"    json:"hostname"`
 	Environment string         `mapstructure:"environment" json:"environment"` // development, production
 	LogDir      string         `mapstructure:"log_dir"     json:"log_dir"`
 	IDX         IDX            `mapstructure:"idx"         json:"idx"`
 	Stockbit    Stockbit       `mapstructure:"stockbit"    json:"stockbit"`
+}
+
+func (a *App) ServiceName() string {
+	return fmt.Sprintf("%s_%s_%s", a.Name, a.Hostname, a.Environment)
 }
 
 // Load reads configuration from file and environment variables
@@ -44,6 +49,7 @@ func Load(configPath string) (*Config, error) {
 
 	// Set defaults
 	v.SetDefault("app.name", "bloodhound")
+	v.MustBindEnv("app.hostname", "HOSTNAME")
 	v.SetDefault("app.environment", "development")
 	v.SetDefault("app.log_level", "info")
 
@@ -74,7 +80,6 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("scheduler.cron_expr", "*/15 * * * *")
 
 	v.SetDefault("telemetry.enabled", true)
-	v.SetDefault("telemetry.service_name", "bloodhound")
 
 	// Config file
 	if configPath != "" {

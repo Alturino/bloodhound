@@ -48,7 +48,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		otel.SetTracerProvider(tp)
 		otel.SetMeterProvider(mp)
 
-		mtr := mp.Meter(cfg.Telemetry.ServiceName)
+		mtr := mp.Meter(cfg.App.ServiceName())
 		metrics, err := NewMetrics(mtr)
 		if err != nil {
 			return nil, err
@@ -57,7 +57,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		AppTelemetry = Telemetry{
 			TracerProvider: tp,
 			MeterProvider:  mp,
-			Tracer:         tp.Tracer(cfg.Telemetry.ServiceName),
+			Tracer:         tp.Tracer(cfg.App.ServiceName()),
 			Metrics:        metrics,
 			Logger:         slog.Default(),
 		}
@@ -67,7 +67,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 	res, err := resource.New(
 		ctx,
 		resource.WithAttributes(
-			semconv.ServiceName(cfg.Telemetry.ServiceName),
+			semconv.ServiceName(cfg.App.ServiceName()),
 			semconv.DeploymentEnvironment(cfg.App.Environment),
 		),
 	)
@@ -86,7 +86,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 		return nil, err
 	}
 
-	mtr := mp.Meter(cfg.Telemetry.ServiceName)
+	mtr := mp.Meter(cfg.App.ServiceName())
 	metrics, err := NewMetrics(mtr)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 	AppTelemetry = Telemetry{
 		TracerProvider: tp,
 		MeterProvider:  mp,
-		Tracer:         tp.Tracer(cfg.Telemetry.ServiceName),
+		Tracer:         tp.Tracer(cfg.App.ServiceName()),
 		Metrics:        metrics,
 		Logger:         logger,
 	}

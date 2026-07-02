@@ -51,8 +51,7 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 	}
 	slog.InfoContext(ctx, "loaded config")
 
-	var logger *slog.Logger
-	logger, err = log.Get(cfg.App)
+	logger, err := log.Get(cfg.App)
 	if err != nil {
 		return fmt.Errorf("initialize logger: %w", err)
 	}

@@ -2,8 +2,6 @@ package log
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -18,15 +16,8 @@ import (
 )
 
 func Get(config *config.App) (*slog.Logger, error) {
-	logFilename := fmt.Sprintf("%s_%s.log", config.Name, config.Environment)
-	logPath := filepath.Join(config.LogDir, logFilename)
-	if _, err := os.Stat(logPath); err != nil {
-		if os.IsNotExist(err) {
-			if _, fileErr := os.Create(logPath); fileErr != nil {
-				return nil, errors.Join(err, fileErr)
-			}
-		}
-	}
+	serviceName := config.ServiceName()
+	logPath := filepath.Join(config.LogDir, serviceName+".log")
 	logfile := &lumberjack.Logger{
 		Filename:  logPath,
 		MaxSize:   1000, // megabytes
@@ -56,7 +47,7 @@ func Get(config *config.App) (*slog.Logger, error) {
 			},
 		),
 	).Handler(slogctxHandler).
-		WithAttrs([]slog.Attr{slog.String("app", "bloodhound")})
+		WithAttrs([]slog.Attr{slog.String("svc_name", serviceName)})
 
 	// otelSlog := otelslog.NewHandler(common.APPLICATION_NAME, otelslog.WithSource(true)).
 	// 	WithAttrs([]slog.Attr{slog.String("app", "leaderboard")})

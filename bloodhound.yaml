@@ -42,4 +42,3 @@ telemetry:
   otlp_traces_endpoint: "localhost:4317"
   otlp_metrics_endpoint: "localhost:4317"
   prometheus_endpoint: ":9091"
-  service_name: bloodhound
