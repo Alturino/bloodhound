@@ -18,13 +18,14 @@ type attachmentPool struct {
 	logger       *slog.Logger
 	taskChan     chan *AttachmentTask
 	workerCount  int
-	ctx          context.Context
+	startOnce    func()
+	shutdownOnce func()
 	cancel       context.CancelFunc
-	tracer       trace.Tracer
 	metrics      *telemetry.Metrics
+	ctx          context.Context
+	tracer       trace.Tracer
 	worker       AttachmentWorker
 	store        AttachmentStore
-	shutdownOnce sync.Once
 }
 
 func NewAttachmentPool(
@@ -38,7 +39,7 @@ func NewAttachmentPool(
 ) *attachmentPool {
 	ctx, cancel := context.WithCancel(ctx)
 
-	pool := &attachmentPool{
+	p := &attachmentPool{
 		worker:      worker,
 		logger:      logger,
 		tracer:      tracer,
@@ -49,11 +50,17 @@ func NewAttachmentPool(
 		cancel:      cancel,
 		workerCount: cfg.AttachmentWorkers,
 	}
-	pool.Start()
-	return pool
+	p.shutdownOnce = sync.OnceFunc(p.shutdown)
+	p.startOnce = sync.OnceFunc(p.start)
+	p.Start()
+	return p
 }
 
 func (p *attachmentPool) Start() {
+	p.startOnce()
+}
+
+func (p *attachmentPool) start() {
 	for i := 1; i <= p.workerCount; i++ {
 		go p.workerLoop(i)
 	}
@@ -128,9 +135,11 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 }
 
 func (p *attachmentPool) Shutdown() {
-	p.shutdownOnce.Do(func() {
-		p.cancel()
-		close(p.taskChan)
-		p.logger.Info("shutdown attachment pool")
-	})
+	p.shutdownOnce()
+}
+
+func (p *attachmentPool) shutdown() {
+	defer p.cancel()
+	close(p.taskChan)
+	p.logger.Info("shutdown attachment pool")
 }

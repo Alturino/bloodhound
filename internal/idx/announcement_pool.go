@@ -51,12 +51,8 @@ func NewAnnouncementPool(
 		cancel:            cancel,
 		workerCount:       workerCount,
 	}
-	p.startOnce = sync.OnceFunc(func() {
-		p.start()
-	})
-	p.shutdownOnce = sync.OnceFunc(func() {
-		p.shutdown()
-	})
+	p.startOnce = sync.OnceFunc(p.start)
+	p.shutdownOnce = sync.OnceFunc(p.shutdown)
 	p.Start()
 	return p
 }

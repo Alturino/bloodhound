@@ -66,12 +66,8 @@ func NewAnnouncementScheduler(
 		pool:              pool,
 		ticker:            time.Tick(cfg.Interval),
 	}
-	as.startOnce = sync.OnceFunc(func() {
-		as.start()
-	})
-	as.shutdownOnce = sync.OnceFunc(func() {
-		as.shutdown()
-	})
+	as.startOnce = sync.OnceFunc(as.start)
+	as.shutdownOnce = sync.OnceFunc(as.shutdown)
 	return as
 }
 
