@@ -113,7 +113,9 @@ func (s *announcementStore) LatestAnnouncement(
 	var ann model.Announcements
 	if err := stmt.QueryContext(ctx, db, &ann); err != nil {
 		err = fmt.Errorf("get latest announcement: %v", err)
-		telemetry.RecordError(span, err)
+		if !errors.Is(err, qrm.ErrNoRows) {
+			telemetry.RecordError(span, err)
+		}
 		return model.Announcements{}, err
 	}
 	logger = logger.With(slog.Any(constants.LatestAnnouncement, ann))

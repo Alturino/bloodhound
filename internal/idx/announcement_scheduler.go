@@ -154,7 +154,7 @@ func (s *AnnouncementScheduler) process(ctx context.Context) error {
 	logger.DebugContext(ctx, "processing announcements")
 	span.AddEvent("processing announcements")
 	if err := s.processAnnouncements(ctx, latestAnnouncement.Date); err != nil {
-		err = fmt.Errorf("processing announcements: %v")
+		err = fmt.Errorf("processing announcements: %v", err)
 		return err
 	}
 	logger.InfoContext(ctx, "processed announcements")
@@ -174,9 +174,9 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 
 	resp, err := s.client.FetchAnnouncements(ctx, 0, since)
 	if err != nil {
-		err = fmt.Errorf("processing announcements: %v", err)
 		return err
 	}
+
 	totalAnnouncements, pageSize := resp.ResultCount, s.pageSize
 	pageTotal := totalAnnouncements / pageSize
 	ctx = slogctx.Append(

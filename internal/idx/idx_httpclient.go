@@ -118,21 +118,23 @@ func (c *client) FetchAnnouncements(
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		logger = logger.With(slog.String(constants.HTTPDump, resp.Dump()))
 	}
+	logger = logger.With(slog.String("request_url", resp.Request.URL.String()))
 	if err != nil {
 		err = fmt.Errorf("fetching announcements: %v", err)
 		telemetry.RecordError(span, err)
 		return AnnouncementResponse{}, err
 	}
-	if !resp.IsSuccessState() {
-		err = fmt.Errorf("fetching announcements: unexpected status_code=%d", resp.StatusCode)
+	if resp.IsErrorState() {
+		err := fmt.Errorf("fetching announcements: unexpected status_code=%d", resp.StatusCode)
+		telemetry.RecordError(span, err)
+		return AnnouncementResponse{}, err
+	}
+	if len(rawResp.Replies) == 0 {
+		err := errors.New("announcements empty")
 		telemetry.RecordError(span, err)
 		return AnnouncementResponse{}, err
 	}
 	result := convertToModel(rawResp)
-	if len(result.Announcements) == 0 {
-		telemetry.RecordError(span, errors.New("announcements empty"))
-		return AnnouncementResponse{}, errors.New("announcements empty")
-	}
 	logger = logger.With(slog.Int(constants.AnnouncementsCount, len(result.Announcements)))
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
