@@ -2,12 +2,14 @@ package idx
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/constants"
@@ -22,6 +24,7 @@ type attachmentPool struct {
 	shutdownOnce func()
 	cancel       context.CancelFunc
 	metrics      *telemetry.Metrics
+	sem          *semaphore.Weighted
 	ctx          context.Context
 	tracer       trace.Tracer
 	worker       AttachmentWorker
@@ -45,6 +48,7 @@ func NewAttachmentPool(
 		tracer:      tracer,
 		metrics:     metrics,
 		store:       store,
+		sem:         semaphore.NewWeighted(int64(cfg.AttachmentWorkers)),
 		taskChan:    make(chan *AttachmentTask, cfg.AttachmentWorkers*2),
 		ctx:         ctx,
 		cancel:      cancel,
@@ -113,15 +117,25 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 
 	logger := p.logger.With(slog.String("tag", "attachmentPool.processAttachment"))
 
+	logger.DebugContext(ctx, "acquiring semaphore")
+	span.AddEvent("acquiring semaphore")
+	if err := p.sem.Acquire(ctx, 1); err != nil {
+		logger.WarnContext(ctx, "acquiring semaphore", slog.Any("error", err))
+		return
+	}
+	defer p.sem.Release(1)
+	logger.DebugContext(ctx, "semaphore acquired")
+	span.AddEvent("semaphore acquired")
+
 	logger.DebugContext(ctx, "processing attachment")
 	span.AddEvent("processing attachment")
 	result, err := p.worker.Work(ctx, task)
 	if err != nil {
 		p.metrics.AttFailedDownload.Add(ctx, 1)
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
-		if err := p.store.UpdateAttachmentResult(ctx, &result.Attachment); err != nil {
+		if updateErr := p.store.UpdateAttachmentResult(ctx, &result.Attachment); updateErr != nil {
+			err = errors.Join(err, updateErr)
 			logger.ErrorContext(ctx, "update attachment", slog.Any("error", err))
-			return
 		}
 		return
 	}

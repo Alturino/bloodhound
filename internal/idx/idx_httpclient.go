@@ -167,7 +167,7 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		telemetry.RecordError(span, err)
 		return nil, "", err
 	}
-	if !resp.IsSuccessState() {
+	if resp.IsErrorState() {
 		err := fmt.Errorf(
 			"downloading file: unexpected status_code=%d, url=%s",
 			resp.StatusCode,

@@ -234,7 +234,7 @@ func (s *attachmentStore) ClaimAttachments(
 				AND(Attachments.IsDownloaded.IS_FALSE()).
 				AND(Attachments.IsProcessing.IS_FALSE()).
 				AND(Attachments.StoragePath.EQ(String("")).OR(Attachments.Checksum.EQ(String("")))).
-				AND(Attachments.Error.NOT_LIKE(String("%status_code=4%"))),
+				AND(Attachments.Error.NOT_LIKE(String("%status_code=404%"))),
 		).
 		SET(Attachments.IsProcessing.SET(Bool(true))).
 		RETURNING(Attachments.AllColumns)

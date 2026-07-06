@@ -59,6 +59,7 @@ func NewAttachmentScheduler(
 	}
 	s.startOnce = sync.OnceFunc(s.start)
 	s.shutdownOnce = sync.OnceFunc(s.shutdown)
+	s.Start()
 	return s
 }
 
