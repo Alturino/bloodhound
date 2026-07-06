@@ -3,6 +3,7 @@ package idx
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,15 +20,17 @@ import (
 //
 // It implements the Background interface (Start, Shutdown).
 type AttachmentScheduler struct {
-	config  *config.Scheduler
-	logger  *slog.Logger
-	tracer  trace.Tracer
-	metrics *telemetry.Metrics
-	store   AttachmentStore
-	pool    *attachmentPool
-	ctx     context.Context
-	cancel  context.CancelFunc
-	ticker  <-chan time.Time
+	config       *config.Scheduler
+	logger       *slog.Logger
+	metrics      *telemetry.Metrics
+	pool         *attachmentPool
+	startOnce    func()
+	shutdownOnce func()
+	cancel       context.CancelFunc
+	ticker       <-chan time.Time
+	tracer       trace.Tracer
+	store        AttachmentStore
+	ctx          context.Context
 }
 
 // NewAttachmentScheduler creates a new AttachmentScheduler with the given
@@ -43,7 +46,7 @@ func NewAttachmentScheduler(
 ) *AttachmentScheduler {
 	ctx, cancel := context.WithCancel(ctx)
 
-	scheduler := &AttachmentScheduler{
+	s := &AttachmentScheduler{
 		config:  cfg,
 		logger:  logger,
 		tracer:  tracer,
@@ -54,13 +57,18 @@ func NewAttachmentScheduler(
 		ticker:  time.Tick(cfg.Interval),
 		cancel:  cancel,
 	}
-	scheduler.Start()
-	return scheduler
+	s.startOnce = sync.OnceFunc(s.start)
+	s.shutdownOnce = sync.OnceFunc(s.shutdown)
+	return s
 }
 
 // Start starts the internal worker pool and launches the schedule goroutine
 // that polls for unprocessed attachments on a configurable interval.
 func (s *AttachmentScheduler) Start() {
+	s.startOnce()
+}
+
+func (s *AttachmentScheduler) start() {
 	go s.schedule()
 }
 
@@ -136,6 +144,10 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 
 // Shutdown cancels the scheduler context and shuts down the internal worker pool.
 func (s *AttachmentScheduler) Shutdown() {
+	s.shutdownOnce()
+}
+
+func (s *AttachmentScheduler) shutdown() {
 	defer s.cancel()
 	s.pool.Shutdown()
 	s.logger.Info("shutdown attachment scheduler")
