@@ -186,13 +186,6 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 		slog.Int(constants.PageSize, pageSize),
 	)
 
-	if pageTotal < 0 {
-		logger.InfoContext(ctx, "no pages to process")
-		span.AddEvent("no pages to process")
-		return nil
-	}
-
-	// TODO: find a way to handle if the announcement / pageSize is equal to 0
 	var wg sync.WaitGroup
 	for curr := pageTotal; curr >= 0; curr-- {
 		ctx := slogctx.Append(ctx, slog.Int(constants.PageIdx, curr))
@@ -200,6 +193,7 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 		case <-ctx.Done():
 			logger.InfoContext(ctx, "context done, stop sending page")
 			span.AddEvent("context done, stop sending page")
+			wg.Wait()
 			return nil
 		default:
 			logger.DebugContext(ctx, "get and submit announcements")
@@ -207,13 +201,13 @@ func (s *AnnouncementScheduler) processAnnouncements(ctx context.Context, since 
 			wg.Go(func() {
 				logger.DebugContext(ctx, "working on page")
 				if err := s.getAndSubmitPage(ctx, curr, pageTotal, since, resp); err != nil {
-					logger.ErrorContext(ctx, "getAndSubmitPage", slog.Any("error", err))
+					logger.ErrorContext(ctx, "submitting page", slog.Any("error", err))
 					return
 				}
+				logger.DebugContext(ctx, "worked on page")
 			})
 		}
 	}
-	logger.DebugContext(ctx, "wait")
 	wg.Wait()
 	logger.DebugContext(ctx, "finished waiting")
 
