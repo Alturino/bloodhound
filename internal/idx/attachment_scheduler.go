@@ -27,7 +27,7 @@ type AttachmentScheduler struct {
 	pool    *attachmentPool
 	ctx     context.Context
 	cancel  context.CancelFunc
-	ticker  *time.Ticker
+	ticker  <-chan time.Time
 }
 
 // NewAttachmentScheduler creates a new AttachmentScheduler with the given
@@ -51,6 +51,7 @@ func NewAttachmentScheduler(
 		store:   store,
 		pool:    pool,
 		ctx:     ctx,
+		ticker:  time.Tick(cfg.Interval),
 		cancel:  cancel,
 	}
 	scheduler.Start()
@@ -71,14 +72,12 @@ func (s *AttachmentScheduler) schedule() {
 	)
 
 	logger.InfoContext(s.ctx, "starting scheduler", slog.Duration(constants.Interval, interval))
-	s.ticker = time.NewTicker(interval)
-	defer s.ticker.Stop()
 	for {
 		select {
 		case <-s.ctx.Done():
 			logger.InfoContext(s.ctx, "context done, stopping", slog.Any("error", s.ctx.Err()))
 			return
-		case t := <-s.ticker.C:
+		case t := <-s.ticker:
 			ctx := slogctx.Append(s.ctx, slog.Time(constants.ExecutedAt, t))
 			logger.DebugContext(ctx, "scheduler executing")
 			s.pollAndSubmit(ctx)
@@ -94,26 +93,20 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 	)
 	defer span.End()
 
-	span.AddEvent("polling and submitting")
-
 	logger := s.logger.With(slog.String("tag", "idx.attachmentScheduler.pollAndSubmit"))
 
 	attachments, err := s.store.UnprocessedAttachments(ctx)
 	if err != nil {
-		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "failed to get unprocessed attachments", slog.Any("error", err))
 		return
 	}
-
 	s.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
-
+	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
 	if len(attachments) == 0 {
 		logger.InfoContext(ctx, "no unprocessed attachments")
 		span.AddEvent("no unprocessed attachments")
 		return
 	}
-
-	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
 
 	ids := make([]uuid.UUID, len(attachments))
 	for i, att := range attachments {
@@ -122,7 +115,6 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 
 	claimed, err := s.store.ClaimAttachments(ctx, ids...)
 	if err != nil {
-		telemetry.RecordError(span, err)
 		logger.ErrorContext(ctx, "failed to claim attachments", slog.Any("error", err))
 		return
 	}
@@ -144,7 +136,7 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 
 // Shutdown cancels the scheduler context and shuts down the internal worker pool.
 func (s *AttachmentScheduler) Shutdown() {
-	s.cancel()
+	defer s.cancel()
 	s.pool.Shutdown()
 	s.logger.Info("shutdown attachment scheduler")
 }

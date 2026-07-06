@@ -85,6 +85,9 @@ func (s *attachmentStore) InsertAttachment(
 		DO_NOTHING().
 		MODELS(attachments).
 		RETURNING(Attachments.AllColumns)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
+	}
 	logger.DebugContext(ctx, "prepared statement")
 	span.AddEvent("prepared statement")
 
@@ -115,8 +118,6 @@ func (s *attachmentStore) Attachment(
 
 	logger := s.logger.With(slog.String("tag", "idx.attachmentStore.Attachment"))
 
-	span.AddEvent("getting attachment")
-
 	if len(id) == 0 {
 		return model.Attachments{}, nil
 	}
@@ -126,18 +127,23 @@ func (s *attachmentStore) Attachment(
 		uuids[i] = UUID(v)
 	}
 
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := Attachments.SELECT(Attachments.AllColumns).
 		WHERE(Attachments.ID.EQ(ANY(ARRAY(uuids...)))).
 		LIMIT(1)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
+	}
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
 
 	var attachment model.Attachments
 	if err := stmt.QueryContext(ctx, db, &attachment); err != nil {
 		err = fmt.Errorf("get attachment: %v", err)
-		if errors.Is(err, qrm.ErrNoRows) {
-			logger.WarnContext(ctx, "attachment not found", slog.Any("error", err))
-			return attachment, err
+		if !errors.Is(err, qrm.ErrNoRows) {
+			telemetry.RecordError(span, err)
 		}
-		telemetry.RecordError(span, err)
 		return attachment, err
 	}
 	logger.InfoContext(ctx, "got attachment")
@@ -169,27 +175,25 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 				AND(Attachments.StoragePath.EQ(String("")).OR(Attachments.Checksum.EQ(String("")))).
 				AND(Attachments.Error.NOT_LIKE(String("%status_code=4%"))),
 		).ORDER_BY(Attachments.Date.ASC()).
-		LIMIT(5000) // limiting to 50k postgres only supports 16bit(65535) parameters
+		LIMIT(5000) // limiting to 5k postgres only supports 16bit(65535) parameters
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
 	}
-	logger.DebugContext(ctx, "preparing statement")
-	span.AddEvent("preparing statement")
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
 
 	logger.DebugContext(ctx, "getting unprocessed attachments")
 	span.AddEvent("getting unprocessed attachments")
 	var attachments []model.Attachments
 	if err := stmt.QueryContext(ctx, s.db, &attachments); err != nil {
 		err = fmt.Errorf("getting unprocessed attachments: %v", err)
-		if errors.Is(err, qrm.ErrNoRows) {
-			logger.WarnContext(ctx, "no unprocessed attachments")
-			return nil, err
+		if !errors.Is(err, qrm.ErrNoRows) {
+			telemetry.RecordError(span, err)
 		}
-		telemetry.RecordError(span, err)
 		return nil, err
 	}
 	logger = logger.With(slog.Int(constants.Count, len(attachments)))
-	logger.DebugContext(ctx, "got unprocessed attachments")
+	logger.InfoContext(ctx, "got unprocessed attachments")
 	span.AddEvent("got unprocessed attachments")
 
 	return attachments, nil
@@ -212,8 +216,6 @@ func (s *attachmentStore) ClaimAttachments(
 		slog.Int(constants.Count, len(id)),
 	)
 
-	span.AddEvent("claiming attachments")
-
 	if len(id) == 0 {
 		err = errors.New("attachments id is empty")
 		return
@@ -224,6 +226,8 @@ func (s *attachmentStore) ClaimAttachments(
 		uuids[i] = UUID(v)
 	}
 
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := Attachments.UPDATE(Attachments.IsProcessing).
 		WHERE(
 			Attachments.ID.EQ(ANY(ARRAY(uuids...))).
@@ -234,7 +238,14 @@ func (s *attachmentStore) ClaimAttachments(
 		).
 		SET(Attachments.IsProcessing.SET(Bool(true))).
 		RETURNING(Attachments.AllColumns)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
+	}
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
 
+	logger.DebugContext(ctx, "claiming attachments")
+	span.AddEvent("claiming attachments")
 	if err = stmt.QueryContext(ctx, s.db, &attachments); err != nil {
 		err = fmt.Errorf("claiming attachments: %v", err)
 		telemetry.RecordError(span, err)
@@ -263,8 +274,8 @@ func (s *attachmentStore) UpdateAttachmentResult(
 		slog.Any(constants.Attachment, attachment),
 	)
 
-	span.AddEvent("updating attachment result")
-
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
 	stmt := Attachments.UPDATE(Attachments.MutableColumns.Except(Attachments.ID)).
 		WHERE(Attachments.ID.EQ(UUID(attachment.ID))).
 		SET(
@@ -276,7 +287,14 @@ func (s *attachmentStore) UpdateAttachmentResult(
 			Attachments.UploadedAt.SET(TimestampzT(time.Now())),
 		).
 		RETURNING(Attachments.AllColumns)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
+	}
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
 
+	logger.DebugContext(ctx, "updating attachment result")
+	span.AddEvent("updating attachment result")
 	var updated model.Attachments
 	if err := stmt.QueryContext(ctx, s.db, &updated); err != nil {
 		err = fmt.Errorf("updating attachment result: %v", err)
