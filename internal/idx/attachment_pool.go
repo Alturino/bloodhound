@@ -54,8 +54,8 @@ func NewAttachmentPool(
 		cancel:      cancel,
 		workerCount: cfg.AttachmentWorkers,
 	}
-	p.shutdownOnce = sync.OnceFunc(p.shutdown)
 	p.startOnce = sync.OnceFunc(p.start)
+	p.shutdownOnce = sync.OnceFunc(p.shutdown)
 	p.Start()
 	return p
 }
