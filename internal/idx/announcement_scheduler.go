@@ -232,10 +232,10 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 
 	logger := s.logger.With(slog.String("tag", "idx.AnnouncementScheduler.getAndSubmitPage"))
 
-	logger.DebugContext(ctx, "semaphore acquire")
-	span.AddEvent("semaphore acquire")
+	logger.DebugContext(ctx, "acquiring semaphore")
+	span.AddEvent("acquiring semaphore")
 	if err := s.sem.Acquire(ctx, 1); err != nil {
-		return fmt.Errorf("semaphore acquire: %w", err)
+		return fmt.Errorf("acquiring semaphore: %v", err)
 	}
 	defer s.sem.Release(1)
 	logger.DebugContext(ctx, "semaphore acquired")

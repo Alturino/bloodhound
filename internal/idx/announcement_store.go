@@ -233,11 +233,8 @@ func (s *announcementStore) InsertAnnouncement(
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(
-		ctx,
-		"inserted announcements",
-		slog.Int(constants.InsertedCount, len(inserted)),
-	)
+	logger = logger.With(slog.Int(constants.InsertedCount, len(inserted)))
+	logger.InfoContext(ctx, "inserted announcements")
 	span.AddEvent("inserted announcements")
 
 	return nil

@@ -110,7 +110,6 @@ func (p *announcementPool) workerLoop(id int) {
 				logger.ErrorContext(ctx, "processing page", slog.Any("error", err))
 				continue
 			}
-			logger.InfoContext(ctx, "processed page")
 		}
 	}
 }
@@ -224,8 +223,6 @@ func (p *announcementPool) saveAnnouncements(
 		return err
 	}
 	p.metrics.IdxAnnouncementsSaved.Add(ctx, int64(len(announcements)))
-	logger.InfoContext(ctx, "inserted announcements")
-	span.AddEvent("inserted announcements")
 
 	logger.DebugContext(ctx, "inserting attachments")
 	span.AddEvent("inserting attachments")
@@ -242,8 +239,6 @@ func (p *announcementPool) saveAnnouncements(
 	if err := errors.Join(errs...); err != nil {
 		return err
 	}
-	logger.InfoContext(ctx, "inserted attachments")
-	span.AddEvent("inserted attachments")
 
 	return nil
 }
