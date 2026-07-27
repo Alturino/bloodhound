@@ -104,7 +104,7 @@ func (c *client) FetchAnnouncements(
 	logger.DebugContext(ctx, "fetching announcements")
 	span.AddEvent("fetching announcements")
 	var rawResp rawAnnouncementResponse
-	resp, err := c.httpclient.R().
+	req := c.httpclient.R().
 		SetContext(ctx).
 		SetQueryParams(map[string]string{
 			"indexFrom": fmt.Sprintf("%d", page),
@@ -113,8 +113,9 @@ func (c *client) FetchAnnouncements(
 			"dateTo":    now.Format("20060102"),
 		}).
 		SetSuccessResult(&rawResp).
-		EnableDump().
-		Get("/primary/ListedCompany/GetAnnouncement")
+		EnableDump()
+	logger = logger.With(slog.String(constants.URL, req.RawURL))
+	resp, err := req.Get("/primary/ListedCompany/GetAnnouncement")
 	if logger.Enabled(ctx, slog.LevelDebug) {
 		logger = logger.With(slog.String(constants.HTTPDump, resp.Dump()))
 	}
@@ -135,6 +136,10 @@ func (c *client) FetchAnnouncements(
 		return AnnouncementResponse{}, err
 	}
 	result := convertToModel(rawResp)
+	if len(result.Announcements) == 0 {
+		telemetry.RecordError(span, errors.New("announcements empty"))
+		return AnnouncementResponse{}, errors.New("announcements empty")
+	}
 	logger = logger.With(slog.Int(constants.AnnouncementsCount, len(result.Announcements)))
 	logger.InfoContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
