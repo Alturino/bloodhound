@@ -118,6 +118,7 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 		deps.attStore,
 		attachmentPool,
 	)
+	attachmentScheduler.Start()
 	defer attachmentScheduler.Shutdown()
 	logger.InfoContext(ctx, "initialized attachment scheduler")
 

@@ -257,6 +257,58 @@ func (s *attachmentStore) ClaimAttachments(
 	return
 }
 
+func (s *attachmentStore) UnclaimAttachments(
+	ctx context.Context,
+	id ...uuid.UUID,
+) (attachments []model.Attachments, err error) {
+	ctx, span := s.tracer.Start(
+		ctx,
+		"idx.attachmentStore.ClaimAttachments",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(),
+	)
+	defer span.End()
+
+	logger := s.logger.With(
+		slog.String("tag", "idx.attachmentStore.ClaimAttachments"),
+		slog.Int(constants.Count, len(id)),
+	)
+
+	if len(id) == 0 {
+		err = errors.New("attachments id is empty")
+		return
+	}
+
+	uuids := make([]StringExpression, len(id))
+	for i, v := range id {
+		uuids[i] = UUID(v)
+	}
+
+	logger.DebugContext(ctx, "preparing statement")
+	span.AddEvent("preparing statement")
+	stmt := Attachments.UPDATE(Attachments.IsProcessing).
+		WHERE(Attachments.IsProcessing.EQ(Bool(true))).
+		SET(Attachments.IsProcessing.SET(Bool(false))).
+		RETURNING(Attachments.AllColumns)
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		logger = logger.With(slog.String(constants.SQLStatement, stmt.DebugSql()))
+	}
+	logger.DebugContext(ctx, "prepared statement")
+	span.AddEvent("prepared statement")
+
+	logger.DebugContext(ctx, "claiming attachments")
+	span.AddEvent("claiming attachments")
+	if err = stmt.QueryContext(ctx, s.db, &attachments); err != nil {
+		err = fmt.Errorf("claiming attachments: %v", err)
+		telemetry.RecordError(span, err)
+		return
+	}
+	logger.InfoContext(ctx, "claimed attachments", slog.Int(constants.Claimed, len(attachments)))
+	span.AddEvent("claimed attachments")
+
+	return
+}
+
 func (s *attachmentStore) UpdateAttachmentResult(
 	ctx context.Context,
 	attachment *model.Attachments,

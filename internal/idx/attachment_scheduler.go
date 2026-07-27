@@ -70,6 +70,7 @@ func (s *AttachmentScheduler) Start() {
 }
 
 func (s *AttachmentScheduler) start() {
+	s.pool.Start()
 	go s.schedule()
 }
 
@@ -88,7 +89,7 @@ func (s *AttachmentScheduler) schedule() {
 			return
 		case t := <-s.ticker:
 			ctx := slogctx.Append(s.ctx, slog.Time(constants.ExecutedAt, t))
-			logger.DebugContext(ctx, "scheduler executing")
+			logger.InfoContext(ctx, "scheduler executing")
 			s.pollAndSubmit(ctx)
 		}
 	}
