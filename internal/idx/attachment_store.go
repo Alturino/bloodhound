@@ -173,7 +173,7 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 			Attachments.IsDownloaded.IS_FALSE().
 				AND(Attachments.IsProcessing.IS_FALSE()).
 				AND(Attachments.StoragePath.EQ(String("")).OR(Attachments.Checksum.EQ(String("")))).
-				AND(Attachments.Error.NOT_LIKE(String("%status_code=4%"))),
+				AND(Attachments.Error.NOT_LIKE(String("%status_code=404%"))),
 		).ORDER_BY(Attachments.Date.ASC()).
 		LIMIT(5000) // limiting to 5k postgres only supports 16bit(65535) parameters
 	if logger.Enabled(ctx, slog.LevelDebug) {
