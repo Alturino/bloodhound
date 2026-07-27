@@ -33,8 +33,7 @@ func NewLocalFile(config *config.Local, logger *slog.Logger, tracer trace.Tracer
 	}
 	fs := &localFile{config: config, logger: logger, tracer: tracer}
 	if err := fs.CreateBucket(context.Background()); err != nil {
-		logger.Error("create bucket", slog.Any("error", err))
-		return &noopLocalFile{}
+		logger.Warn("create bucket", slog.Any("error", err))
 	}
 	return fs
 }
