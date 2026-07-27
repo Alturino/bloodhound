@@ -163,11 +163,13 @@ func (s *announcementStore) IsProcessed(
 	var announcements []model.Announcements
 	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
 		err = fmt.Errorf("checking announcements is processed: %v", err)
+		if !errors.Is(err, qrm.ErrNoRows) {
+			telemetry.RecordError(span, err)
+		}
 		if errors.Is(err, qrm.ErrNoRows) {
-			logger.WarnContext(ctx, "", slog.Any("error", err))
+			logger.WarnContext(ctx, "no announcements is processed", slog.Any("error", err))
 			return map[string]bool{}, nil
 		}
-		telemetry.RecordError(span, err)
 		return nil, err
 	}
 	result := make(map[string]bool, idxIdsLen)
