@@ -1,3 +1,6 @@
 [submodule "extractor"]
 	path = extractor
 	url = git@github.com:Alturino/bloodhound-extractor.git
+[submodule "analyzer"]
+	path = analyzer
+	url = git@github.com:Alturino/bloodhound-analyzer.git
