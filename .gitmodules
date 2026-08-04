@@ -4,3 +4,6 @@
 [submodule "analyzer"]
 	path = analyzer
 	url = git@github.com:Alturino/bloodhound-analyzer.git
+[submodule "ui"]
+	path = ui
+	url = git@github.com:Alturino/bloodhound-ui.git
