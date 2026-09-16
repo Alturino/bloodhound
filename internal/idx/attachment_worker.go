@@ -68,7 +68,7 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	data, contentType, err := a.client.DownloadFile(ctx, task.Attachment.IdxURL)
 	if err != nil {
 		a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
-		a.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
+		a.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String(constants.Status, "failure"),
 		))
 		task.Attachment.IsDownloaded = false
@@ -87,7 +87,7 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	if err != nil {
 		a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
 		a.metrics.AttDownloadSize.Record(ctx, int64(len(data)))
-		a.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
+		a.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String(constants.Status, "failure"),
 		))
 		task.Attachment.IsDownloaded = false
@@ -99,7 +99,7 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 
 	a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
 	a.metrics.AttDownloadSize.Record(ctx, int64(len(data)))
-	a.metrics.AttDownloaded.Add(ctx, 1, metric.WithAttributes(
+	a.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(constants.Status, "success"),
 	))
 

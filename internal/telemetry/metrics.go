@@ -5,45 +5,24 @@ import (
 )
 
 type Metrics struct {
-	IdxAnnouncementsFetched      metric.Int64Counter
-	IdxAnnouncementsSaved        metric.Int64Counter
-	IdxAnnouncementsDuplicate    metric.Int64Counter
+	IdxAnnouncementsProcessed   metric.Int64Counter
 	IdxAnnouncementsFetchedTotal metric.Int64Gauge
-	IdxProcessingDuration        metric.Float64Histogram
-	IdxPagesFetched              metric.Int64Counter
-	IdxPageFetchDuration         metric.Float64Histogram
-	AttDownloaded                metric.Int64Counter
-	AttFailedDownload            metric.Int64Counter
-	AttDownloadDuration          metric.Float64Histogram
-	AttDownloadSize              metric.Int64Histogram
-	AttPolledCount               metric.Int64Gauge
-	SbSymbolsSynced              metric.Int64Counter
-	SbSyncDuration               metric.Float64Histogram
-	SbStockCodesTotal            metric.Int64Gauge
+	IdxProcessingDuration       metric.Float64Histogram
+	IdxPagesFetched             metric.Int64Counter
+	IdxPageFetchDuration        metric.Float64Histogram
+	AttDownloadTotal            metric.Int64Counter
+	AttDownloadDuration         metric.Float64Histogram
+	AttDownloadSize             metric.Int64Histogram
+	AttPolledCount              metric.Int64Gauge
+	SbSymbolsSynced             metric.Int64Counter
+	SbSyncDuration              metric.Float64Histogram
+	SbStockCodesTotal           metric.Int64Gauge
 }
 
 func NewMetrics(meter metric.Meter) (*Metrics, error) {
-	idxAnnouncementsFetched, err := meter.Int64Counter(
-		"bloodhound.idx.announcements.fetched",
-		metric.WithDescription("Total announcements fetched from IDX API"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	idxAnnouncementsSaved, err := meter.Int64Counter(
-		"bloodhound.idx.announcements.saved",
-		metric.WithDescription("Announcements saved to DB"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	idxAnnouncementsDuplicate, err := meter.Int64Counter(
-		"bloodhound.idx.announcements.duplicate",
-		metric.WithDescription("Duplicate announcements skipped"),
+	idxAnnouncementsProcessed, err := meter.Int64Counter(
+		"bloodhound.idx.announcements.processed",
+		metric.WithDescription("IDX announcements processed, status attribute"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -52,7 +31,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	idxAnnouncementsFetchedTotal, err := meter.Int64Gauge(
 		"bloodhound.idx.announcements.total",
-		metric.WithDescription("Total announcement count in API response gauge"),
+		metric.WithDescription("Total announcement count in API response"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -61,7 +40,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	idxProcessingDuration, err := meter.Float64Histogram(
 		"bloodhound.idx.processing.duration",
-		metric.WithDescription("Full IDX processing cycle duration (ms)"),
+		metric.WithDescription("Full IDX processing cycle duration"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
@@ -70,7 +49,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	idxPagesFetched, err := meter.Int64Counter(
 		"bloodhound.idx.pages.fetched",
-		metric.WithDescription("Pages fetched from IDX API, status attribute"),
+		metric.WithDescription("Pages fetched from IDX API"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -79,25 +58,16 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	idxPageFetchDuration, err := meter.Float64Histogram(
 		"bloodhound.idx.page.fetch.duration",
-		metric.WithDescription("Single page fetch duration (ms)"),
+		metric.WithDescription("Single page fetch duration"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	attDownloaded, err := meter.Int64Counter(
-		"bloodhound.attachment.downloaded",
-		metric.WithDescription("Attachments downloaded, status attribute"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	attFailedDownload, err := meter.Int64Counter(
-		"bloodhound.attachment.failed.download",
-		metric.WithDescription("Attachments downloaded, status attribute"),
+	attDownloadTotal, err := meter.Int64Counter(
+		"bloodhound.attachment.download.total",
+		metric.WithDescription("Total attachment downloads, status attribute"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -106,7 +76,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	attDownloadDuration, err := meter.Float64Histogram(
 		"bloodhound.attachment.download.duration",
-		metric.WithDescription("Attachment download duration (ms)"),
+		metric.WithDescription("Attachment download duration"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
@@ -115,7 +85,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	attDownloadSize, err := meter.Int64Histogram(
 		"bloodhound.attachment.download.size",
-		metric.WithDescription("Attachment download size (bytes)"),
+		metric.WithDescription("Attachment download size"),
 		metric.WithUnit("bytes"),
 	)
 	if err != nil {
@@ -124,7 +94,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	attPolledCount, err := meter.Int64Gauge(
 		"bloodhound.attachment.polled.count",
-		metric.WithDescription("Unprocessed attachments found per poll gauge"),
+		metric.WithDescription("Unprocessed attachments found per poll"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -142,7 +112,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	sbSyncDuration, err := meter.Float64Histogram(
 		"bloodhound.stockbit.sync.duration",
-		metric.WithDescription("Stockbit sync duration per symbol (ms)"),
+		metric.WithDescription("Stockbit sync duration per symbol"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
@@ -151,7 +121,7 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 
 	sbStockCodesTotal, err := meter.Int64Gauge(
 		"bloodhound.stockbit.symbols.total",
-		metric.WithDescription("Total stock codes to sync gauge"),
+		metric.WithDescription("Total stock codes to sync"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -159,15 +129,12 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 	}
 
 	return &Metrics{
-		IdxAnnouncementsFetched:      idxAnnouncementsFetched,
-		IdxAnnouncementsSaved:        idxAnnouncementsSaved,
-		IdxAnnouncementsDuplicate:    idxAnnouncementsDuplicate,
+		IdxAnnouncementsProcessed:    idxAnnouncementsProcessed,
 		IdxAnnouncementsFetchedTotal: idxAnnouncementsFetchedTotal,
 		IdxProcessingDuration:        idxProcessingDuration,
 		IdxPagesFetched:              idxPagesFetched,
 		IdxPageFetchDuration:         idxPageFetchDuration,
-		AttDownloaded:                attDownloaded,
-		AttFailedDownload:            attFailedDownload,
+		AttDownloadTotal:             attDownloadTotal,
 		AttDownloadDuration:          attDownloadDuration,
 		AttDownloadSize:              attDownloadSize,
 		AttPolledCount:               attPolledCount,

@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	slogctx "github.com/veqryn/slog-context"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/internal/constants"
@@ -165,7 +167,9 @@ func (p *announcementPool) processPage(
 			unprocessed = append(unprocessed, ann)
 			continue
 		}
-		p.metrics.IdxAnnouncementsDuplicate.Add(ctx, 1)
+		p.metrics.IdxAnnouncementsProcessed.Add(ctx, 1, metric.WithAttributes(
+			attribute.String(constants.Status, "duplicate"),
+		))
 	}
 	if logger.Enabled(ctx, slog.LevelDebug) && len(unprocessed) > 0 {
 		ctx = slogctx.Append(
@@ -222,7 +226,9 @@ func (p *announcementPool) saveAnnouncements(
 	if err := p.announcementStore.InsertAnnouncement(ctx, nil, modelAnnouncements...); err != nil {
 		return err
 	}
-	p.metrics.IdxAnnouncementsSaved.Add(ctx, int64(len(announcements)))
+	p.metrics.IdxAnnouncementsProcessed.Add(ctx, int64(len(announcements)), metric.WithAttributes(
+		attribute.String(constants.Status, "saved"),
+	))
 
 	logger.DebugContext(ctx, "inserting attachments")
 	span.AddEvent("inserting attachments")

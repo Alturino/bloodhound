@@ -8,6 +8,7 @@ import (
 
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
 
@@ -131,7 +132,9 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 	span.AddEvent("processing attachment")
 	result, err := p.worker.Work(ctx, task)
 	if err != nil {
-		p.metrics.AttFailedDownload.Add(ctx, 1)
+		p.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String(constants.Status, "failure"),
+		))
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
 		if updateErr := p.store.UpdateAttachmentResult(ctx, &result.Attachment); updateErr != nil {
 			err = errors.Join(err, updateErr)
@@ -139,7 +142,9 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 		}
 		return
 	}
-	p.metrics.AttDownloaded.Add(ctx, 1)
+	p.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String(constants.Status, "success"),
+	))
 	if err := p.store.UpdateAttachmentResult(ctx, &result.Attachment); err != nil {
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
