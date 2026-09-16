@@ -87,6 +87,7 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
+	logger.InfoContext(ctx, "stockbit worker initialized")
 	// stockbitStore := state.NewStockbitStore(database, logger)
 	//
 	// httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)

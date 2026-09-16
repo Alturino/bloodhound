@@ -141,7 +141,7 @@ func (c *client) FetchAnnouncements(
 		return AnnouncementResponse{}, errors.New("announcements empty")
 	}
 	logger = logger.With(slog.Int(constants.AnnouncementsCount, len(result.Announcements)))
-	logger.InfoContext(ctx, "fetched announcements")
+	logger.DebugContext(ctx, "fetched announcements")
 	span.AddEvent("fetched announcements")
 
 	return result, nil
@@ -181,7 +181,7 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		telemetry.RecordError(span, err)
 		return nil, "", err
 	}
-	logger.InfoContext(ctx, "downloaded file")
+	logger.DebugContext(ctx, "downloaded file")
 	span.AddEvent("downloaded file")
 
 	contentType := resp.Header.Get("Content-Type")

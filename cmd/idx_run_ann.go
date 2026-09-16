@@ -43,12 +43,13 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 	}
 	ctx = slogctx.Append(ctx, slog.String("config_path", configPath))
 
-	slog.InfoContext(ctx, "load config")
+	slog.DebugContext(ctx, "loading config")
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		err = fmt.Errorf("load config: %v", err)
 		return err
 	}
+	slog.InfoContext(ctx, "loaded config")
 
 	var logger *slog.Logger
 	logger, err = log.Get(cfg.App)
@@ -67,6 +68,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 		err = fmt.Errorf("init idx deps: %v", err)
 		return err
 	}
+	logger.InfoContext(ctx, "initialized idx dependencies")
 	defer func() {
 		if err := deps.tmt.Shutdown(ctx); err != nil {
 			err = fmt.Errorf("shutdown telemetry: %w", err)

@@ -144,7 +144,7 @@ func (s *AnnouncementScheduler) process(ctx context.Context) error {
 	span.AddEvent("get latest announcement")
 	latestAnnouncement, err := s.announcementStore.LatestAnnouncement(ctx, nil)
 	if err != nil {
-		logger.InfoContext(ctx, "no latest announcement, set to zero")
+		logger.DebugContext(ctx, "no latest announcement, set to zero")
 		latestAnnouncement.Date = time.Time{}
 	}
 	ctx = slogctx.Append(ctx, slog.Time(constants.LatestAnnouncementDate, latestAnnouncement.Date))
@@ -262,7 +262,7 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 	}
 	ctx = slogctx.Append(ctx, slog.Any(constants.Page, page))
 	s.pool.Submit(page)
-	logger.InfoContext(ctx, "submitted page")
+	logger.DebugContext(ctx, "submitted page")
 	span.AddEvent("submitted page")
 
 	return nil

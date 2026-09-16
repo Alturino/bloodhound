@@ -114,7 +114,7 @@ func (f *localFile) SaveReader(
 		},
 	}
 	logger = logger.With(slog.Any(constants.LocalSaveResult, saveres))
-	logger.InfoContext(ctx, "saved file locally")
+	logger.DebugContext(ctx, "saved file locally")
 	span.AddEvent("saved file locally")
 
 	return saveres, nil

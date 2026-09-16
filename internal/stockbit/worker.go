@@ -79,7 +79,7 @@ func (w Stockbit) Process(ctx context.Context) error {
 	w.metrics.SbStockCodesTotal.Record(ctx, int64(len(stockCodes)))
 
 	if len(stockCodes) == 0 {
-		logger.InfoContext(ctx, "no stock codes found for market detector sync")
+		logger.DebugContext(ctx, "no stock codes found for market detector sync")
 		span.AddEvent("no stock codes found")
 		return nil
 	}

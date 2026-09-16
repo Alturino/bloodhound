@@ -113,7 +113,7 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 	s.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
 	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
 	if len(attachments) == 0 {
-		logger.InfoContext(ctx, "no unprocessed attachments")
+		logger.DebugContext(ctx, "no unprocessed attachments")
 		span.AddEvent("no unprocessed attachments")
 		return
 	}
@@ -152,5 +152,5 @@ func (s *AttachmentScheduler) Shutdown() {
 func (s *AttachmentScheduler) shutdown() {
 	defer s.cancel()
 	s.pool.Shutdown()
-	s.logger.Info("shutdown attachment scheduler")
+	s.logger.Debug("shutdown attachment scheduler")
 }
