@@ -106,7 +106,7 @@ func TestLocalFile_SaveReader(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 				}
-				if result.UploadInfo.ChecksumSHA256 == "" {
+				if result.ChecksumSHA256 == "" {
 					t.Error("expected checksum, got empty")
 				}
 			},
