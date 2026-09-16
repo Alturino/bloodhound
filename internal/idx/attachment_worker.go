@@ -109,7 +109,7 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	task.Attachment.Checksum = result.ChecksumSHA256
 	task.Attachment.StoragePath = filepath.Clean(filePath)
 	task.Attachment.UploadedAt = time.Now()
-	logger.InfoContext(ctx, "attachment processed", slog.Any(constants.Attachment, task))
+	logger.DebugContext(ctx, "attachment processed", slog.Any(constants.Attachment, task))
 	span.AddEvent("attachment processed")
 	return AttachmentResult{AttachmentTask: task}, nil
 }

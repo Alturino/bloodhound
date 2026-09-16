@@ -42,16 +42,18 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	}
 	ctx = slogctx.Append(ctx, slog.String("config_path", configPath))
 
-	slog.InfoContext(ctx, "load config")
+	slog.DebugContext(ctx, "loading config")
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+	slog.InfoContext(ctx, "loaded config")
 
 	deps, err := initIDXDeps(ctx, cfg)
 	if err != nil {
 		return err
 	}
+	slog.InfoContext(ctx, "initialized idx dependencies")
 
 	defer func() {
 		if r := recover(); r != nil {

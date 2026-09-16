@@ -84,7 +84,7 @@ func (p *announcementPool) Shutdown() {
 func (p *announcementPool) shutdown() {
 	defer p.cancel()
 	close(p.taskChan)
-	p.logger.Info("shutdown announcement pool")
+	p.logger.Debug("shutdown announcement pool")
 }
 
 func (p *announcementPool) workerLoop(id int) {
@@ -95,7 +95,7 @@ func (p *announcementPool) workerLoop(id int) {
 	for {
 		select {
 		case <-p.ctx.Done():
-			logger.InfoContext(p.ctx, "context done, stopping worker")
+			logger.DebugContext(p.ctx, "context done, stopping worker")
 			return
 		case page, ok := <-p.taskChan:
 			if !ok {
@@ -147,12 +147,12 @@ func (p *announcementPool) processPage(
 		ctx = slogctx.Append(ctx, slog.Any(constants.ProcessedID, keys[:min(2, len(keys))]))
 	}
 	if len(processedMap) == 0 {
-		logger.InfoContext(ctx, "no processed announcements, saving all")
+		logger.DebugContext(ctx, "no processed announcements, saving all")
 		span.AddEvent("no processed announcements, saving all")
 		if err := p.saveAnnouncements(ctx, announcements); err != nil {
 			return fmt.Errorf("saving all announcements: %w", err)
 		}
-		logger.InfoContext(ctx, "processed announcements, saved all")
+		logger.DebugContext(ctx, "processed announcements, saved all")
 		span.AddEvent("processed announcements, saved all")
 		return nil
 	}
@@ -178,7 +178,7 @@ func (p *announcementPool) processPage(
 		)
 	}
 	if len(unprocessed) == 0 {
-		logger.InfoContext(ctx, "no new announcements")
+		logger.DebugContext(ctx, "no new announcements")
 		span.AddEvent("no new announcements")
 		return nil
 	}

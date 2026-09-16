@@ -67,7 +67,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 			logger.DebugContext(ctx, "transaction already committed", slog.Any("error", err))
 			return
 		}
-		logger.InfoContext(ctx, "transaction rolled back")
+		logger.WarnContext(ctx, "transaction rolled back")
 	}()
 
 	var dbSummary model.MarketDetectorSummaries
@@ -146,7 +146,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(ctx, "committed transaction")
+	logger.DebugContext(ctx, "committed transaction")
 	span.AddEvent("committed transaction")
 
 	return nil

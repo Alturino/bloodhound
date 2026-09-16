@@ -87,7 +87,7 @@ func (p *attachmentPool) workerLoop(id int) {
 	for {
 		select {
 		case <-p.ctx.Done():
-			logger.Info("context done, stopping worker")
+			logger.Debug("context done, stopping worker")
 			return
 		case task, ok := <-p.taskChan:
 			ctx := slogctx.Append(
@@ -149,7 +149,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 		logger.ErrorContext(ctx, "update attachment result", slog.Any("error", err))
 		return
 	}
-	logger.InfoContext(ctx, "attachment processed")
+	logger.DebugContext(ctx, "attachment processed")
 	span.AddEvent("attachment processed")
 }
 
@@ -160,5 +160,5 @@ func (p *attachmentPool) Shutdown() {
 func (p *attachmentPool) shutdown() {
 	defer p.cancel()
 	close(p.taskChan)
-	p.logger.Info("shutdown attachment pool")
+	p.logger.Debug("shutdown attachment pool")
 }

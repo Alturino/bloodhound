@@ -119,7 +119,7 @@ func (s *announcementStore) LatestAnnouncement(
 		return model.Announcements{}, err
 	}
 	logger = logger.With(slog.Any(constants.LatestAnnouncement, ann))
-	logger.InfoContext(ctx, "got latest announcements")
+	logger.DebugContext(ctx, "got latest announcements")
 	span.AddEvent("got latest announcement")
 
 	return ann, nil
@@ -185,7 +185,7 @@ func (s *announcementStore) IsProcessed(
 		slog.Int(constants.Found, annLen),
 		slog.Int("not_found", idxIdsLen-annLen),
 	)
-	logger.InfoContext(ctx, "checked announcements is processed")
+	logger.DebugContext(ctx, "checked announcements is processed")
 	span.AddEvent("checked announcements is processed")
 
 	return result, nil
@@ -234,7 +234,7 @@ func (s *announcementStore) InsertAnnouncement(
 		return err
 	}
 	logger = logger.With(slog.Int(constants.InsertedCount, len(inserted)))
-	logger.InfoContext(ctx, "inserted announcements")
+	logger.DebugContext(ctx, "inserted announcements")
 	span.AddEvent("inserted announcements")
 
 	return nil

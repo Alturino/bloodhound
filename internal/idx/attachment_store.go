@@ -73,7 +73,7 @@ func (s *attachmentStore) InsertAttachment(
 	)
 
 	if len(attachments) == 0 {
-		logger.InfoContext(ctx, "no attachments to insert")
+		logger.DebugContext(ctx, "no attachments to insert")
 		span.AddEvent("no attachments to insert")
 		return nil
 	}
@@ -99,7 +99,7 @@ func (s *attachmentStore) InsertAttachment(
 		return err
 	}
 	logger = logger.With(slog.Int(constants.InsertedCount, len(attachments)))
-	logger.InfoContext(ctx, "inserted attachments")
+	logger.DebugContext(ctx, "inserted attachments")
 	span.AddEvent("inserted attachments")
 
 	return nil
@@ -146,7 +146,7 @@ func (s *attachmentStore) Attachment(
 		}
 		return attachment, err
 	}
-	logger.InfoContext(ctx, "got attachment")
+	logger.DebugContext(ctx, "got attachment")
 	span.AddEvent("got attachment")
 
 	return attachment, nil
@@ -193,7 +193,7 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 		return nil, err
 	}
 	logger = logger.With(slog.Int(constants.Count, len(attachments)))
-	logger.InfoContext(ctx, "got unprocessed attachments")
+	logger.DebugContext(ctx, "got unprocessed attachments")
 	span.AddEvent("got unprocessed attachments")
 
 	return attachments, nil
@@ -251,7 +251,7 @@ func (s *attachmentStore) ClaimAttachments(
 		telemetry.RecordError(span, err)
 		return
 	}
-	logger.InfoContext(ctx, "claimed attachments", slog.Int(constants.Claimed, len(attachments)))
+	logger.DebugContext(ctx, "claimed attachments", slog.Int(constants.Claimed, len(attachments)))
 	span.AddEvent("claimed attachments")
 
 	return
@@ -303,7 +303,7 @@ func (s *attachmentStore) UnclaimAttachments(
 		telemetry.RecordError(span, err)
 		return
 	}
-	logger.InfoContext(ctx, "claimed attachments", slog.Int(constants.Claimed, len(attachments)))
+	logger.DebugContext(ctx, "claimed attachments", slog.Int(constants.Claimed, len(attachments)))
 	span.AddEvent("claimed attachments")
 
 	return
@@ -353,7 +353,7 @@ func (s *attachmentStore) UpdateAttachmentResult(
 		telemetry.RecordError(span, err)
 		return err
 	}
-	logger.InfoContext(ctx, "updated attachment result")
+	logger.DebugContext(ctx, "updated attachment result")
 	span.AddEvent("updated attachment result")
 
 	return nil

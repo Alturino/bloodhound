@@ -61,10 +61,10 @@ type storage struct {
 // NewStorage creates a multi-backend storage that fans out operations to all backends.
 // Local file storage is always included. If MinIO is enabled in config, it is added as well.
 func NewStorage(config *config.Storage, logger *slog.Logger, tracer trace.Tracer) (Storage, error) {
-	logger.Debug("initializing local file storage storage")
+	logger.Debug("initializing local file storage")
 	localLogger := logger.With(slog.String("tag", "blobstorage.localFile"))
 	local := NewLocalFile(config.Local, localLogger, tracer)
-	logger.Info("initialized local file storage storage")
+	logger.Debug("initialized local file storage")
 
 	logger.Debug("initializing minio storage")
 	minioLogger := logger.With(slog.String("tag", "blobstorage.Minio"))

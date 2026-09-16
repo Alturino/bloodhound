@@ -117,7 +117,7 @@ func (s *MinIO) SaveReader(
 		return SaveResult{}, err
 	}
 	ctx = slogctx.Append(ctx, slog.Any(constants.MinIOResult, info))
-	logger.InfoContext(ctx, "uploaded file to minio")
+	logger.DebugContext(ctx, "uploaded file to minio")
 	span.AddEvent("uploaded file to minio")
 
 	return SaveResult{UploadInfo: info}, nil
@@ -153,7 +153,7 @@ func (s *MinIO) Exists(ctx context.Context, object string) (bool, error) {
 		telemetry.RecordError(span, err)
 		return false, err
 	}
-	logger.InfoContext(ctx, "object exists", slog.Int64(constants.ObjectSize, info.Size))
+	logger.DebugContext(ctx, "object exists", slog.Int64(constants.ObjectSize, info.Size))
 	span.AddEvent("object exists")
 
 	return info.Size > 0, nil
@@ -222,7 +222,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 			return err
 		}
 	}
-	logger.InfoContext(ctx, "bucket exists")
+	logger.DebugContext(ctx, "bucket exists")
 	span.AddEvent("bucket exists")
 
 	return nil
