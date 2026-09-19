@@ -20,7 +20,7 @@ func init() {
 type Config struct {
 	Telemetry *Telemetry `mapstructure:"telemetry" json:"telemetry"`
 	Storage   *Storage   `mapstructure:"storage"   json:"storage"`
-	Database  *Database  `mapstructure:"database"  json:"database"`
+	Database  *DB        `mapstructure:"database"  json:"database"`
 	App       *App       `mapstructure:"app"       json:"app"`
 }
 

@@ -5,7 +5,7 @@ import (
 	"net/url"
 )
 
-type Database struct {
+type DB struct {
 	MaxConnections int    `mapstructure:"max_connections" json:"max_connections"`
 	MinConnections int    `mapstructure:"min_connections" json:"min_connections"`
 	Port           int    `mapstructure:"port"            json:"port"`
@@ -17,7 +17,7 @@ type Database struct {
 	SSLMode        string `mapstructure:"sslmode"         json:"ssl_mode"`
 }
 
-func (d Database) DSN() string {
+func (d DB) DSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		url.QueryEscape(d.User),

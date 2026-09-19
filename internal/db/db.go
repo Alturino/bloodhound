@@ -25,7 +25,7 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-func Get(ctx context.Context, config *config.Database) (*sql.DB, error) {
+func Get(ctx context.Context, config *config.DB) (*sql.DB, error) {
 	ctx, span := telemetry.AppTelemetry.Tracer.Start(ctx, "db.Get")
 	defer span.End()
 
@@ -75,7 +75,7 @@ func Get(ctx context.Context, config *config.Database) (*sql.DB, error) {
 	return db, nil
 }
 
-func migrateUp(ctx context.Context, config *config.Database, db *sql.DB, postgresURL string) error {
+func migrateUp(ctx context.Context, config *config.DB, db *sql.DB, postgresURL string) error {
 	ctx, span := telemetry.AppTelemetry.Tracer.Start(
 		ctx,
 		"db.migrateUp",
@@ -120,7 +120,7 @@ func migrateUp(ctx context.Context, config *config.Database, db *sql.DB, postgre
 	return nil
 }
 
-func generateJet(ctx context.Context, config *config.Database) error {
+func generateJet(ctx context.Context, config *config.DB) error {
 	_, span := telemetry.AppTelemetry.Tracer.Start(
 		ctx,
 		"db.generateJet",
