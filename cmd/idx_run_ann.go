@@ -46,7 +46,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 	slog.DebugContext(ctx, "loading config")
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		err = fmt.Errorf("load config: %v", err)
+		err = fmt.Errorf("load config: %w", err)
 		return err
 	}
 	slog.InfoContext(ctx, "loaded config")
@@ -65,7 +65,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 
 	deps, err := initIDXDeps(ctx, cfg)
 	if err != nil {
-		err = fmt.Errorf("init idx deps: %v", err)
+		err = fmt.Errorf("init idx deps: %w", err)
 		return err
 	}
 	logger.InfoContext(ctx, "initialized idx dependencies")
@@ -78,7 +78,7 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 	}()
 	defer func() {
 		if err := deps.db.Close(); err != nil {
-			err = fmt.Errorf("close database: %v", err)
+			err = fmt.Errorf("close database: %w", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
@@ -114,12 +114,12 @@ func idxWorkerAnn(cmd *cobra.Command, args []string) error {
 			return
 		}
 		if err := viper.MergeInConfig(); err != nil {
-			err = fmt.Errorf("merge config file: %v", err)
+			err = fmt.Errorf("merge config file: %w", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}
 		if err := viper.Unmarshal(cfg); err != nil {
-			err = fmt.Errorf("unmarshal config: %v", err)
+			err = fmt.Errorf("unmarshal config: %w", err)
 			logger.ErrorContext(ctx, err.Error())
 			return
 		}

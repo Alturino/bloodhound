@@ -72,7 +72,7 @@ func (w Stockbit) Process(ctx context.Context) error {
 
 	stockCodes, err := w.stockbitStore.StockCodes(ctx)
 	if err != nil {
-		err = fmt.Errorf("get stock codes: %v", err)
+		err = fmt.Errorf("get stock codes: %w", err)
 		return err
 	}
 
@@ -155,7 +155,7 @@ func (w Stockbit) syncMarketDetector(ctx context.Context, symbol string) error {
 	}
 
 	if err := w.stockbitStore.UpsertMarketDetector(ctx, summary, txns); err != nil {
-		err = fmt.Errorf("upsert: %v", err)
+		err = fmt.Errorf("upsert: %w", err)
 		return err
 	}
 

@@ -94,7 +94,7 @@ func (c *client) FetchAnnouncements(
 	if dateFrom.IsZero() {
 		dt, err := time.Parse("20060102", "19010101")
 		if err != nil {
-			err = fmt.Errorf("parsing default date: %v", err)
+			err = fmt.Errorf("parsing default date: %w", err)
 			telemetry.RecordError(span, err)
 			return AnnouncementResponse{}, err
 		}
@@ -121,7 +121,7 @@ func (c *client) FetchAnnouncements(
 	}
 	logger = logger.With(slog.String("request_url", resp.Request.URL.String()))
 	if err != nil {
-		err = fmt.Errorf("fetching announcements: %v", err)
+		err = fmt.Errorf("fetching announcements: %w", err)
 		telemetry.RecordError(span, err)
 		return AnnouncementResponse{}, err
 	}
@@ -168,7 +168,7 @@ func (c *client) DownloadFile(ctx context.Context, url string) ([]byte, string, 
 		logger = logger.With(slog.String(constants.HTTPDump, resp.Dump()))
 	}
 	if err != nil {
-		err = fmt.Errorf("downloading file: %v", err)
+		err = fmt.Errorf("downloading file: %w", err)
 		telemetry.RecordError(span, err)
 		return nil, "", err
 	}

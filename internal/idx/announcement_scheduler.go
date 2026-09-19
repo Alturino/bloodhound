@@ -154,7 +154,7 @@ func (s *AnnouncementScheduler) process(ctx context.Context) error {
 	logger.DebugContext(ctx, "processing announcements")
 	span.AddEvent("processing announcements")
 	if err := s.processAnnouncements(ctx, latestAnnouncement.Date); err != nil {
-		err = fmt.Errorf("processing announcements: %v", err)
+		err = fmt.Errorf("processing announcements: %w", err)
 		return err
 	}
 	logger.InfoContext(ctx, "processed announcements")
@@ -235,7 +235,7 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 	logger.DebugContext(ctx, "acquiring semaphore")
 	span.AddEvent("acquiring semaphore")
 	if err := s.sem.Acquire(ctx, 1); err != nil {
-		return fmt.Errorf("acquiring semaphore: %v", err)
+		return fmt.Errorf("acquiring semaphore: %w", err)
 	}
 	defer s.sem.Release(1)
 	logger.DebugContext(ctx, "semaphore acquired")
@@ -244,7 +244,7 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 	fetchStart := time.Now()
 	resp, err := s.client.FetchAnnouncements(ctx, curr, since)
 	if err != nil {
-		err = fmt.Errorf("get page: %v", err)
+		err = fmt.Errorf("get page: %w", err)
 		return err
 	}
 	s.metrics.IdxPageFetchDuration.Record(ctx, float64(time.Since(fetchStart).Milliseconds()))

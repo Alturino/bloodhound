@@ -94,7 +94,7 @@ func (s *attachmentStore) InsertAttachment(
 	logger.DebugContext(ctx, "inserting attachments")
 	span.AddEvent("inserting attachments")
 	if err := stmt.QueryContext(ctx, db, &attachments); err != nil {
-		err = fmt.Errorf("inserting attachments: %v", err)
+		err = fmt.Errorf("inserting attachments: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -140,7 +140,7 @@ func (s *attachmentStore) Attachment(
 
 	var attachment model.Attachments
 	if err := stmt.QueryContext(ctx, db, &attachment); err != nil {
-		err = fmt.Errorf("get attachment: %v", err)
+		err = fmt.Errorf("get attachment: %w", err)
 		if !errors.Is(err, qrm.ErrNoRows) {
 			telemetry.RecordError(span, err)
 		}
@@ -186,7 +186,7 @@ func (s *attachmentStore) UnprocessedAttachments(ctx context.Context) ([]model.A
 	span.AddEvent("getting unprocessed attachments")
 	var attachments []model.Attachments
 	if err := stmt.QueryContext(ctx, s.db, &attachments); err != nil {
-		err = fmt.Errorf("getting unprocessed attachments: %v", err)
+		err = fmt.Errorf("getting unprocessed attachments: %w", err)
 		if !errors.Is(err, qrm.ErrNoRows) {
 			telemetry.RecordError(span, err)
 		}
@@ -247,7 +247,7 @@ func (s *attachmentStore) ClaimAttachments(
 	logger.DebugContext(ctx, "claiming attachments")
 	span.AddEvent("claiming attachments")
 	if err = stmt.QueryContext(ctx, s.db, &attachments); err != nil {
-		err = fmt.Errorf("claiming attachments: %v", err)
+		err = fmt.Errorf("claiming attachments: %w", err)
 		telemetry.RecordError(span, err)
 		return
 	}
@@ -352,7 +352,7 @@ func (s *attachmentStore) UpdateAttachmentResult(
 	span.AddEvent("updating attachment result")
 	var updated model.Attachments
 	if err := stmt.QueryContext(ctx, s.db, &updated); err != nil {
-		err = fmt.Errorf("updating attachment result: %v", err)
+		err = fmt.Errorf("updating attachment result: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}

@@ -66,7 +66,7 @@ func (s *announcementStore) IsExists(ctx context.Context, db qrm.DB) (bool, erro
 	span.AddEvent("checking announcements")
 	var isExists struct{ bool }
 	if err := stmt.QueryContext(ctx, db, &isExists); err != nil {
-		err = fmt.Errorf("checking announcements: %v", err)
+		err = fmt.Errorf("checking announcements: %w", err)
 		telemetry.RecordError(span, err)
 		return false, err
 	}
@@ -162,7 +162,7 @@ func (s *announcementStore) IsProcessed(
 	span.AddEvent("checking announcements is processed")
 	var announcements []model.Announcements
 	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
-		err = fmt.Errorf("checking announcements is processed: %v", err)
+		err = fmt.Errorf("checking announcements is processed: %w", err)
 		if !errors.Is(err, qrm.ErrNoRows) {
 			telemetry.RecordError(span, err)
 		}
@@ -229,7 +229,7 @@ func (s *announcementStore) InsertAnnouncement(
 	span.AddEvent("inserting announcements")
 	var inserted []model.Announcements
 	if err := stmt.QueryContext(ctx, db, &inserted); err != nil {
-		err = fmt.Errorf("inserting announcements: %v", err)
+		err = fmt.Errorf("inserting announcements: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -264,7 +264,7 @@ func (s *announcementStore) Announcement(
 
 	var announcements []model.Announcements
 	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
-		err = fmt.Errorf("getting announcement: %v", err)
+		err = fmt.Errorf("getting announcement: %w", err)
 		telemetry.RecordError(span, err)
 		return announcements, err
 	}

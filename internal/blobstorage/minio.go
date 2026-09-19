@@ -51,7 +51,7 @@ func NewMinIO(
 		TrailingHeaders: true,
 	})
 	if err != nil {
-		err = fmt.Errorf("creating minio client: %v", err)
+		err = fmt.Errorf("creating minio client: %w", err)
 		return nil, err
 	}
 
@@ -62,7 +62,7 @@ func NewMinIO(
 		config: config,
 	}
 	if err := minio.CreateBucket(context.Background()); err != nil {
-		err = fmt.Errorf("create bucket: %v", err)
+		err = fmt.Errorf("create bucket: %w", err)
 		return nil, err
 	}
 
@@ -112,7 +112,7 @@ func (s *MinIO) SaveReader(
 		},
 	)
 	if err != nil {
-		err = fmt.Errorf("uploading file=%s bucket=%s: %v", filename, bucket, err)
+		err = fmt.Errorf("uploading file=%s bucket=%s: %w", filename, bucket, err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
@@ -146,7 +146,7 @@ func (s *MinIO) Exists(ctx context.Context, object string) (bool, error) {
 	span.AddEvent("checking object in minio")
 	info, err := s.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("check object: %v", err)
+		err = fmt.Errorf("check object: %w", err)
 		if minio.ToErrorResponse(err).Code == minio.NoSuchKey {
 			return false, nil
 		}
@@ -182,7 +182,7 @@ func (s *MinIO) Download(ctx context.Context, object string) (io.ReadCloser, err
 	span.AddEvent("downloading object from minio")
 	obj, err := s.client.GetObject(ctx, bucket, object, minio.GetObjectOptions{})
 	if err != nil {
-		err = fmt.Errorf("downloading object from minio: %v", err)
+		err = fmt.Errorf("downloading object from minio: %w", err)
 		telemetry.RecordError(span, err)
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 	span.AddEvent("checking bucket exists")
 	isExists, err := s.client.BucketExists(ctx, bucket)
 	if err != nil {
-		err = fmt.Errorf("minio is bucket exists: %v", err)
+		err = fmt.Errorf("minio is bucket exists: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -217,7 +217,7 @@ func (s *MinIO) CreateBucket(ctx context.Context) error {
 		logger.DebugContext(ctx, "bucket doesn't exist, creating bucket")
 		span.AddEvent("bucket doesn't exist, creating bucket")
 		if err := s.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-			err = fmt.Errorf("minio create bucket: %v", err)
+			err = fmt.Errorf("minio create bucket: %w", err)
 			telemetry.RecordError(span, err)
 			return err
 		}

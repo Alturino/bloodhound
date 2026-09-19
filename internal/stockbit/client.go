@@ -98,7 +98,7 @@ func (c client) FetchMarketDetector(
 		}).
 		Get("/marketdetectors/" + symbol)
 	if err != nil {
-		err = fmt.Errorf("fetching stockbit market detector: %v", err)
+		err = fmt.Errorf("fetching stockbit market detector: %w", err)
 		telemetry.RecordError(span, err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}
@@ -114,7 +114,7 @@ func (c client) FetchMarketDetector(
 	span.AddEvent("unmarshaling response")
 	var rawResp models.StockbitMarketDetectorResponse
 	if err := json.Unmarshal(resp.Bytes(), &rawResp); err != nil {
-		err = fmt.Errorf("unmarshaling response: %v", err)
+		err = fmt.Errorf("unmarshaling response: %w", err)
 		telemetry.RecordError(span, err)
 		return models.StockbitMarketDetectorResponse{}, err
 	}

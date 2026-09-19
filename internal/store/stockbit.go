@@ -53,14 +53,14 @@ func (s *stockbitStore) UpsertMarketDetector(
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		err = fmt.Errorf("StockbitStore.UpsertMarketDetector begin tx: %v", err)
+		err = fmt.Errorf("StockbitStore.UpsertMarketDetector begin tx: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
 	defer func() {
 		if err := tx.Rollback(); err != nil {
 			err = fmt.Errorf("rollback: %v", err)
-			if !errors.Is(err, sql.ErrTxDone) && !errors.Is(err, sql.ErrConnDone) {
+			if !errors.Is(err, sql.ErrTxDone) || !errors.Is(err, sql.ErrConnDone) {
 				telemetry.RecordError(span, err)
 				return
 			}
@@ -98,7 +98,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 		)).
 		RETURNING(MarketDetectorSummaries.ID)
 	if err := stmt.QueryContext(ctx, tx, &dbSummary); err != nil {
-		err = fmt.Errorf("upsert summary: %v", err)
+		err = fmt.Errorf("upsert summary: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -133,7 +133,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 				BrokerTransactions.Frequency.SET(BrokerTransactions.EXCLUDED.Frequency),
 			))
 		if err := insStmt.QueryContext(ctx, tx, nil); err != nil {
-			err = fmt.Errorf("upsert broker transactions: %v", err)
+			err = fmt.Errorf("upsert broker transactions: %w", err)
 			telemetry.RecordError(span, err)
 			return err
 		}
@@ -142,7 +142,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 	logger.DebugContext(ctx, "committing transaction")
 	span.AddEvent("committing transaction")
 	if err := tx.Commit(); err != nil {
-		err = fmt.Errorf("commit: %v", err)
+		err = fmt.Errorf("commit: %w", err)
 		telemetry.RecordError(span, err)
 		return err
 	}
@@ -177,7 +177,7 @@ func (s *stockbitStore) StockCodes(ctx context.Context) ([]string, error) {
 	}
 	err := stmt.QueryContext(ctx, s.db, &results)
 	if err != nil {
-		err = fmt.Errorf("get stock codes: %v", err)
+		err = fmt.Errorf("get stock codes: %w", err)
 		telemetry.RecordError(span, err)
 		return nil, err
 	}

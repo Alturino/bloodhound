@@ -92,12 +92,12 @@ func Load(configPath string) (*Config, error) {
 	}
 
 	if err := v.ReadInConfig(); err != nil {
-		err = fmt.Errorf("read config file: %v", err)
+		err = fmt.Errorf("read config file: %w", err)
 		return &cfg, err
 	}
 
 	if err := v.Unmarshal(&cfg); err != nil {
-		err = fmt.Errorf("unmarshal config: %v", err)
+		err = fmt.Errorf("unmarshal config: %w", err)
 		return &cfg, err
 	}
 	cfg.App.LogLevelVar.Set(cfg.App.LogLevel)

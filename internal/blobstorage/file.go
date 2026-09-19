@@ -61,7 +61,7 @@ func (f *localFile) SaveReader(
 	if strings.HasPrefix(f.config.BloodhoundDir, "~") {
 		homedir, err := os.UserHomeDir()
 		if err != nil {
-			err = fmt.Errorf("get user home dir: %v", err)
+			err = fmt.Errorf("get user home dir: %w", err)
 			telemetry.RecordError(span, err)
 			return SaveResult{}, nil
 		}
@@ -77,7 +77,7 @@ func (f *localFile) SaveReader(
 	span.AddEvent("creating dir")
 	dir = filepath.Join(dir, filepath.Dir(filename))
 	if err := os.MkdirAll(dir, os.FileMode(0o755)); err != nil {
-		err = fmt.Errorf("creating dir: %v", err)
+		err = fmt.Errorf("creating dir: %w", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
@@ -89,7 +89,7 @@ func (f *localFile) SaveReader(
 	fp := filepath.Join(dir, filepath.Base(filename))
 	file, err := os.Create(fp)
 	if err != nil {
-		err = fmt.Errorf("creating file: %v", err)
+		err = fmt.Errorf("creating file: %w", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
@@ -101,7 +101,7 @@ func (f *localFile) SaveReader(
 	hash := sha256.New()
 	tee := io.TeeReader(content, hash)
 	if _, err := io.Copy(file, tee); err != nil {
-		err = fmt.Errorf("save reader: %v", err)
+		err = fmt.Errorf("save reader: %w", err)
 		telemetry.RecordError(span, err)
 		return SaveResult{}, err
 	}
@@ -152,7 +152,7 @@ func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser,
 
 	byte, err := os.ReadFile(filepath.Join(f.config.BloodhoundDir, filepath.Clean(object)))
 	if err != nil {
-		err = fmt.Errorf("reading local file: %v", err)
+		err = fmt.Errorf("reading local file: %w", err)
 		return nil, err
 	}
 
@@ -164,7 +164,7 @@ func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser,
 func (f *localFile) CreateBucket(ctx context.Context) error {
 	fp := filepath.Join(f.config.BloodhoundDir)
 	if err := os.MkdirAll(fp, os.FileMode(0o755)); err != nil {
-		err = fmt.Errorf("create dir: %v", err)
+		err = fmt.Errorf("create dir: %w", err)
 		return err
 	}
 	return nil
