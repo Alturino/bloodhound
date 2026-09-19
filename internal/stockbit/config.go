@@ -14,6 +14,6 @@ type Config struct {
 	Config        *config.Config
 	Logger        *slog.Logger
 	Tracer        trace.Tracer
-	Metrics       *telemetry.Metrics
+	Metrics       *telemetry.MetricsProvider
 	StockbitStore store.StockbitStore
 }

@@ -66,7 +66,7 @@ func (s *stubStorage) CreateBucket(context.Context) error {
 	return nil
 }
 
-func newTestMetrics(t *testing.T) *telemetry.Metrics {
+func newTestMetrics(t *testing.T) *telemetry.MetricsProvider {
 	t.Helper()
 	meter := noop.NewMeterProvider().Meter("test")
 	metrics, err := telemetry.NewMetrics(meter)

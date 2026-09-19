@@ -26,7 +26,7 @@ func NewAttachmentWorker(
 	configMinio *config.MinIO,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	metrics *telemetry.Metrics,
+	metrics *telemetry.MetricsProvider,
 	client Client,
 	storage blobstorage.Storage,
 ) AttachmentWorker {
@@ -45,7 +45,7 @@ type attachment struct {
 	configMinio *config.MinIO
 	logger      *slog.Logger
 	tracer      trace.Tracer
-	metrics     *telemetry.Metrics
+	metrics     *telemetry.MetricsProvider
 	client      Client
 	cleaner     AttachmentPathCleaner
 	storage     blobstorage.Storage

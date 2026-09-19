@@ -22,7 +22,7 @@ import (
 type AttachmentScheduler struct {
 	config       *config.Scheduler
 	logger       *slog.Logger
-	metrics      *telemetry.Metrics
+	metrics      *telemetry.MetricsProvider
 	pool         *attachmentPool
 	startOnce    func()
 	shutdownOnce func()
@@ -40,7 +40,7 @@ func NewAttachmentScheduler(
 	cfg *config.Scheduler,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	metrics *telemetry.Metrics,
+	metrics *telemetry.MetricsProvider,
 	store AttachmentStore,
 	pool *attachmentPool,
 ) *AttachmentScheduler {

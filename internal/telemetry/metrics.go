@@ -4,8 +4,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-type Metrics struct {
-	IdxAnnouncementsProcessed   metric.Int64Counter
+type MetricsProvider struct {
+	IdxAnnouncementsFetched      metric.Int64Counter
+	IdxAnnouncementsSaved        metric.Int64Counter
+	IdxAnnouncementsDuplicate    metric.Int64Counter
 	IdxAnnouncementsFetchedTotal metric.Int64Gauge
 	IdxProcessingDuration       metric.Float64Histogram
 	IdxPagesFetched             metric.Int64Counter
@@ -20,9 +22,27 @@ type Metrics struct {
 }
 
 func NewMetrics(meter metric.Meter) (*Metrics, error) {
-	idxAnnouncementsProcessed, err := meter.Int64Counter(
-		"bloodhound.idx.announcements.processed",
-		metric.WithDescription("IDX announcements processed, status attribute"),
+	idxAnnouncementsFetched, err := meter.Int64Counter(
+		"bloodhound.idx.announcements.fetched",
+		metric.WithDescription("Total announcements fetched from IDX API"),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	idxAnnouncementsSaved, err := meter.Int64Counter(
+		"bloodhound.idx.announcements.saved",
+		metric.WithDescription("Announcements saved to DB"),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	idxAnnouncementsDuplicate, err := meter.Int64Counter(
+		"bloodhound.idx.announcements.duplicate",
+		metric.WithDescription("Duplicate announcements skipped"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -128,8 +148,10 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 		return nil, err
 	}
 
-	return &Metrics{
-		IdxAnnouncementsProcessed:    idxAnnouncementsProcessed,
+	return &MetricsProvider{
+		IdxAnnouncementsFetched:      idxAnnouncementsFetched,
+		IdxAnnouncementsSaved:        idxAnnouncementsSaved,
+		IdxAnnouncementsDuplicate:    idxAnnouncementsDuplicate,
 		IdxAnnouncementsFetchedTotal: idxAnnouncementsFetchedTotal,
 		IdxProcessingDuration:        idxProcessingDuration,
 		IdxPagesFetched:              idxPagesFetched,

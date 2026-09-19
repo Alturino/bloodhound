@@ -20,7 +20,7 @@ import (
 
 type announcementPool struct {
 	logger            *slog.Logger
-	metrics           *telemetry.Metrics
+	metrics           *telemetry.MetricsProvider
 	taskChan          chan *Page
 	workerCount       int
 	cancel            context.CancelFunc
@@ -37,7 +37,7 @@ func NewAnnouncementPool(
 	workerCount int,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	metrics *telemetry.Metrics,
+	metrics *telemetry.MetricsProvider,
 	announcementStore AnnouncementStore,
 	attachmentStore AttachmentStore,
 ) *announcementPool {

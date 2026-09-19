@@ -21,7 +21,7 @@ type Stockbit struct {
 	config        *config.Config
 	logger        *slog.Logger
 	tracer        trace.Tracer
-	metrics       *telemetry.Metrics
+	metrics       *telemetry.MetricsProvider
 	client        Client
 	stockbitStore store.StockbitStore
 }

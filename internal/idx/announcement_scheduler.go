@@ -24,7 +24,7 @@ type AnnouncementScheduler struct {
 	startOnce         func()
 	shutdownOnce      func()
 	cancel            context.CancelFunc
-	metrics           *telemetry.Metrics
+	metrics           *telemetry.MetricsProvider
 	pageSize          int
 	pool              *announcementPool
 	ticker            <-chan time.Time
@@ -43,7 +43,7 @@ func NewAnnouncementScheduler(
 	workerCount int,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	metrics *telemetry.Metrics,
+	metrics *telemetry.MetricsProvider,
 	announcementStore AnnouncementStore,
 	attachmentStore AttachmentStore,
 	client Client,

@@ -24,7 +24,7 @@ type attachmentPool struct {
 	startOnce    func()
 	shutdownOnce func()
 	cancel       context.CancelFunc
-	metrics      *telemetry.Metrics
+	metrics      *telemetry.MetricsProvider
 	sem          *semaphore.Weighted
 	ctx          context.Context
 	tracer       trace.Tracer
@@ -37,7 +37,7 @@ func NewAttachmentPool(
 	cfg *config.WorkerPool,
 	logger *slog.Logger,
 	tracer trace.Tracer,
-	metrics *telemetry.Metrics,
+	metrics *telemetry.MetricsProvider,
 	worker AttachmentWorker,
 	store AttachmentStore,
 ) *attachmentPool {
