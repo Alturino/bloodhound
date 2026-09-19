@@ -60,7 +60,7 @@ func (s *stockbitStore) UpsertMarketDetector(
 	defer func() {
 		if err := tx.Rollback(); err != nil {
 			err = fmt.Errorf("rollback: %v", err)
-			if !errors.Is(err, sql.ErrTxDone) || !errors.Is(err, sql.ErrConnDone) {
+			if !errors.Is(err, sql.ErrTxDone) && !errors.Is(err, sql.ErrConnDone) {
 				telemetry.RecordError(span, err)
 				return
 			}
