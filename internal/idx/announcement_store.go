@@ -112,7 +112,7 @@ func (s *announcementStore) LatestAnnouncement(
 	span.AddEvent("get latest announcement")
 	var ann model.Announcements
 	if err := stmt.QueryContext(ctx, db, &ann); err != nil {
-		err = fmt.Errorf("get latest announcement: %v", err)
+		err = fmt.Errorf("get latest announcement: %w", err)
 		if !errors.Is(err, qrm.ErrNoRows) {
 			telemetry.RecordError(span, err)
 		}
