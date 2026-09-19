@@ -7,3 +7,6 @@
 [submodule "ui"]
 	path = ui
 	url = git@github.com:Alturino/bloodhound-ui.git
+[submodule "fetcher"]
+	path = fetcher
+	url = git@github.com:Alturino/bloodhound-fetcher.git

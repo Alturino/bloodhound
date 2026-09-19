@@ -1,6 +1,0 @@
-all: true
-template: testify
-packages:
-  github.com/alturino/bloodhound/internal/store: {}
-  github.com/alturino/bloodhound/internal/idx: {}
-  github.com/alturino/bloodhound/internal/blobstorage: {}

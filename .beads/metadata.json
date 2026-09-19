@@ -1,7 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "embedded",
-  "dolt_database": "bloodhound",
-  "project_id": "09247894-23b5-4f23-a6d3-c9455ae7e70c"
-}
