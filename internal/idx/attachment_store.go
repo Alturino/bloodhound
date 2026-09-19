@@ -263,14 +263,14 @@ func (s *attachmentStore) UnclaimAttachments(
 ) (attachments []model.Attachments, err error) {
 	ctx, span := s.tracer.Start(
 		ctx,
-		"idx.attachmentStore.ClaimAttachments",
+		"idx.attachmentStore.UnclaimAttachments",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(),
 	)
 	defer span.End()
 
 	logger := s.logger.With(
-		slog.String("tag", "idx.attachmentStore.ClaimAttachments"),
+		slog.String("tag", "idx.attachmentStore.UnclaimAttachments"),
 		slog.Int(constants.Count, len(id)),
 	)
 
@@ -287,7 +287,10 @@ func (s *attachmentStore) UnclaimAttachments(
 	logger.DebugContext(ctx, "preparing statement")
 	span.AddEvent("preparing statement")
 	stmt := Attachments.UPDATE(Attachments.IsProcessing).
-		WHERE(Attachments.IsProcessing.EQ(Bool(true))).
+		WHERE(
+			Attachments.ID.EQ(ANY(ARRAY(uuids...))).
+				AND(Attachments.IsProcessing.EQ(Bool(true))),
+		).
 		SET(Attachments.IsProcessing.SET(Bool(false))).
 		RETURNING(Attachments.AllColumns)
 	if logger.Enabled(ctx, slog.LevelDebug) {
@@ -296,15 +299,15 @@ func (s *attachmentStore) UnclaimAttachments(
 	logger.DebugContext(ctx, "prepared statement")
 	span.AddEvent("prepared statement")
 
-	logger.DebugContext(ctx, "claiming attachments")
-	span.AddEvent("claiming attachments")
+	logger.DebugContext(ctx, "unclaiming attachments")
+	span.AddEvent("unclaiming attachments")
 	if err = stmt.QueryContext(ctx, s.db, &attachments); err != nil {
-		err = fmt.Errorf("claiming attachments: %v", err)
+		err = fmt.Errorf("unclaiming attachments: %w", err)
 		telemetry.RecordError(span, err)
 		return
 	}
-	logger.DebugContext(ctx, "claimed attachments", slog.Int(constants.Claimed, len(attachments)))
-	span.AddEvent("claimed attachments")
+	logger.InfoContext(ctx, "unclaimed attachments", slog.Int(constants.Claimed, len(attachments)))
+	span.AddEvent("unclaimed attachments")
 
 	return
 }
