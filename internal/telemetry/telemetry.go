@@ -29,20 +29,20 @@ import (
 	"github.com/alturino/bloodhound/config"
 )
 
-// Telemetry holds the OpenTelemetry providers
-type Telemetry struct {
+// App holds the OpenTelemetry providers
+type App struct {
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
 	Tracer         trace.Tracer
-	Metrics        *Metrics
+	Metrics        *MetricsProvider
 	Logger         *slog.Logger
 }
 
-var AppTelemetry Telemetry
+var AppTelemetry App
 
-// New creates a new Telemetry instance with configured providers
+// New creates a new App instance with configured providers
 // TODO: refactor use otelconf package to simplify configuration and initialization
-func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
+func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if !cfg.Telemetry.Enabled {
 		tp, mp := tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider()
 		otel.SetTracerProvider(tp)
@@ -54,7 +54,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 			return nil, err
 		}
 
-		AppTelemetry = Telemetry{
+		AppTelemetry = App{
 			TracerProvider: tp,
 			MeterProvider:  mp,
 			Tracer:         tp.Tracer(cfg.App.ServiceName()),
@@ -95,7 +95,7 @@ func New(ctx context.Context, cfg *config.Config) (*Telemetry, error) {
 	// 3. Initialize Logger
 	logger := initLogger(cfg)
 
-	AppTelemetry = Telemetry{
+	AppTelemetry = App{
 		TracerProvider: tp,
 		MeterProvider:  mp,
 		Tracer:         tp.Tracer(cfg.App.ServiceName()),
@@ -220,7 +220,7 @@ func initLogger(cfg *config.Config) *slog.Logger {
 }
 
 // Shutdown gracefully shuts down the telemetry providers
-func (t *Telemetry) Shutdown(ctx context.Context) error {
+func (t *App) Shutdown(ctx context.Context) error {
 	if tp, ok := t.TracerProvider.(*sdktrace.TracerProvider); t.TracerProvider != nil && ok {
 		if err := tp.Shutdown(ctx); err != nil {
 			return err

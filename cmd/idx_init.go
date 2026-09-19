@@ -19,7 +19,7 @@ type idxDependencies struct {
 	db       *sql.DB
 	logger   *slog.Logger
 	stg      blobstorage.Storage
-	tmt      *telemetry.Telemetry
+	tmt      *telemetry.App
 	client   idx.Client
 	annStore idx.AnnouncementStore
 	attStore idx.AttachmentStore
