@@ -26,7 +26,7 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(IDXWorker, StocbitWorker)
+	RootCmd.AddCommand(IDXWorker, StockbitWorker)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "bloodhound.yaml", "config file path")
 	RootCmd.PersistentFlags().BoolVar(&mock, "mock", false, "enable IDX mock mode")
 	if err := viper.BindPFlag("config", RootCmd.PersistentFlags().Lookup("config")); err != nil {

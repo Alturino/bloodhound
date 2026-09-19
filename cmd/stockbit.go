@@ -17,7 +17,7 @@ import (
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-var StocbitWorker = &cobra.Command{
+var StockbitWorker = &cobra.Command{
 	Use:     "sb run",
 	Short:   "Run the stockbit worker service",
 	RunE:    stockbitWorker,
