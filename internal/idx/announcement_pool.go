@@ -137,14 +137,7 @@ func (p *announcementPool) processPage(
 	}
 	processedMap, err := p.announcementStore.IsProcessed(ctx, nil, idxIDs...)
 	if err != nil {
-		return fmt.Errorf("checking processed announcements: %w", err)
-	}
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		keys := make([]string, 0, len(processedMap))
-		for k := range processedMap {
-			keys = append(keys, k)
-		}
-		ctx = slogctx.Append(ctx, slog.Any(constants.ProcessedID, keys[:min(2, len(keys))]))
+		return err
 	}
 	if len(processedMap) == 0 {
 		logger.DebugContext(ctx, "no processed announcements, saving all")
@@ -167,16 +160,16 @@ func (p *announcementPool) processPage(
 			unprocessed = append(unprocessed, ann)
 			continue
 		}
-		p.metrics.IdxAnnouncementsProcessed.Add(ctx, 1, metric.WithAttributes(
+	}
+	dup := len(announcements) - len(unprocessed)
+	ctx = slogctx.Append(ctx, slog.Int("duplicate", dup))
+	p.metrics.AnnouncementsSaved.Add(
+		ctx,
+		int64(dup),
+		metric.WithAttributes(
 			attribute.String(constants.Status, "duplicate"),
-		))
-	}
-	if logger.Enabled(ctx, slog.LevelDebug) && len(unprocessed) > 0 {
-		ctx = slogctx.Append(
-			ctx,
-			slog.Any(constants.UnprocessedAnnouncements, unprocessed[:min(2, len(unprocessed))]),
-		)
-	}
+		),
+	)
 	if len(unprocessed) == 0 {
 		logger.DebugContext(ctx, "no new announcements")
 		span.AddEvent("no new announcements")
@@ -191,8 +184,6 @@ func (p *announcementPool) processPage(
 		err = fmt.Errorf("saving announcements: %w", err)
 		return err
 	}
-	logger.DebugContext(ctx, "saved announcements")
-	span.AddEvent("saved announcements")
 
 	span.AddEvent("processed page")
 	logger.InfoContext(ctx, "processed page")
@@ -226,7 +217,7 @@ func (p *announcementPool) saveAnnouncements(
 	if err := p.announcementStore.InsertAnnouncement(ctx, nil, modelAnnouncements...); err != nil {
 		return err
 	}
-	p.metrics.IdxAnnouncementsProcessed.Add(ctx, int64(len(announcements)), metric.WithAttributes(
+	p.metrics.AnnouncementsSaved.Add(ctx, int64(len(announcements)), metric.WithAttributes(
 		attribute.String(constants.Status, "saved"),
 	))
 
@@ -245,6 +236,7 @@ func (p *announcementPool) saveAnnouncements(
 	if err := errors.Join(errs...); err != nil {
 		return err
 	}
+	logger.InfoContext(ctx, "saved announcements")
 
 	return nil
 }

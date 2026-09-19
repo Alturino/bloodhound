@@ -1,7 +1,6 @@
 package blobstorage
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -11,8 +10,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/internal/config"
@@ -37,8 +36,8 @@ func NewLocalFile(config *config.Local, logger *slog.Logger, tracer trace.Tracer
 	return fs
 }
 
-// SaveReader uploads a file to the storage
-func (f *localFile) SaveReader(
+// Upload uploads a file to the storage
+func (f *localFile) Upload(
 	ctx context.Context,
 	filename string,
 	content io.Reader,
@@ -47,30 +46,14 @@ func (f *localFile) SaveReader(
 ) (SaveResult, error) {
 	ctx, span := f.tracer.Start(
 		ctx,
-		"blobstorage.localFile.SaveReader",
+		"blobstorage.localFile.Upload",
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
-	logger := f.logger.With(slog.String("tag", "blobstorage.localFile.SaveReader"))
+	logger := f.logger.With(slog.String("tag", "blobstorage.localFile.Upload"))
 
-	logger.DebugContext(ctx, "expanding path")
-	span.AddEvent("expanding path")
 	dir := f.config.BloodhoundDir
-	if strings.HasPrefix(f.config.BloodhoundDir, "~") {
-		homedir, err := os.UserHomeDir()
-		if err != nil {
-			err = fmt.Errorf("get user home dir: %w", err)
-			telemetry.RecordError(span, err)
-			return SaveResult{}, nil
-		}
-		dir = strings.Replace(f.config.BloodhoundDir, "~", homedir, 1)
-	}
-	if strings.ContainsAny(f.config.BloodhoundDir, "$") {
-		dir = os.ExpandEnv(f.config.BloodhoundDir)
-	}
-	logger.DebugContext(ctx, "expanded path")
-	span.AddEvent("expanded path")
 
 	logger.DebugContext(ctx, "creating dir")
 	span.AddEvent("creating dir")
@@ -120,51 +103,91 @@ func (f *localFile) SaveReader(
 }
 
 // Exists checks if a file exists in the storage
-func (f *localFile) Exists(ctx context.Context, filename string) (bool, error) {
-	_, span := f.tracer.Start(ctx,
+func (f *localFile) Exists(ctx context.Context, relPath string) (bool, error) {
+	_, span := f.tracer.Start(
+		ctx,
 		"blobstorage.localFile.Exists",
-		trace.WithSpanKind(trace.SpanKindInternal))
+		trace.WithSpanKind(trace.SpanKindInternal),
+	)
 	defer span.End()
 
-	fp := filepath.Join(f.config.BloodhoundDir, filepath.Clean(filename))
+	logger := f.logger.With(slog.String("tag", "blobstorage.localFile.Exists"))
+
+	fp := filepath.Join(f.config.BloodhoundDir, relPath)
+
+	logger.DebugContext(ctx, "checking file")
+	span.AddEvent("checking file")
 	fi, err := os.Stat(fp)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return false, nil
 		}
+		err = fmt.Errorf("checking file: %v", err)
 		return false, err
 	}
-	if fi.Size() > 0 {
-		return true, nil
+	if fi.Size() < 0 {
+		return false, nil
 	}
-	return false, nil
+	logger.DebugContext(ctx, "checked file", slog.Bool("is_exists", true))
+	span.AddEvent("checking file")
+
+	return true, nil
 }
 
 // Download downloads a file from the storage
 func (f *localFile) Download(ctx context.Context, object string) (io.ReadCloser, error) {
+	fp := filepath.Join(f.config.BloodhoundDir, object)
+
 	_, span := f.tracer.Start(
 		ctx,
 		"blobstorage.localFile.Download",
 		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(attribute.String(constants.Filepath, fp)),
 	)
 	defer span.End()
 
-	byte, err := os.ReadFile(filepath.Join(f.config.BloodhoundDir, filepath.Clean(object)))
+	logger := f.logger.With(
+		slog.String("tag", "blobstorage.localFile.Download"),
+		slog.String(constants.Filepath, fp),
+	)
+
+	logger.DebugContext(ctx, "opening file")
+	span.AddEvent("opening file")
+	file, err := os.Open(fp)
 	if err != nil {
-		err = fmt.Errorf("reading local file: %w", err)
+		err = fmt.Errorf("opening file: %v", err)
 		return nil, err
 	}
+	logger.DebugContext(ctx, "opened file")
+	span.AddEvent("opened file")
 
-	reader := io.NopCloser(bytes.NewReader(byte))
-	return reader, err
+	return file, err
 }
 
 // CreateBucket creates a bucket if it doesn't exist
 func (f *localFile) CreateBucket(ctx context.Context) error {
-	fp := filepath.Join(f.config.BloodhoundDir)
+	fp := filepath.Clean(f.config.BloodhoundDir)
+	_, span := f.tracer.Start(
+		ctx,
+		"blobstorage.localFile.CreateBucket",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(attribute.String(constants.Filepath, fp)),
+	)
+	defer span.End()
+
+	logger := f.logger.With(
+		slog.String("tag", "blobstorage.localFile.CreateBucket"),
+		slog.String(constants.Filepath, fp),
+	)
+
+	logger.DebugContext(ctx, "creating dir")
+	span.AddEvent("creating dir")
 	if err := os.MkdirAll(fp, os.FileMode(0o755)); err != nil {
-		err = fmt.Errorf("create dir: %w", err)
+		err = fmt.Errorf("creating dir: %v", err)
 		return err
 	}
+	logger.DebugContext(ctx, "created dir")
+	span.AddEvent("created dir")
+
 	return nil
 }

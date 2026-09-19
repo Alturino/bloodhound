@@ -8,8 +8,8 @@ import (
 
 type noopMinIO struct{}
 
-// SaveReader uploads a file to the storage
-func (n *noopMinIO) SaveReader(
+// Upload uploads a file to the storage
+func (n *noopMinIO) Upload(
 	ctx context.Context,
 	filename string,
 	content io.Reader,

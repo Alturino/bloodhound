@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -33,6 +34,8 @@ type App struct {
 func (a *App) ServiceName() string {
 	return fmt.Sprintf("%s_%s_%s", a.Name, a.Hostname, a.Environment)
 }
+
+var config Config
 
 // Load reads configuration from file and environment variables
 func Load(configPath string) (*Config, error) {
@@ -85,69 +88,31 @@ func Load(configPath string) (*Config, error) {
 		v.AddConfigPath("./env")
 	}
 
+	config := Config{App: &App{LogLevelVar: &slog.LevelVar{}}}
+
 	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("read config file: %w", err)
+		err = fmt.Errorf("read config file: %w", err)
+		return &config, err
 	}
 
-	// Unmarshal non-telemetry fields via Viper (handles time.Duration etc.).
-	// We decode into a struct without the Telemetry field because mapstructure
-	// cannot handle otelconf's discriminated union types.
-	var raw struct {
-		Storage *Storage `mapstructure:"storage"`
-		Database  *DB    `mapstructure:"database"`
-		App       *App   `mapstructure:"app"`
+	if err := v.Unmarshal(&config); err != nil {
+		err = fmt.Errorf("unmarshal config: %w", err)
+		return &config, err
 	}
-	raw.App = &App{}
-	raw.App.LogLevelVar = &slog.LevelVar{}
+	cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
 
-	if err := v.Unmarshal(&raw); err != nil {
-		return nil, fmt.Errorf("unmarshal config: %w", err)
-	}
-	raw.App.LogLevelVar.Set(raw.App.LogLevel)
+	config.Storage.Local.BloodhoundDir = expandPath(config.Storage.Local.BloodhoundDir)
+	config.App.LogLevelVar.Set(config.App.LogLevel)
 
-	cfg := &Config{
-		Storage:  raw.Storage,
-		Database: raw.Database,
-		App:      raw.App,
-	}
-
-	// Parse telemetry with otelconf (mapstructure cannot handle otelconf types)
-	if t := v.AllSettings()["telemetry"]; t != nil {
-		if telemetryMap, ok := t.(map[string]any); ok {
-			if err := parseTelemetry(telemetryMap, cfg); err != nil {
-				return nil, fmt.Errorf("load telemetry config: %w", err)
-			}
-		}
-	}
-
-	return cfg, nil
+	return &config, nil
 }
 
-// parseTelemetry takes the raw telemetry subtree and parses it with
-// otelconf.ParseYAML().
-func parseTelemetry(raw map[string]any, cfg *Config) error {
-	// Extract enabled flag
-	if enabled, ok := raw["enabled"]; ok {
-		if e, ok := enabled.(bool); ok {
-			cfg.App.Enabled = e
-		}
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~") {
+		path = strings.Replace(path, "~", "$HOME", 1)
 	}
 
-	// Remove non-otel fields
-	delete(raw, "enabled")
+	path = os.ExpandEnv(path)
 
-	// Marshal to YAML for otelconf.ParseYAML()
-	otelYAML, err := yaml.Marshal(raw)
-	if err != nil {
-		return fmt.Errorf("marshal telemetry to yaml: %w", err)
-	}
-
-	// Parse with otelconf (handles ${VAR} substitution internally)
-	otelCfg, err := otelconf.ParseYAML(otelYAML)
-	if err != nil {
-		return fmt.Errorf("parse otel config: %w", err)
-	}
-
-	cfg.Telemetry = otelCfg
-	return nil
+	return path
 }

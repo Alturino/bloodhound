@@ -68,7 +68,7 @@ func TestLocalFile_NewLocalFile(t *testing.T) {
 func TestLocalFile_NewLocalFile_CreateBucketFails(t *testing.T) {
 	tmpDir := t.TempDir()
 	parentDir := filepath.Join(tmpDir, "readonly")
-	if err := os.MkdirAll(parentDir, 0o555); err != nil {
+	if err := os.MkdirAll(parentDir, 0o655); err != nil {
 		t.Fatalf("create readonly dir: %v", err)
 	}
 	readonlyPath := filepath.Join(parentDir, "nested")
@@ -96,7 +96,7 @@ func TestLocalFile_SaveReader(t *testing.T) {
 			name: "write new file",
 			run: func(t *testing.T, s Storage, filename string) {
 				content := bytes.NewReader([]byte("test content"))
-				result, err := s.SaveReader(
+				result, err := s.Upload(
 					context.Background(),
 					filename,
 					content,
@@ -115,7 +115,7 @@ func TestLocalFile_SaveReader(t *testing.T) {
 			name: "write in nested directory",
 			run: func(t *testing.T, s Storage, _ string) {
 				content := bytes.NewReader([]byte("nested content"))
-				_, err := s.SaveReader(
+				_, err := s.Upload(
 					context.Background(),
 					"subdir/anotherdir/file.txt",
 					content,
@@ -131,12 +131,12 @@ func TestLocalFile_SaveReader(t *testing.T) {
 			name: "overwrite existing file",
 			run: func(t *testing.T, s Storage, filename string) {
 				content := bytes.NewReader([]byte("first write"))
-				_, err := s.SaveReader(context.Background(), filename, content, 0, "text/plain")
+				_, err := s.Upload(context.Background(), filename, content, 0, "text/plain")
 				if err != nil {
 					t.Errorf("first write error: %v", err)
 				}
 				content = bytes.NewReader([]byte("second write"))
-				_, err = s.SaveReader(context.Background(), filename, content, 0, "text/plain")
+				_, err = s.Upload(context.Background(), filename, content, 0, "text/plain")
 				if err != nil {
 					t.Errorf("overwrite error: %v", err)
 				}
@@ -165,7 +165,7 @@ func TestLocalFile_SaveReader_Errors(t *testing.T) {
 	s := NewLocalFile(cfg, logger, tracer)
 
 	content := bytes.NewReader([]byte("test"))
-	_, err := s.SaveReader(context.Background(), "newfile.txt", content, 0, "text/plain")
+	_, err := s.Upload(context.Background(), "newfile.txt", content, 0, "text/plain")
 	if err == nil {
 		t.Error("expected error when writing to readonly dir")
 	}
@@ -443,7 +443,7 @@ func TestLocalFile_PathTraversal(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.filename, func(t *testing.T) {
 			content := bytes.NewReader([]byte("malicious"))
-			_, err := s.SaveReader(context.Background(), tc.filename, content, 0, "text/plain")
+			_, err := s.Upload(context.Background(), tc.filename, content, 0, "text/plain")
 			if err != nil {
 				return
 			}
@@ -464,7 +464,7 @@ func TestLocalFile_Concurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			content := bytes.NewReader([]byte("concurrent content"))
-			s.SaveReader(context.Background(), "concurrent.txt", content, 0, "text/plain")
+			s.Upload(context.Background(), "concurrent.txt", content, 0, "text/plain")
 		}()
 	}
 	wg.Wait()
@@ -475,5 +475,57 @@ func TestLocalFile_Concurrent(t *testing.T) {
 	}
 	if !exists {
 		t.Error("expected file to exist after concurrent writes")
+	}
+}
+
+func TestLocalFile_expandPath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("TEST_EXPAND_DIR", "expanded")
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "no special characters",
+			path: "/tmp/data",
+			want: "/tmp/data",
+		},
+		{
+			name: "tilde prefix expanded via $HOME",
+			path: "~/data",
+			want: home + "/data",
+		},
+		{
+			name: "env var expanded",
+			path: "/tmp/$TEST_EXPAND_DIR",
+			want: "/tmp/expanded",
+		},
+		{
+			name: "tilde not at start is not replaced",
+			path: "data/~user",
+			want: "data/~user",
+		},
+		{
+			name: "multiple env vars",
+			path: "/$TEST_EXPAND_DIR/$TEST_EXPAND_DIR",
+			want: "/expanded/expanded",
+		},
+		{
+			name: "empty path",
+			path: "",
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expandPath(tt.path)
+			if got != tt.want {
+				t.Errorf("expandPath(%q) = %q, want %q", tt.path, got, tt.want)
+			}
+		})
 	}
 }

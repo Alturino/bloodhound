@@ -20,10 +20,8 @@ import (
 )
 
 type AnnouncementStore interface {
-	Announcement(ctx context.Context, db qrm.DB, id ...string) ([]model.Announcements, error)
 	InsertAnnouncement(ctx context.Context, db qrm.DB, ann ...model.Announcements) error
 	LatestAnnouncement(ctx context.Context, db qrm.DB) (model.Announcements, error)
-	IsExists(ctx context.Context, db qrm.DB) (bool, error)
 	IsProcessed(ctx context.Context, db qrm.DB, idxIDs ...string) (map[string]bool, error)
 }
 
@@ -38,43 +36,6 @@ type announcementStore struct {
 	db     *sql.DB
 	logger *slog.Logger
 	tracer trace.Tracer
-}
-
-func (s *announcementStore) IsExists(ctx context.Context, db qrm.DB) (bool, error) {
-	if db == nil {
-		db = s.db
-	}
-	ctx, span := s.tracer.Start(
-		ctx,
-		"idx.announcementStore.isExists",
-		trace.WithSpanKind(trace.SpanKindInternal),
-	)
-	defer span.End()
-
-	logger := s.logger.With(slog.String("tag", "idx.announcementStore.IsExists"))
-
-	logger.DebugContext(ctx, "preparing statement")
-	span.AddEvent("preparing statement")
-	stmt := SELECT(EXISTS(Announcements.SELECT(Announcements.AllColumns).LIMIT(1)))
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		ctx = slogctx.Append(ctx, slog.String(constants.SQLStatement, stmt.DebugSql()))
-	}
-	logger.DebugContext(ctx, "prepared statement")
-	span.AddEvent("prepared statement")
-
-	logger.DebugContext(ctx, "checking announcements")
-	span.AddEvent("checking announcements")
-	var isExists struct{ bool }
-	if err := stmt.QueryContext(ctx, db, &isExists); err != nil {
-		err = fmt.Errorf("checking announcements: %w", err)
-		telemetry.RecordError(span, err)
-		return false, err
-	}
-	logger = logger.With(slog.Bool(constants.IsExists, isExists.bool))
-	logger.InfoContext(ctx, "checked announcements")
-	span.AddEvent("checked announcements")
-
-	return isExists.bool, nil
 }
 
 func (s *announcementStore) LatestAnnouncement(
@@ -130,9 +91,6 @@ func (s *announcementStore) IsProcessed(
 	db qrm.DB,
 	idxIDs ...string,
 ) (map[string]bool, error) {
-	if db == nil {
-		db = s.db
-	}
 	ctx, span := s.tracer.Start(
 		ctx,
 		"idx.announcementStore.IsProcessed",
@@ -141,14 +99,14 @@ func (s *announcementStore) IsProcessed(
 	defer span.End()
 
 	idxIdsLen := len(idxIDs)
+	if idxIdsLen == 0 {
+		return map[string]bool{}, errors.New("idxIdsLen should not be 0")
+	}
+
 	logger := s.logger.With(
 		slog.String("tag", "idx.announcementStore.IsProcessed"),
 		slog.Int("ids_count", idxIdsLen),
 	)
-
-	if idxIdsLen == 0 {
-		return map[string]bool{}, nil
-	}
 
 	logger.DebugContext(ctx, "preparing statement")
 	span.AddEvent("preparing statement")
@@ -162,12 +120,10 @@ func (s *announcementStore) IsProcessed(
 	span.AddEvent("checking announcements is processed")
 	var announcements []model.Announcements
 	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
-		err = fmt.Errorf("checking announcements is processed: %w", err)
 		if !errors.Is(err, qrm.ErrNoRows) {
 			telemetry.RecordError(span, err)
 		}
 		if errors.Is(err, qrm.ErrNoRows) {
-			logger.WarnContext(ctx, "no announcements is processed", slog.Any("error", err))
 			return map[string]bool{}, nil
 		}
 		return nil, err
@@ -238,38 +194,4 @@ func (s *announcementStore) InsertAnnouncement(
 	span.AddEvent("inserted announcements")
 
 	return nil
-}
-
-func (s *announcementStore) Announcement(
-	ctx context.Context,
-	db qrm.DB,
-	id ...string,
-) ([]model.Announcements, error) {
-	if db == nil {
-		db = s.db
-	}
-	ctx, span := s.tracer.Start(ctx, "idx.announcementStore.Announcement")
-	defer span.End()
-
-	span.AddEvent("getting announcement")
-
-	logger := s.logger.With(slog.String("tag", "idx.announcementStore.Announcement"))
-
-	if len(id) == 0 {
-		return []model.Announcements{}, nil
-	}
-
-	stmt := Announcements.SELECT(Announcements.AllColumns).
-		WHERE(Announcements.ID.EQ(ANY(StringArray(id...))))
-
-	var announcements []model.Announcements
-	if err := stmt.QueryContext(ctx, db, &announcements); err != nil {
-		err = fmt.Errorf("getting announcement: %w", err)
-		telemetry.RecordError(span, err)
-		return announcements, err
-	}
-	logger.InfoContext(ctx, "got announcement")
-	span.AddEvent("got announcement")
-
-	return announcements, nil
 }

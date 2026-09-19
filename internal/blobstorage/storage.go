@@ -10,10 +10,12 @@ import (
 	"sync"
 
 	slogctx "github.com/veqryn/slog-context"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/alturino/bloodhound/internal/config"
+	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/constants"
 )
 
 var ErrBucketExists = errors.New("bucket already exists")
@@ -45,8 +47,8 @@ func (s SaveResult) LogValue() slog.Value {
 
 // Storage defines the interface for file storage operations
 type Storage interface {
-	// SaveReader uploads a file to the storage
-	SaveReader(
+	// Upload uploads a file to the storage
+	Upload(
 		ctx context.Context,
 		filename string,
 		content io.Reader,
@@ -63,9 +65,9 @@ type Storage interface {
 
 // storage fans out operations to multiple Storage backends in parallel.
 type storage struct {
-	storages []Storage
 	logger   *slog.Logger
 	tracer   trace.Tracer
+	storages []Storage
 }
 
 // NewStorage creates a multi-backend storage that fans out operations to all backends.
@@ -88,9 +90,9 @@ func NewStorage(config *config.Storage, logger *slog.Logger, tracer trace.Tracer
 	return &storage{storages: backends, logger: logger, tracer: tracer}, nil
 }
 
-// SaveReader buffers the content using io.Copy and fans out the write
+// Upload buffers the content using io.Copy and fans out the write
 // to all backends in parallel. Returns the first backend's result.
-func (s *storage) SaveReader(
+func (s *storage) Upload(
 	ctx context.Context,
 	filename string,
 	content io.Reader,
@@ -101,7 +103,7 @@ func (s *storage) SaveReader(
 		ctx,
 		"blobstorage.storage.SaveReader",
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(),
+		trace.WithAttributes(attribute.String(constants.File, filename)),
 	)
 	defer span.End()
 
@@ -112,14 +114,17 @@ func (s *storage) SaveReader(
 	}
 	data := buf.Bytes()
 
-	logger := s.logger.With(slog.String("tag", "blobstorage.storage.SaveReader"))
+	ctx = slogctx.Append(ctx, slog.String(constants.File, filename))
+	logger := s.logger.With(slog.String("tag", "blobstorage.storage.Upload"))
 
+	logger.DebugContext(ctx, "uploading file")
+	span.AddEvent("uploading file")
 	var wg sync.WaitGroup
 	results := make([]SaveResult, len(s.storages))
 	for i, backend := range s.storages {
 		ctx := slogctx.Append(ctx, slog.Int("storages_index", i))
 		wg.Go(func() {
-			result, err := backend.SaveReader(
+			result, err := backend.Upload(
 				ctx,
 				filename,
 				bytes.NewReader(data),
@@ -127,15 +132,23 @@ func (s *storage) SaveReader(
 				contentType,
 			)
 			if err != nil {
-				logger.WarnContext(ctx, "save failed", slog.Any("error", err))
+				logger.ErrorContext(ctx, "uploading file failed", slog.Any("error", err))
 				return
 			}
 			results[i] = result
 		})
 	}
 	wg.Wait()
+	var res SaveResult
+	for _, result := range results {
+		if result.ChecksumSHA256 != "" {
+			res = result
+		}
+	}
+	logger.DebugContext(ctx, "uploaded file")
+	span.AddEvent("uploaded file")
 
-	return results[0], nil
+	return res, nil
 }
 
 // CreateBucket fans out bucket creation to all backends in parallel.
@@ -168,30 +181,37 @@ func (s *storage) Exists(ctx context.Context, object string) (bool, error) {
 	defer span.End()
 
 	ctx = slogctx.Append(ctx, slog.String("object_key", object))
+	logger := s.logger.With(slog.String("tag", "blobstorage.storage.Exists"))
 
-	g, ctx := errgroup.WithContext(ctx)
+	logger.DebugContext(ctx, "checking file")
+	span.AddEvent("checking file")
+	var wg sync.WaitGroup
 	results := make([]bool, len(s.storages))
 	for i, backend := range s.storages {
 		ctx := slogctx.Append(ctx, slog.Int("storages_index", i))
-		g.Go(func() error {
+		wg.Go(func() {
 			exists, err := backend.Exists(ctx, object)
 			if err != nil {
-				return err
+				return
 			}
 			results[i] = exists
-			return nil
 		})
 	}
-	if err := g.Wait(); err != nil {
-		return false, err
-	}
-
+	wg.Wait()
+	var isExists bool
 	for _, result := range results {
 		if result {
-			return true, nil
+			isExists = result
+			break
 		}
 	}
-	return false, nil
+	logger.InfoContext(ctx, "checked file", slog.Bool(constants.IsExists, isExists))
+	span.AddEvent(
+		"checked file",
+		trace.WithAttributes(attribute.Bool(constants.IsExists, isExists)),
+	)
+
+	return isExists, nil
 }
 
 // Download retrieves the object from the first available backend.
@@ -206,16 +226,23 @@ func (s *storage) Download(ctx context.Context, object string) (io.ReadCloser, e
 
 	logger := s.logger.With(slog.String("tag", "blobstorage.storage.Download"))
 
+	logger.DebugContext(ctx, "downloading")
+	span.AddEvent("downloading")
+	var reader io.ReadCloser
 	for i, backend := range s.storages {
 		ctx := slogctx.Append(ctx, slog.Int("storages_index", i))
-		reader, err := backend.Download(ctx, object)
+		file, err := backend.Download(ctx, object)
 		if err != nil {
-			logger.ErrorContext(ctx, "storage failed", slog.Any("error", err))
+			logger.ErrorContext(ctx, "downloading failed", slog.Any("error", err))
 			continue
 		}
-		if reader != nil {
-			return reader, nil
-		}
+		reader = file
 	}
-	return nil, fmt.Errorf("object %s not found in any backend", object)
+	if reader == nil {
+		return nil, fmt.Errorf("object %s not found in any backend", object)
+	}
+	logger.InfoContext(ctx, "downloaded")
+	span.AddEvent("downloaded")
+
+	return reader, nil
 }

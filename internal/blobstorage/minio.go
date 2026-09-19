@@ -66,10 +66,10 @@ func NewMinIO(
 	return minio, nil
 }
 
-// SaveReader uploads a file to MinIO.
+// Upload uploads a file to MinIO.
 // Content is passed directly to PutObject without buffering —
 // the storage wrapper handles fan-out and local storage writes.
-func (s *MinIO) SaveReader(
+func (s *MinIO) Upload(
 	ctx context.Context,
 	filename string,
 	content io.Reader,

@@ -110,7 +110,7 @@ func (s *AttachmentScheduler) pollAndSubmit(ctx context.Context) {
 		logger.ErrorContext(ctx, "failed to get unprocessed attachments", slog.Any("error", err))
 		return
 	}
-	s.metrics.AttPolledCount.Record(ctx, int64(len(attachments)))
+	s.metrics.AttachmentPolledCount.Record(ctx, int64(len(attachments)))
 	ctx = slogctx.Append(ctx, slog.Int(constants.UnprocessedAttachmentsCount, len(attachments)))
 	if len(attachments) == 0 {
 		logger.DebugContext(ctx, "no unprocessed attachments")

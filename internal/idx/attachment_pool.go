@@ -132,7 +132,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 	span.AddEvent("processing attachment")
 	result, err := p.worker.Work(ctx, task)
 	if err != nil {
-		p.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
+		p.metrics.AttachmentDownload.Add(ctx, 1, metric.WithAttributes(
 			attribute.String(constants.Status, "failure"),
 		))
 		logger.ErrorContext(ctx, "worker error", slog.Any("error", err))
@@ -142,7 +142,7 @@ func (p *attachmentPool) processAttachment(ctx context.Context, task *Attachment
 		}
 		return
 	}
-	p.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
+	p.metrics.AttachmentDownload.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(constants.Status, "success"),
 	))
 	if err := p.store.UpdateAttachmentResult(ctx, &result.Attachment); err != nil {

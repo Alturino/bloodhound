@@ -10,10 +10,11 @@ import (
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/blobstorage"
+	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
@@ -67,9 +68,9 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 
 	data, contentType, err := a.client.DownloadFile(ctx, task.Attachment.IdxURL)
 	if err != nil {
-		a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
-		a.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String(constants.Status, "failure"),
+		a.metrics.AttachmentDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
+		a.metrics.AttachmentDownload.Add(ctx, 1, metric.WithAttributes(
+			semconv.ErrorTypeKey.String(err.Error()),
 		))
 		task.Attachment.IsDownloaded = false
 		task.Attachment.IsProcessing = false
@@ -83,11 +84,11 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 		slog.Int(constants.Count, len(data)),
 		slog.String(constants.ContentType, contentType),
 	)
-	result, err := a.storage.SaveReader(ctx, filePath, reader, int64(len(data)), contentType)
+	result, err := a.storage.Upload(ctx, filePath, reader, int64(len(data)), contentType)
 	if err != nil {
-		a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
-		a.metrics.AttDownloadSize.Record(ctx, int64(len(data)))
-		a.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
+		a.metrics.AttachmentDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
+		a.metrics.AttachmentDownloadSize.Record(ctx, int64(len(data)))
+		a.metrics.AttachmentDownload.Add(ctx, 1, metric.WithAttributes(
 			attribute.String(constants.Status, "failure"),
 		))
 		task.Attachment.IsDownloaded = false
@@ -97,9 +98,9 @@ func (a *attachment) Work(ctx context.Context, task *AttachmentTask) (Attachment
 	}
 	ctx = slogctx.Append(ctx, slog.Any(constants.LocalSaveResult, result))
 
-	a.metrics.AttDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
-	a.metrics.AttDownloadSize.Record(ctx, int64(len(data)))
-	a.metrics.AttDownloadTotal.Add(ctx, 1, metric.WithAttributes(
+	a.metrics.AttachmentDownloadDuration.Record(ctx, float64(time.Since(start).Milliseconds()))
+	a.metrics.AttachmentDownloadSize.Record(ctx, int64(len(data)))
+	a.metrics.AttachmentDownload.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(constants.Status, "success"),
 	))
 

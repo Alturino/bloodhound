@@ -28,6 +28,7 @@ const (
 	ObjectSize                  = "object_size"
 	ContentType                 = "content_type"
 	CleanFilepath               = "clean_filepath"
+	Filepath                    = "filepath"
 	HTTPDump                    = "http_dump"
 	WorkerID                    = "worker_id"
 	Interval                    = "interval"
@@ -40,8 +41,8 @@ const (
 	URL                         = "url"
 	Status                      = "status"
 	Service                     = "service"
-	Count                        = "count"
-	ExecutedAt                   = "executed_at"
+	Count                       = "count"
+	ExecutedAt                  = "executed_at"
 )
 
 const (

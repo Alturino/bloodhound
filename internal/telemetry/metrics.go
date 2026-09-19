@@ -5,21 +5,15 @@ import (
 )
 
 type MetricsProvider struct {
-	IdxAnnouncementsFetched      metric.Int64Counter
-	IdxAnnouncementsSaved        metric.Int64Counter
-	IdxAnnouncementsDuplicate    metric.Int64Counter
-	IdxAnnouncementsProcessed    metric.Int64Counter
-	IdxAnnouncementsFetchedTotal metric.Int64Gauge
-	IdxProcessingDuration        metric.Float64Histogram
-	IdxPagesFetched              metric.Int64Counter
-	IdxPageFetchDuration         metric.Float64Histogram
-	AttDownloadTotal             metric.Int64Counter
-	AttDownloadDuration          metric.Float64Histogram
-	AttDownloadSize              metric.Int64Histogram
-	AttPolledCount               metric.Int64Gauge
-	SbSymbolsSynced              metric.Int64Counter
-	SbSyncDuration               metric.Float64Histogram
-	SbStockCodesTotal            metric.Int64Gauge
+	AnnouncementsFetched           metric.Int64Counter
+	AnnouncementsSaved             metric.Int64Counter
+	AnnouncementProcessingDuration metric.Float64Histogram
+	PagesFetched                   metric.Int64Counter
+	PageFetchDuration              metric.Float64Histogram
+	AttachmentDownload             metric.Int64Counter
+	AttachmentDownloadDuration     metric.Float64Histogram
+	AttachmentDownloadSize         metric.Int64Histogram
+	AttachmentPolledCount          metric.Int64Gauge
 }
 
 func NewMetrics(meter metric.Meter) (*MetricsProvider, error) {
@@ -35,33 +29,6 @@ func NewMetrics(meter metric.Meter) (*MetricsProvider, error) {
 	idxAnnouncementsSaved, err := meter.Int64Counter(
 		"bloodhound.idx.announcements.saved",
 		metric.WithDescription("Announcements saved to DB"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	idxAnnouncementsDuplicate, err := meter.Int64Counter(
-		"bloodhound.idx.announcements.duplicate",
-		metric.WithDescription("Duplicate announcements skipped"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	idxAnnouncementsProcessed, err := meter.Int64Counter(
-		"bloodhound.idx.announcements.processed",
-		metric.WithDescription("Announcements processed (saved or duplicate)"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	idxAnnouncementsFetchedTotal, err := meter.Int64Gauge(
-		"bloodhound.idx.announcements.total",
-		metric.WithDescription("Total announcement count in API response"),
 		metric.WithUnit("{count}"),
 	)
 	if err != nil {
@@ -131,48 +98,15 @@ func NewMetrics(meter metric.Meter) (*MetricsProvider, error) {
 		return nil, err
 	}
 
-	sbSymbolsSynced, err := meter.Int64Counter(
-		"bloodhound.stockbit.symbols.synced",
-		metric.WithDescription("Stockbit symbols synced, status attribute"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	sbSyncDuration, err := meter.Float64Histogram(
-		"bloodhound.stockbit.sync.duration",
-		metric.WithDescription("Stockbit sync duration per symbol"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	sbStockCodesTotal, err := meter.Int64Gauge(
-		"bloodhound.stockbit.symbols.total",
-		metric.WithDescription("Total stock codes to sync"),
-		metric.WithUnit("{count}"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	return &MetricsProvider{
-		IdxAnnouncementsFetched:      idxAnnouncementsFetched,
-		IdxAnnouncementsSaved:        idxAnnouncementsSaved,
-		IdxAnnouncementsDuplicate:    idxAnnouncementsDuplicate,
-		IdxAnnouncementsProcessed:    idxAnnouncementsProcessed,
-		IdxAnnouncementsFetchedTotal: idxAnnouncementsFetchedTotal,
-		IdxProcessingDuration:        idxProcessingDuration,
-		IdxPagesFetched:              idxPagesFetched,
-		IdxPageFetchDuration:         idxPageFetchDuration,
-		AttDownloadTotal:             attDownloadTotal,
-		AttDownloadDuration:          attDownloadDuration,
-		AttDownloadSize:              attDownloadSize,
-		AttPolledCount:               attPolledCount,
-		SbSymbolsSynced:              sbSymbolsSynced,
-		SbSyncDuration:               sbSyncDuration,
-		SbStockCodesTotal:            sbStockCodesTotal,
+		AnnouncementsFetched:           idxAnnouncementsFetched,
+		AnnouncementsSaved:             idxAnnouncementsSaved,
+		AnnouncementProcessingDuration: idxProcessingDuration,
+		PagesFetched:                   idxPagesFetched,
+		PageFetchDuration:              idxPageFetchDuration,
+		AttachmentDownload:             attDownloadTotal,
+		AttachmentDownloadDuration:     attDownloadDuration,
+		AttachmentDownloadSize:         attDownloadSize,
+		AttachmentPolledCount:          attPolledCount,
 	}, nil
 }

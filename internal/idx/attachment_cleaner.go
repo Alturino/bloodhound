@@ -14,7 +14,7 @@ type AttachmentPathCleaner interface {
 
 func NewAttachmentPathCleaner() AttachmentPathCleaner {
 	return &attachmentPathCleaner{
-		cleanRegex:      regexp.MustCompile(`\s+_+-+\\+,+\.+;+:+\(+\)+`),
+		cleanRegex:      regexp.MustCompile(`[\s_\-+,.;:()]+`),
 		whitespaceRegex: regexp.MustCompile(`\s+`),
 	}
 }

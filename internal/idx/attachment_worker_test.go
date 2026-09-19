@@ -41,7 +41,7 @@ type stubStorage struct {
 	err    error
 }
 
-func (s *stubStorage) SaveReader(
+func (s *stubStorage) Upload(
 	_ context.Context,
 	filename string,
 	_ io.Reader,

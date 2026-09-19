@@ -126,7 +126,7 @@ func (s *AnnouncementScheduler) schedule() {
 func (s *AnnouncementScheduler) process(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.IdxProcessingDuration.Record(
+		s.metrics.AnnouncementProcessingDuration.Record(
 			ctx,
 			float64(time.Since(start).Milliseconds()),
 			metric.WithAttributes(attribute.String(constants.Service, "idx")),
@@ -248,9 +248,9 @@ func (s *AnnouncementScheduler) getAndSubmitPage(
 		err = fmt.Errorf("get page: %w", err)
 		return err
 	}
-	s.metrics.IdxPageFetchDuration.Record(ctx, float64(time.Since(fetchStart).Milliseconds()))
-	s.metrics.IdxPagesFetched.Add(ctx, 1)
-	s.metrics.IdxAnnouncementsFetchedTotal.Record(ctx, int64(len(resp.Announcements)))
+	s.metrics.PageFetchDuration.Record(ctx, float64(time.Since(fetchStart).Milliseconds()))
+	s.metrics.PagesFetched.Add(ctx, 1)
+	s.metrics.AnnouncementsFetched.Add(ctx, int64(len(resp.Announcements)))
 
 	logger.DebugContext(ctx, "submitting page")
 	span.AddEvent("submitting page")
