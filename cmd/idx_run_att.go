@@ -3,18 +3,12 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/idx"
 	"github.com/alturino/bloodhound/internal/log"
 )
@@ -30,58 +24,27 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		if err := http.ListenAndServe(":9999", nil); err != nil {
-			slog.ErrorContext(ctx, err.Error())
-			return
-		}
-	}()
+	StartPprofServer(ctx)
 
-	configPath := viper.GetString("config")
-	if configPath == "" {
-		configPath = "bloodhound.yaml"
-	}
-	ctx = slogctx.Append(ctx, slog.String("config_path", configPath))
-
-	slog.DebugContext(ctx, "loading config")
-	cfg, err := config.Load(configPath)
+	configPath := ResolveConfigPath()
+	cfg, ctx, err := LoadConfig(ctx, configPath)
 	if err != nil {
-		err = fmt.Errorf("load config: %w", err)
 		return err
 	}
-	slog.InfoContext(ctx, "loaded config")
 
 	logger, err := log.Get(cfg.App)
 	if err != nil {
 		return fmt.Errorf("initialize logger: %w", err)
 	}
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Error("panic", slog.Any("panic", r))
-			return
-		}
-	}()
+	defer RecoverPanic(logger)
 
 	logger.DebugContext(ctx, "initializing idx dependencies")
 	deps, err := initIDXDeps(ctx, cfg)
 	if err != nil {
-		err = fmt.Errorf("init idx deps: %w", err)
-		return err
+		return fmt.Errorf("init idx deps: %w", err)
 	}
-	defer func() {
-		if err := deps.tmt.Shutdown(ctx); err != nil {
-			err = fmt.Errorf("shutdown telemetry: %w", err)
-			logger.ErrorContext(ctx, err.Error())
-			return
-		}
-	}()
-	defer func() {
-		if err := deps.db.Close(); err != nil {
-			err = fmt.Errorf("close database: %w", err)
-			logger.ErrorContext(ctx, err.Error())
-			return
-		}
-	}()
+	defer ShutdownTelemetry(ctx, deps.tmt, logger)
+	defer CloseDatabase(ctx, deps.db, logger)
 	logger.InfoContext(ctx, "initialized idx dependencies")
 
 	logger.DebugContext(ctx, "initializing attachment worker")
@@ -122,22 +85,7 @@ func idxWorkerAtt(cmd *cobra.Command, args []string) error {
 	defer attachmentScheduler.Shutdown()
 	logger.InfoContext(ctx, "initialized attachment scheduler")
 
-	viper.OnConfigChange(func(in fsnotify.Event) {
-		if !in.Has(fsnotify.Write) {
-			return
-		}
-		if err := viper.MergeInConfig(); err != nil {
-			err = fmt.Errorf("merge config file: %w", err)
-			logger.ErrorContext(ctx, err.Error())
-			return
-		}
-		if err := viper.Unmarshal(cfg); err != nil {
-			err = fmt.Errorf("unmarshal config: %w", err)
-			logger.ErrorContext(ctx, err.Error())
-			return
-		}
-		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
-	})
+	WatchConfigChange(ctx, cfg, logger)
 
 	<-ctx.Done()
 	logger.InfoContext(ctx, "context done, stopping")

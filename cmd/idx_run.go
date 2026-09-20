@@ -1,20 +1,13 @@
 package cmd
 
 import (
-	"fmt"
 	"log/slog"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/alturino/bloodhound/config"
 	"github.com/alturino/bloodhound/internal/idx"
 )
 
@@ -29,23 +22,12 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		if err := http.ListenAndServe(":9999", nil); err != nil {
-			slog.ErrorContext(ctx, err.Error())
-			return
-		}
-	}()
+	StartPprofServer(ctx)
 
-	configPath := viper.GetString("config")
-	if configPath == "" {
-		configPath = "bloodhound.yaml"
-	}
-	ctx = slogctx.Append(ctx, slog.String("config_path", configPath))
-
-	slog.DebugContext(ctx, "loading config")
-	cfg, err := config.Load(configPath)
+	configPath := ResolveConfigPath()
+	cfg, ctx, err := LoadConfig(ctx, configPath)
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+		return err
 	}
 	slog.InfoContext(ctx, "loaded config")
 
@@ -55,23 +37,9 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	}
 	slog.InfoContext(ctx, "initialized idx dependencies")
 
-	defer func() {
-		if r := recover(); r != nil {
-			deps.logger.Error("panic", slog.Any("panic", r))
-		}
-	}()
-
-	defer func() {
-		if err := deps.tmt.Shutdown(ctx); err != nil {
-			deps.logger.ErrorContext(ctx, fmt.Errorf("shutdown telemetry: %w", err).Error())
-		}
-	}()
-
-	defer func() {
-		if err := deps.db.Close(); err != nil {
-			deps.logger.ErrorContext(ctx, fmt.Errorf("close database: %w", err).Error())
-		}
-	}()
+	defer RecoverPanic(deps.logger)
+	defer ShutdownTelemetry(ctx, deps.tmt, deps.logger)
+	defer CloseDatabase(ctx, deps.db, deps.logger)
 
 	logger := deps.logger
 
@@ -128,20 +96,7 @@ func idxWorkerRunAll(cmd *cobra.Command, args []string) error {
 	announcementScheduler.Start()
 	defer announcementScheduler.Shutdown()
 
-	viper.OnConfigChange(func(in fsnotify.Event) {
-		if !in.Has(fsnotify.Write) {
-			return
-		}
-		if err := viper.MergeInConfig(); err != nil {
-			deps.logger.ErrorContext(ctx, fmt.Errorf("merge config file: %w", err).Error())
-			return
-		}
-		if err := viper.Unmarshal(cfg); err != nil {
-			deps.logger.ErrorContext(ctx, fmt.Errorf("unmarshal config: %w", err).Error())
-			return
-		}
-		cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
-	})
+	WatchConfigChange(ctx, cfg, logger)
 
 	<-ctx.Done()
 	logger.InfoContext(ctx, "context done, stopping")
