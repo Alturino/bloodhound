@@ -90,15 +90,15 @@ func (p *attachmentPool) workerLoop(id int) {
 			logger.Debug("context done, stopping worker")
 			return
 		case task, ok := <-p.taskChan:
+			if !ok {
+				logger.WarnContext(p.ctx, "task channel closed")
+				return
+			}
 			ctx := slogctx.Append(
 				task.Ctx,
 				slog.Any(constants.Attachment, task.Attachment),
 				slog.Int(constants.WorkerID, id),
 			)
-			if !ok {
-				logger.WarnContext(ctx, "task channel closed")
-				return
-			}
 			p.processAttachment(ctx, task)
 		}
 	}
