@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/minio/minio-go/v7"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
@@ -106,7 +105,7 @@ func (f *localFile) SaveReader(
 		return SaveResult{}, err
 	}
 	saveres := SaveResult{
-		UploadInfo: minio.UploadInfo{
+		UploadInfo: UploadInfo{
 			Bucket:         f.config.BloodhoundDir,
 			Key:            fp,
 			Location:       fp,

@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/minio/minio-go/v7"
 	slogctx "github.com/veqryn/slog-context"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
@@ -19,8 +18,19 @@ import (
 
 var ErrBucketExists = errors.New("bucket already exists")
 
+// UploadInfo contains metadata about an uploaded object.
+// This is a local type to avoid leaking MinIO-specific types through the Storage interface.
+type UploadInfo struct {
+	Bucket         string
+	Key            string
+	Location       string
+	Size           int64
+	ETag           string
+	ChecksumSHA256 string
+}
+
 type SaveResult struct {
-	minio.UploadInfo
+	UploadInfo
 }
 
 func (s SaveResult) LogValue() slog.Value {

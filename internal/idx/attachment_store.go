@@ -27,17 +27,6 @@ type AttachmentStore interface {
 	UpdateAttachmentResult(ctx context.Context, attachment *model.Attachments) error
 }
 
-type AttachmentStoreTask struct {
-	AnnouncementID    string
-	AnnouncementTitle string
-	StockCode         string
-	Date              time.Time
-	Checksum          string
-	Path              string
-	Err               string
-	Attachment        Attachment
-}
-
 func NewAttachmentStore(db *sql.DB, logger *slog.Logger, tracer trace.Tracer) AttachmentStore {
 	if logger == nil {
 		logger = slog.Default().With(slog.String("tag", "state.AttachmentStore"))

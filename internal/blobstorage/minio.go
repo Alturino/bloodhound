@@ -120,7 +120,16 @@ func (s *MinIO) SaveReader(
 	logger.DebugContext(ctx, "uploaded file to minio")
 	span.AddEvent("uploaded file to minio")
 
-	return SaveResult{UploadInfo: info}, nil
+	return SaveResult{
+		UploadInfo: UploadInfo{
+			Bucket:         info.Bucket,
+			Key:            info.Key,
+			Location:       info.Location,
+			Size:           info.Size,
+			ETag:           info.ETag,
+			ChecksumSHA256: info.ChecksumSHA256,
+		},
+	}, nil
 }
 
 // Exists checks if an object exists in MinIO and is not empty
