@@ -67,14 +67,7 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	// stg, err := blobstorage.NewStorage(&cfg.Storage, logger, telemetry.AppTelemetry.Tracer)
-	// if err != nil {
-	// 	err = fmt.Errorf("initialize storage: %w", err)
-	// 	logger.ErrorContext(ctx, err.Error())
-	// 	return err
-	// }
-
-	database, err := db.Get(ctx, cfg.Database)
+	database, err := db.Get(ctx, cfg.Database, tmt.Tracer)
 	if err != nil {
 		err = fmt.Errorf("initialize database %w", err)
 		logger.ErrorContext(ctx, err.Error())
@@ -87,10 +80,6 @@ func stockbitWorker(cmd *cobra.Command, args []string) error {
 			return
 		}
 	}()
-	logger.InfoContext(ctx, "stockbit worker initialized")
-	// stockbitStore := state.NewStockbitStore(database, logger)
-	//
-	// httpClient := httpclient.NewClient(cfg, telemetry.AppTelemetry.Tracer)
 
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if !in.Has(fsnotify.Write) {

@@ -38,8 +38,6 @@ type App struct {
 	Logger         *slog.Logger
 }
 
-var AppTelemetry App
-
 // New creates a new App instance with configured providers
 // TODO: refactor use otelconf package to simplify configuration and initialization
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
@@ -54,14 +52,13 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 			return nil, err
 		}
 
-		AppTelemetry = App{
+		return &App{
 			TracerProvider: tp,
 			MeterProvider:  mp,
 			Tracer:         tp.Tracer(cfg.App.ServiceName()),
 			Metrics:        metrics,
 			Logger:         slog.Default(),
-		}
-		return &AppTelemetry, nil
+		}, nil
 	}
 
 	res, err := resource.New(
@@ -95,14 +92,13 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	// 3. Initialize Logger
 	logger := initLogger(cfg)
 
-	AppTelemetry = App{
+	return &App{
 		TracerProvider: tp,
 		MeterProvider:  mp,
 		Tracer:         tp.Tracer(cfg.App.ServiceName()),
 		Metrics:        metrics,
 		Logger:         logger,
-	}
-	return &AppTelemetry, nil
+	}, nil
 }
 
 func initTracer(

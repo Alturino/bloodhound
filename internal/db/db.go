@@ -22,11 +22,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/alturino/bloodhound/config"
-	"github.com/alturino/bloodhound/internal/telemetry"
 )
 
-func Get(ctx context.Context, config *config.DB) (*sql.DB, error) {
-	ctx, span := telemetry.AppTelemetry.Tracer.Start(ctx, "db.Get")
+func Get(ctx context.Context, config *config.DB, tracer trace.Tracer) (*sql.DB, error) {
+	ctx, span := tracer.Start(ctx, "db.Get")
 	defer span.End()
 
 	logger := slog.Default().With(
@@ -57,11 +56,11 @@ func Get(ctx context.Context, config *config.DB) (*sql.DB, error) {
 	logger.InfoContext(ctx, "connected to database")
 	span.AddEvent("connected to database")
 
-	if err := migrateUp(ctx, config, db, postgresDSN); err != nil {
+	if err := migrateUp(ctx, config, db, postgresDSN, tracer); err != nil {
 		return nil, err
 	}
 
-	if err := generateJet(ctx, config); err != nil {
+	if err := generateJet(ctx, config, tracer); err != nil {
 		return nil, err
 	}
 
@@ -75,8 +74,8 @@ func Get(ctx context.Context, config *config.DB) (*sql.DB, error) {
 	return db, nil
 }
 
-func migrateUp(ctx context.Context, config *config.DB, db *sql.DB, postgresURL string) error {
-	ctx, span := telemetry.AppTelemetry.Tracer.Start(
+func migrateUp(ctx context.Context, config *config.DB, db *sql.DB, postgresURL string, tracer trace.Tracer) error {
+	ctx, span := tracer.Start(
 		ctx,
 		"db.migrateUp",
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -120,8 +119,8 @@ func migrateUp(ctx context.Context, config *config.DB, db *sql.DB, postgresURL s
 	return nil
 }
 
-func generateJet(ctx context.Context, config *config.DB) error {
-	_, span := telemetry.AppTelemetry.Tracer.Start(
+func generateJet(ctx context.Context, config *config.DB, tracer trace.Tracer) error {
+	_, span := tracer.Start(
 		ctx,
 		"db.generateJet",
 		trace.WithSpanKind(trace.SpanKindClient),

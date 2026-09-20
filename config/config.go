@@ -9,13 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfg Config
-
-func init() {
-	cfg.App = &App{}
-	cfg.App.LogLevelVar = &slog.LevelVar{}
-}
-
 // Config holds all application configuration
 type Config struct {
 	Telemetry *Telemetry `mapstructure:"telemetry" json:"telemetry"`
@@ -90,6 +83,10 @@ func Load(configPath string) (*Config, error) {
 		v.AddConfigPath(".")
 		v.AddConfigPath("./env")
 	}
+
+	var cfg Config
+	cfg.App = &App{}
+	cfg.App.LogLevelVar = &slog.LevelVar{}
 
 	if err := v.ReadInConfig(); err != nil {
 		err = fmt.Errorf("read config file: %w", err)

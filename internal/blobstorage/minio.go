@@ -42,9 +42,6 @@ func NewMinIO(
 	if logger == nil {
 		logger = slog.Default().With(slog.String("tag", "blobstorage.MinIO"))
 	}
-	if tracer == nil {
-		tracer = telemetry.AppTelemetry.Tracer
-	}
 	client, err := minio.New(config.Endpoint, &minio.Options{
 		Creds:           credentials.NewStaticV4(config.AccessKey, config.SecretKey, ""),
 		Secure:          config.UseSSL,

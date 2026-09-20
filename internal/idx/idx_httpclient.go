@@ -46,9 +46,6 @@ func NewClient(
 	if logger == nil {
 		logger = slog.Default().With(slog.String("tag", "idx.Client"))
 	}
-	if tracer == nil {
-		tracer = telemetry.AppTelemetry.Tracer
-	}
 	idxhttpclient := httpclient.SetCommonHeaders(map[string]string{
 		"Connection":         "keep-alive",
 		"Accept-Encoding":    "gzip",

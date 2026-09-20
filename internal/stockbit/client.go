@@ -40,9 +40,6 @@ func NewClient(
 	if logger == nil {
 		logger = slog.Default().With(slog.String("tag", "stockbit.Client"))
 	}
-	if tracer == nil {
-		tracer = telemetry.AppTelemetry.Tracer
-	}
 	httpclient = httpclient.Clone().SetCommonHeaders(map[string]string{
 		"accept":             "application/json",
 		"accept-language":    "en,en-US;q=0.9,id;q=0.8",
