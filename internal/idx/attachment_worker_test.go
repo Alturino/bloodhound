@@ -88,7 +88,7 @@ func TestAttachmentWork_SetsStoragePathOnSuccess(t *testing.T) {
 	}
 	task := AttachmentTask{
 		Ctx:        context.Background(),
-		Attachment: &att,
+		Attachment: att,
 	}
 
 	client := &stubClient{data: []byte("pdf-bytes"), contentType: "application/pdf"}
@@ -137,7 +137,7 @@ func TestAttachmentWork_LeavesStoragePathEmptyOnDownloadError(t *testing.T) {
 	}
 	task := AttachmentTask{
 		Ctx:        context.Background(),
-		Attachment: &att,
+		Attachment: att,
 	}
 
 	client := &stubClient{err: errors.New("boom")}
