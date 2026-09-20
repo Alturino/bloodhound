@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )

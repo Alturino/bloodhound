@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/db"
 	"github.com/alturino/bloodhound/internal/log"
 	"github.com/alturino/bloodhound/internal/telemetry"

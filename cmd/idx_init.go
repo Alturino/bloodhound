@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/blobstorage"
 	"github.com/alturino/bloodhound/internal/db"
 	"github.com/alturino/bloodhound/internal/httpclient"

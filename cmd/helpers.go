@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
 

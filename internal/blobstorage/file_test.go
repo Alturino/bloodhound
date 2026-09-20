@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/config"
 )
 
 func newTestStorage(t *testing.T) (Storage, string) {

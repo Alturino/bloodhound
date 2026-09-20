@@ -15,7 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/alturino/bloodhound/config"
+	"github.com/alturino/bloodhound/internal/config"
 	"github.com/alturino/bloodhound/internal/constants"
 	"github.com/alturino/bloodhound/internal/telemetry"
 )
