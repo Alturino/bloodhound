@@ -27,7 +27,7 @@ type AttachmentScheduler struct {
 	startOnce    func()
 	shutdownOnce func()
 	cancel       context.CancelFunc
-	ticker       <-chan time.Time
+	ticker       *time.Ticker
 	tracer       trace.Tracer
 	store        AttachmentStore
 	ctx          context.Context
@@ -54,7 +54,7 @@ func NewAttachmentScheduler(
 		store:   store,
 		pool:    pool,
 		ctx:     ctx,
-		ticker:  time.Tick(cfg.Interval),
+		ticker:  time.NewTicker(cfg.Interval),
 		cancel:  cancel,
 	}
 	s.startOnce = sync.OnceFunc(s.start)
@@ -87,7 +87,7 @@ func (s *AttachmentScheduler) schedule() {
 		case <-s.ctx.Done():
 			logger.InfoContext(s.ctx, "context done, stopping", slog.Any("error", s.ctx.Err()))
 			return
-		case t := <-s.ticker:
+		case t := <-s.ticker.C:
 			ctx := slogctx.Append(s.ctx, slog.Time(constants.ExecutedAt, t))
 			logger.InfoContext(ctx, "scheduler executing")
 			s.pollAndSubmit(ctx)
@@ -150,6 +150,7 @@ func (s *AttachmentScheduler) Shutdown() {
 }
 
 func (s *AttachmentScheduler) shutdown() {
+	defer s.ticker.Stop()
 	defer s.cancel()
 	s.pool.Shutdown()
 	s.logger.Debug("shutdown attachment scheduler")
