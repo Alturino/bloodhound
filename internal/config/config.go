@@ -12,7 +12,7 @@ import (
 )
 
 type Config struct {
-	Telemetry *otelconf.OpenTelemetryConfiguration `mapstructure:"-" json:"telemetry"`
+	Telemetry *otelconf.OpenTelemetryConfiguration `mapstructure:"telemetry" json:"telemetry"`
 	Storage   *Storage                             `mapstructure:"storage"   json:"storage"`
 	Database  *DB                                  `mapstructure:"database"  json:"database"`
 	App       *App                                 `mapstructure:"app"       json:"app"`
@@ -85,56 +85,59 @@ func Load(configPath string) (*Config, error) {
 		v.AddConfigPath("./env")
 	}
 
-	var cfg Config
-	cfg.App = &App{}
-	cfg.App.LogLevelVar = &slog.LevelVar{}
-
 	if err := v.ReadInConfig(); err != nil {
-		err = fmt.Errorf("read config file: %w", err)
-		return &cfg, err
+		return nil, fmt.Errorf("read config file: %w", err)
 	}
 
-	if err := v.Unmarshal(&cfg); err != nil {
-		err = fmt.Errorf("unmarshal config: %w", err)
-		return &cfg, err
+	// Unmarshal non-telemetry fields via Viper (handles time.Duration etc.).
+	// We decode into a struct without the Telemetry field because mapstructure
+	// cannot handle otelconf's discriminated union types.
+	var raw struct {
+		Storage *Storage `mapstructure:"storage"`
+		Database  *DB    `mapstructure:"database"`
+		App       *App   `mapstructure:"app"`
 	}
-	cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
+	raw.App = &App{}
+	raw.App.LogLevelVar = &slog.LevelVar{}
 
-	// Parse telemetry section with otelconf (bypasses mapstructure for otel types)
-	if err := loadTelemetry(v, &cfg); err != nil {
-		return &cfg, fmt.Errorf("load telemetry config: %w", err)
+	if err := v.Unmarshal(&raw); err != nil {
+		return nil, fmt.Errorf("unmarshal config: %w", err)
+	}
+	raw.App.LogLevelVar.Set(raw.App.LogLevel)
+
+	cfg := &Config{
+		Storage:  raw.Storage,
+		Database: raw.Database,
+		App:      raw.App,
 	}
 
-	return &cfg, nil
+	// Parse telemetry with otelconf (mapstructure cannot handle otelconf types)
+	if t := v.AllSettings()["telemetry"]; t != nil {
+		if telemetryMap, ok := t.(map[string]any); ok {
+			if err := parseTelemetry(telemetryMap, cfg); err != nil {
+				return nil, fmt.Errorf("load telemetry config: %w", err)
+			}
+		}
+	}
+
+	return cfg, nil
 }
 
-// loadTelemetry extracts the telemetry subtree from Viper and parses it
-// with otelconf.ParseYAML(). This bypasses mapstructure which cannot handle
-// otelconf's discriminated union types.
-func loadTelemetry(v *viper.Viper, cfg *Config) error {
-	allSettings := v.AllSettings()
-	telemetryRaw, ok := allSettings["telemetry"]
-	if !ok {
-		return nil
-	}
-
-	telemetryMap, ok := telemetryRaw.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("telemetry section is not a map")
-	}
-
+// parseTelemetry takes the raw telemetry subtree and parses it with
+// otelconf.ParseYAML().
+func parseTelemetry(raw map[string]any, cfg *Config) error {
 	// Extract enabled flag
-	if enabled, ok := telemetryMap["enabled"]; ok {
+	if enabled, ok := raw["enabled"]; ok {
 		if e, ok := enabled.(bool); ok {
 			cfg.App.Enabled = e
 		}
 	}
 
 	// Remove non-otel fields
-	delete(telemetryMap, "enabled")
+	delete(raw, "enabled")
 
 	// Marshal to YAML for otelconf.ParseYAML()
-	otelYAML, err := yaml.Marshal(telemetryMap)
+	otelYAML, err := yaml.Marshal(raw)
 	if err != nil {
 		return fmt.Errorf("marshal telemetry to yaml: %w", err)
 	}

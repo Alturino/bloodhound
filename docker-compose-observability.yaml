@@ -34,6 +34,7 @@ services:
     command: ["-config.file=/etc/loki/loki.yaml", "-config.expand-env=true"]
     volumes:
       - ./observability/loki.yaml:/etc/loki/loki.yaml
+      - loki:/loki
     # depends_on:
     #   - promtail
     env_file: .env
@@ -71,6 +72,7 @@ services:
       - --web.enable-otlp-receiver
     volumes:
       - ./observability/prometheus.yaml:/etc/prometheus.yaml
+      - prometheus:/prometheus
     ports:
       - 9090:9090
   node-exporter:
@@ -98,3 +100,6 @@ services:
   #   volumes:
   #     - ./observability/promtail.yaml:/etc/promtail/promtail.yaml
   #     - /var/run/docker.sock:/var/run/docker.sock
+volumes:
+  prometheus:
+  loki:
