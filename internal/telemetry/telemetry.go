@@ -2,27 +2,15 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
-	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
-	"go.opentelemetry.io/contrib/processors/baggagecopy"
-	"go.opentelemetry.io/contrib/propagators/jaeger"
+	"go.opentelemetry.io/contrib/otelconf"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	otelExportProm "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
-	"go.opentelemetry.io/otel/propagation"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
@@ -36,10 +24,10 @@ type App struct {
 	Tracer         trace.Tracer
 	Metrics        *MetricsProvider
 	Logger         *slog.Logger
+	shutdown       func(ctx context.Context) error
 }
 
 // New creates a new App instance with configured providers
-// TODO: refactor use otelconf package to simplify configuration and initialization
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	if !cfg.Telemetry.Enabled {
 		tp, mp := tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider()
@@ -61,146 +49,54 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		}, nil
 	}
 
-	res, err := resource.New(
-		ctx,
-		resource.WithAttributes(
-			semconv.ServiceName(cfg.App.ServiceName()),
-			semconv.DeploymentEnvironment(cfg.App.Environment),
-		),
+	// Marshal the otel config subtree to YAML bytes
+	otelYAML := cfg.Telemetry.OTelRaw
+	if len(otelYAML) == 0 {
+		return nil, fmt.Errorf("no otel config found in telemetry.otel")
+	}
+
+	// Set env vars that otelconf ParseYAML will substitute
+	os.Setenv("OTEL_SERVICE_NAME", cfg.App.ServiceName())
+	os.Setenv("OTEL_ENVIRONMENT", cfg.App.Environment)
+
+	// Parse otelconf YAML (handles ${VAR} substitution internally)
+	otelCfg, err := otelconf.ParseYAML(otelYAML)
+	if err != nil {
+		return nil, fmt.Errorf("parse otel config: %w", err)
+	}
+
+	// Create SDK from declarative config
+	sdk, err := otelconf.NewSDK(
+		otelconf.WithOpenTelemetryConfiguration(*otelCfg),
+		otelconf.WithContext(ctx),
 	)
 	if err != nil {
-		return nil, err
-	}
-	// 1. Initialize Traces
-	tp, err := initTracer(ctx, cfg, res)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create otel sdk: %w", err)
 	}
 
-	// 2. Initialize Metrics
-	mp, err := initMeter(ctx, cfg, res)
-	if err != nil {
-		return nil, err
-	}
+	// Set global providers
+	otel.SetTracerProvider(sdk.TracerProvider())
+	otel.SetMeterProvider(sdk.MeterProvider())
+	otel.SetTextMapPropagator(sdk.Propagator())
 
-	mtr := mp.Meter(cfg.App.ServiceName())
+	// Create custom metrics from meter provider
+	mtr := sdk.MeterProvider().Meter(cfg.App.ServiceName())
 	metrics, err := NewMetrics(mtr)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Initialize Logger
+	// Initialize structured logger
 	logger := initLogger(cfg)
 
 	return &App{
-		TracerProvider: tp,
-		MeterProvider:  mp,
-		Tracer:         tp.Tracer(cfg.App.ServiceName()),
+		TracerProvider: sdk.TracerProvider(),
+		MeterProvider:  sdk.MeterProvider(),
+		Tracer:         sdk.TracerProvider().Tracer(cfg.App.ServiceName()),
 		Metrics:        metrics,
 		Logger:         logger,
+		shutdown:       sdk.Shutdown,
 	}, nil
-}
-
-func initTracer(
-	ctx context.Context,
-	cfg *config.Config,
-	res *resource.Resource,
-) (*sdktrace.TracerProvider, error) {
-	var exporter sdktrace.SpanExporter
-	var err error
-
-	exporter, err = otlptracegrpc.New(
-		ctx,
-		otlptracegrpc.WithEndpoint(cfg.Telemetry.OTLPTracesEndpoint),
-		otlptracegrpc.WithInsecure(),
-	)
-	// if cfg.App.Environment != "production" {
-	// 	exporter, err = stdouttrace.New(stdouttrace.WithPrettyPrint())
-	// }
-	if err != nil {
-		return nil, err
-	}
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(baggagecopy.NewSpanProcessor(baggagecopy.AllowAllMembers)),
-		sdktrace.WithBatcher(
-			exporter,
-			sdktrace.WithMaxExportBatchSize(1024*1024),
-			sdktrace.WithMaxQueueSize(10000),
-		),
-		sdktrace.WithResource(res),
-	)
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-		propagation.Baggage{},
-		jaeger.Jaeger{},
-	))
-
-	return tp, nil
-}
-
-func initMeter(
-	ctx context.Context,
-	cfg *config.Config,
-	res *resource.Resource,
-) (*sdkmetric.MeterProvider, error) {
-	// OTLP HTTP exporter for forwarding metrics to the OTel Collector
-	otlpExporter, err := otlpmetricgrpc.New(
-		ctx,
-		otlpmetricgrpc.WithEndpoint(cfg.Telemetry.OTLPMetricsEndpoint),
-		otlpmetricgrpc.WithInsecure(),
-		otlpmetricgrpc.WithCompressor("gzip"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Prometheus exporter for direct /metrics scraping
-	promExporter, err := otelExportProm.New()
-	if err != nil {
-		return nil, err
-	}
-	initPrometheusServer(cfg.Telemetry.PrometheusEndpoint)
-
-	otlpReader := sdkmetric.WithReader(
-		sdkmetric.NewPeriodicReader(otlpExporter, sdkmetric.WithInterval(time.Second*5)),
-	)
-	promReader := sdkmetric.WithReader(promExporter)
-	runtimeReader := sdkmetric.WithReader(
-		sdkmetric.NewManualReader(sdkmetric.WithProducer(runtime.NewProducer())),
-	)
-	mp := sdkmetric.NewMeterProvider(
-		otlpReader,
-		promReader,
-		runtimeReader,
-		sdkmetric.WithResource(res),
-	)
-	otel.SetMeterProvider(mp)
-	if err := runtime.Start(runtime.WithMeterProvider(mp)); err != nil {
-		return nil, err
-	}
-
-	return mp, nil
-}
-
-func initPrometheusServer(endpoint string) {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	server := &http.Server{
-		Addr:              endpoint,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-	go func() {
-		slog.Info(
-			"starting prometheus metrics server",
-			slog.String("prometheus_endpoint", endpoint),
-		)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("prometheus metrics server failed", "error", err)
-		}
-	}()
 }
 
 func initLogger(cfg *config.Config) *slog.Logger {
@@ -217,15 +113,8 @@ func initLogger(cfg *config.Config) *slog.Logger {
 
 // Shutdown gracefully shuts down the telemetry providers
 func (t *App) Shutdown(ctx context.Context) error {
-	if tp, ok := t.TracerProvider.(*sdktrace.TracerProvider); t.TracerProvider != nil && ok {
-		if err := tp.Shutdown(ctx); err != nil {
-			return err
-		}
-	}
-	if mp, ok := t.MeterProvider.(*sdkmetric.MeterProvider); mp.MeterProvider != nil && ok {
-		if err := mp.Shutdown(ctx); err != nil {
-			return err
-		}
+	if t.shutdown != nil {
+		return t.shutdown(ctx)
 	}
 	return nil
 }

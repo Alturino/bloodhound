@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"go.yaml.in/yaml/v3"
 )
 
 // Config holds all application configuration
@@ -98,6 +99,15 @@ func Load(configPath string) (*Config, error) {
 		return &cfg, err
 	}
 	cfg.App.LogLevelVar.Set(cfg.App.LogLevel)
+
+	// Extract raw OTel config YAML for otelconf.ParseYAML()
+	if otelRaw := v.Get("telemetry.otel"); otelRaw != nil {
+		otelYAML, err := yaml.Marshal(otelRaw)
+		if err != nil {
+			return &cfg, fmt.Errorf("marshal otel config: %w", err)
+		}
+		cfg.Telemetry.OTelRaw = otelYAML
+	}
 
 	return &cfg, nil
 }

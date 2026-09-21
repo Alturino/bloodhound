@@ -39,6 +39,38 @@ storage:
 
 telemetry:
   enabled: true
-  otlp_traces_endpoint: "localhost:4317"
-  otlp_metrics_endpoint: "localhost:4317"
-  prometheus_endpoint: ":9091"
+  otel:
+    file_format: "0.3"
+    disabled: false
+    resource:
+      attributes:
+        - name: service.name
+          value: "${OTEL_SERVICE_NAME}"
+        - name: deployment.environment
+          value: "${OTEL_ENVIRONMENT}"
+    tracer_provider:
+      processors:
+        - batch:
+            exporter:
+              otlp_grpc:
+                endpoint: "${OTEL_TRACES_ENDPOINT}"
+                insecure: true
+    meter_provider:
+      readers:
+        - periodic:
+            interval: 5000
+            exporter:
+              otlp_grpc:
+                endpoint: "${OTEL_METRICS_ENDPOINT}"
+                insecure: true
+                compression: gzip
+        - pull:
+            exporter:
+              prometheus/development:
+                host: localhost
+                port: 9091
+    propagator:
+      composite:
+        - tracecontext: {}
+        - baggage: {}
+        - jaeger: {}
