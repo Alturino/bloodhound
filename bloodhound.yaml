@@ -1,5 +1,6 @@
 app:
   name: bloodhound
+  enabled: true
   environment: production
   log_level: 0
   log_dir: ./logs/
@@ -38,39 +39,37 @@ storage:
     use_ssl: false
 
 telemetry:
-  enabled: true
-  otel:
-    file_format: "0.3"
-    disabled: false
-    resource:
-      attributes:
-        - name: service.name
-          value: "${OTEL_SERVICE_NAME}"
-        - name: deployment.environment
-          value: "${OTEL_ENVIRONMENT}"
-    tracer_provider:
-      processors:
-        - batch:
-            exporter:
-              otlp_grpc:
-                endpoint: "${OTEL_TRACES_ENDPOINT}"
-                insecure: true
-    meter_provider:
-      readers:
-        - periodic:
-            interval: 5000
-            exporter:
-              otlp_grpc:
-                endpoint: "${OTEL_METRICS_ENDPOINT}"
-                insecure: true
-                compression: gzip
-        - pull:
-            exporter:
-              prometheus/development:
-                host: localhost
-                port: 9091
-    propagator:
-      composite:
-        - tracecontext: {}
-        - baggage: {}
-        - jaeger: {}
+  file_format: "0.3"
+  disabled: false
+  resource:
+    attributes:
+      - name: service.name
+        value: "${OTEL_SERVICE_NAME}"
+      - name: deployment.environment
+        value: "${OTEL_ENVIRONMENT}"
+  tracer_provider:
+    processors:
+      - batch:
+          exporter:
+            otlp_grpc:
+              endpoint: "${OTEL_TRACES_ENDPOINT}"
+              insecure: true
+  meter_provider:
+    readers:
+      - periodic:
+          interval: 5000
+          exporter:
+            otlp_grpc:
+              endpoint: "${OTEL_METRICS_ENDPOINT}"
+              insecure: true
+              compression: gzip
+      - pull:
+          exporter:
+            prometheus/development:
+              host: localhost
+              port: 9091
+  propagator:
+    composite:
+      - tracecontext: {}
+      - baggage: {}
+      - jaeger: {}

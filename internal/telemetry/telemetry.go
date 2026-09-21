@@ -29,7 +29,7 @@ type App struct {
 
 // New creates a new App instance with configured providers
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
-	if !cfg.Telemetry.Enabled {
+	if !cfg.App.Enabled {
 		tp, mp := tracenoop.NewTracerProvider(), metricnoop.NewMeterProvider()
 		otel.SetTracerProvider(tp)
 		otel.SetMeterProvider(mp)
@@ -49,25 +49,17 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		}, nil
 	}
 
-	// Marshal the otel config subtree to YAML bytes
-	otelYAML := cfg.Telemetry.OTelRaw
-	if len(otelYAML) == 0 {
-		return nil, fmt.Errorf("no otel config found in telemetry.otel")
+	if cfg.Telemetry == nil {
+		return nil, fmt.Errorf("no telemetry configuration found")
 	}
 
-	// Set env vars that otelconf ParseYAML will substitute
+	// Set env vars for ${VAR} substitution in otelconf YAML
 	os.Setenv("OTEL_SERVICE_NAME", cfg.App.ServiceName())
 	os.Setenv("OTEL_ENVIRONMENT", cfg.App.Environment)
 
-	// Parse otelconf YAML (handles ${VAR} substitution internally)
-	otelCfg, err := otelconf.ParseYAML(otelYAML)
-	if err != nil {
-		return nil, fmt.Errorf("parse otel config: %w", err)
-	}
-
-	// Create SDK from declarative config
+	// Create SDK from declarative config (already parsed by otelconf in config.Load)
 	sdk, err := otelconf.NewSDK(
-		otelconf.WithOpenTelemetryConfiguration(*otelCfg),
+		otelconf.WithOpenTelemetryConfiguration(*cfg.Telemetry),
 		otelconf.WithContext(ctx),
 	)
 	if err != nil {
